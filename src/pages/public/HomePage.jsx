@@ -58,7 +58,6 @@ export default function HomePage({ app, onOpenLoginPage }) {
             onOpenLoginPage={onOpenLoginPage}
             publicActions={null}
             publicLinks={[
-              { label: "Contacto", to: "/contacto" },
               { label: "About us", to: "/about-us" },
               { label: "Comunidad", to: "/comunidad" },
               { label: "Como llegar", to: "/como-llegar" },
@@ -104,7 +103,7 @@ export default function HomePage({ app, onOpenLoginPage }) {
           </div>
 
           <div className="relative z-10 mx-auto w-full max-w-[620px] translate-y-4 lg:translate-y-14">
-            <div className="rounded-[22px] border border-white/28 bg-white/84 p-4 text-center shadow-[0_22px_70px_rgba(12,24,16,0.2)] backdrop-blur-sm">
+            <div className="rounded-[22px] border border-white p-4 text-center bg-white shadow-[0_22px_70px_rgba(12,24,16,0.2)]">
               <div>
                 <p className="text-sm font-semibold uppercase tracking-[0.18em] text-[#f97316]">Bienvenido a</p>
                 <h1 className="mt-3 whitespace-nowrap text-[1.8rem] font-semibold leading-tight text-[#183325] sm:text-[2.35rem]">Sabores Tropicales y Algo Mas</h1>
@@ -116,7 +115,7 @@ export default function HomePage({ app, onOpenLoginPage }) {
                     <Icon name="storefront" />
                     Ver catalogo
                   </Link>
-                  <Link className="inline-flex items-center justify-center gap-2 rounded-xl border border-[#d7dfd2] bg-white/92 px-4 py-2.5 text-sm font-semibold text-[#183325] transition hover:bg-[#f6faf4]" to="/como-llegar">
+                  <Link className="inline-flex items-center justify-center gap-2 rounded-xl border border-[#d7dfd2] bg-white px-4 py-2.5 text-sm font-semibold text-[#183325] transition hover:bg-white" to="/como-llegar">
                     <Icon name="map" />
                     Como llegar
                   </Link>

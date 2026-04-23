@@ -18,7 +18,7 @@ function UserAvatar({ user }) {
     return <img alt={fullName(user)} className="h-9 w-9 rounded-full object-cover" src={user.avatarUrl} />;
   }
 
-  return <div className="grid h-9 w-9 place-items-center rounded-full bg-[#eef4ea] text-sm font-semibold text-[#183325]">{initials(user)}</div>;
+  return <div className="grid h-9 w-9 place-items-center rounded-full border border-[#e1ece3] bg-white text-sm font-semibold text-[#183325]">{initials(user)}</div>;
 }
 
 function NavItem({ link }) {
@@ -61,12 +61,12 @@ export default function TopNav({
   const isLanding = isPublic && publicVariant === "landing";
 
   return (
-    <header className={isLanding ? "sticky top-0 z-40 px-4 pt-3 lg:px-6 lg:pt-5" : "sticky top-0 z-40 border-b border-[#e7ede3] bg-white/96 backdrop-blur"}>
+    <header className={isLanding ? "sticky top-0 z-40 px-4 pt-3 lg:px-6 lg:pt-5" : "sticky top-0 z-40 border-b border-[#e7ede3] bg-white"}>
       <div className={isLanding ? "mx-auto max-w-[1440px]" : "mx-auto max-w-[1440px] px-4 lg:px-6"}>
         <div
           className={
             isLanding
-              ? "mx-auto flex w-full max-w-[1320px] items-center justify-between gap-4 rounded-[24px] border border-[#e7ede3] bg-white/92 px-5 py-3 shadow-[0_12px_34px_rgba(24,51,37,0.08)] backdrop-blur"
+              ? "mx-auto flex w-full max-w-[1320px] items-center justify-between gap-4 rounded-[24px] border border-[#e7ede3] bg-white px-5 py-3 shadow-[0_12px_34px_rgba(24,51,37,0.08)]"
               : `flex w-full items-center justify-between gap-4 ${isPublic ? "py-4" : "px-1 py-4"}`
           }
         >
@@ -82,7 +82,7 @@ export default function TopNav({
             {!session && publicLinks.length ? <nav className="hidden items-center gap-1 lg:flex">{publicLinks.map((link) => <NavItem key={link.label} link={link} />)}</nav> : null}
 
             {showActiveShiftBadge ? (
-              <div className="hidden items-center gap-2 rounded-xl border border-[#cfe5d5] bg-[#eef8f1] px-3 py-2 text-sm font-semibold text-[#1f7a3a] shadow-[0_8px_20px_rgba(31,122,58,0.08)] md:inline-flex">
+              <div className="hidden items-center gap-2 rounded-xl border border-[#cfe5d5] bg-white px-3 py-2 text-sm font-semibold text-[#1f7a3a] shadow-[0_8px_20px_rgba(31,122,58,0.08)] md:inline-flex">
                 <span className="relative inline-flex h-3 w-3">
                   <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-[#2b8e46]/35" />
                   <span className="relative inline-flex h-3 w-3 rounded-full bg-[#1f7a3a]" />

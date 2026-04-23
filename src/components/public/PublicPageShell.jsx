@@ -1,12 +1,14 @@
+import { Link } from "react-router-dom";
 import AppFooter from "../shell/AppFooter.jsx";
 import TopNav from "../shell/TopNav";
 import Icon from "../ui/Icon";
+import { trackWhatsAppClick } from "../../services/publicAnalyticsService.js";
 
 function StatPill({ icon, label, value }) {
   return (
-    <div className="rounded-[22px] border border-white/65 bg-white/78 px-4 py-3 shadow-[0_14px_32px_rgba(24,51,37,0.08)] backdrop-blur-sm">
+    <div className="rounded-[22px] border border-[#e1ece3] bg-white px-4 py-3 shadow-[0_14px_32px_rgba(24,51,37,0.08)]">
       <div className="flex items-center gap-3">
-        <span className="inline-flex h-10 w-10 items-center justify-center rounded-full bg-[#edf7ef] text-[#1f7a3a]">
+        <span className="inline-flex h-10 w-10 items-center justify-center rounded-full border border-[#e1ece3] bg-white text-[#1f7a3a]">
           <Icon name={icon} />
         </span>
         <div>
@@ -25,10 +27,10 @@ export default function PublicPageShell({ app, children, title, description, bad
         { icon: "chat", label: "WhatsApp", value: app.business.whatsapp || "Disponible" },
         { icon: "schedule", label: "Horario", value: app.business.horario || "Atencion diaria" },
         { icon: "location_on", label: "Ubicacion", value: app.business.ubicacion || "Buena Fe, Ecuador" },
-      ];
+  ];
 
   return (
-    <div className="min-h-screen bg-[linear-gradient(180deg,#f6fbf7_0%,#edf5ef_42%,#ffffff_100%)] text-[#183325]">
+    <div className="min-h-screen bg-white text-[#183325]">
       <TopNav
         businessName={app.business.nombre}
         darkMode={false}
@@ -37,7 +39,6 @@ export default function PublicPageShell({ app, children, title, description, bad
         }}
         publicActions={null}
         publicLinks={[
-          { label: "Contacto", to: "/contacto" },
           { label: "About us", to: "/about-us" },
           { label: "Comunidad", to: "/comunidad" },
           { label: "Como llegar", to: "/como-llegar" },
@@ -48,12 +49,9 @@ export default function PublicPageShell({ app, children, title, description, bad
         user={null}
       />
 
-      <main className="relative overflow-hidden px-4 py-8 lg:px-6 lg:py-10">
-        <div className="absolute left-[-10%] top-0 h-72 w-72 rounded-full bg-[#d9efe0]/70 blur-3xl" />
-        <div className="absolute right-[-6%] top-24 h-80 w-80 rounded-full bg-[#fde8d8]/60 blur-3xl" />
-
+      <main className="relative overflow-hidden bg-white px-4 py-8 lg:px-6 lg:py-10">
         <div className="relative mx-auto max-w-[1440px] space-y-8">
-          <section className="overflow-hidden rounded-[34px] border border-[#deebe0] bg-[linear-gradient(135deg,rgba(255,255,255,0.96),rgba(240,248,241,0.94))] p-6 shadow-[0_30px_70px_rgba(24,51,37,0.08)] lg:p-8">
+          <section className="overflow-hidden rounded-[34px] border border-[#deebe0] bg-white p-6 shadow-[0_30px_70px_rgba(24,51,37,0.08)] lg:p-8">
             <div className="grid gap-8 lg:grid-cols-[minmax(0,1.2fr)_420px] lg:items-center">
               <div className="space-y-5">
                 <span className="inline-flex rounded-full border border-[#f5d6bf] bg-[#fff5ee] px-4 py-1.5 text-xs font-semibold uppercase tracking-[0.2em] text-[#f97316]">
@@ -77,6 +75,7 @@ export default function PublicPageShell({ app, children, title, description, bad
                       <a
                         className="inline-flex items-center gap-2 rounded-xl border border-[#d9e5db] bg-white px-5 py-3 text-sm font-semibold text-[#183325]"
                         href={`https://wa.me/${app.business.whatsapp}`}
+                        onClick={trackWhatsAppClick}
                         rel="noreferrer"
                         target="_blank"
                       >

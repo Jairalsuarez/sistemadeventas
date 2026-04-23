@@ -73,25 +73,6 @@ export async function updateRemoteProfile(profile) {
   return { ok: true, profile: normalizeProfile(data) };
 }
 
-export async function createRemoteManagedUser(payload) {
-  if (!supabaseReady || !supabase) return { ok: false, error: "Supabase no configurado." };
-
-  const { data, error } = await supabase.functions.invoke("create-managed-user", {
-    body: {
-      nombre: payload.nombre,
-      apellido: payload.apellido || "",
-      telefono: payload.telefono || "",
-      email: payload.email,
-      password: payload.password,
-      role: normalizeRole(payload.role),
-    },
-  });
-
-  if (error) return { ok: false, error: error.message };
-  if (!data?.user) return { ok: false, error: "La funcion no devolvio el usuario creado." };
-  return { ok: true, user: normalizeProfile(data.user) };
-}
-
 export function mergeUsers(localUsers = [], remoteProfiles = []) {
   if (supabaseReady) return [...remoteProfiles];
   const map = new Map();

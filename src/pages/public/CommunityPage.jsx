@@ -2,10 +2,10 @@ import PublicPageShell from "../../components/public/PublicPageShell.jsx";
 
 function toneClasses(index) {
   const styles = [
-    "border-[#d9efde] bg-[#f6fbf7]",
-    "border-[#fde8d9] bg-[#fffaf5]",
-    "border-[#e3e8ff] bg-[#f7f8ff]",
-    "border-[#f2e4ff] bg-[#fcf8ff]",
+    "border-[#d9efde] bg-white",
+    "border-[#fde8d9] bg-white",
+    "border-[#e3e8ff] bg-white",
+    "border-[#f2e4ff] bg-white",
   ];
   return styles[index % styles.length];
 }
@@ -42,7 +42,7 @@ export default function CommunityPage({ app, feedbacks }) {
                 <span className="text-xs font-semibold uppercase tracking-[0.18em] text-[#f97316]">Voz de la comunidad</span>
                 <h2 className="mt-2 text-lg font-semibold">Comentario {String(index + 1).padStart(2, "0")}</h2>
               </div>
-              <span className="rounded-full bg-white/80 px-3 py-1 text-[11px] font-semibold text-[#5b6d61]">{formatCommentDate(item.createdAt)}</span>
+              <span className="rounded-full border border-[#e1ece3] bg-white px-3 py-1 text-[11px] font-semibold text-[#5b6d61]">{formatCommentDate(item.createdAt)}</span>
             </div>
             <p className="mt-4 text-sm leading-7 text-[#5b6d61]">{item.comment}</p>
           </article>

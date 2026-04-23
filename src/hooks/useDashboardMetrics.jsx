@@ -77,28 +77,23 @@ export default function useDashboardMetrics({
   );
 
   const adminStats = useMemo(() => {
-    const totalProducts = app.products.length;
-    const completedSchedules = app.schedules.filter((item) => item.estado === "completado").length;
+    const todaySalesCount = app.sales.filter((sale) => new Date(sale.createdAt).toDateString() === new Date().toDateString()).length;
     return [
-      { label: "Ventas hoy", value: money(salesToday), detail: `${app.sales.length} ventas registradas` },
+      { label: "Ventas hoy", value: money(salesToday), detail: todaySalesCount ? `${todaySalesCount} venta(s) hoy` : "Sin ventas hoy" },
       {
         label: "Saldo general",
         value: money(app.wallet.saldoActual),
         detail: `Actualizado ${formatDate(app.wallet.updatedAt, { dateStyle: "medium", timeStyle: "short" })}`,
       },
-      { label: "Inventario bajo", value: `${lowStock.length}`, detail: `${totalProducts} productos activos` },
-      { label: "Turnos cerrados", value: `${completedSchedules}`, detail: `${upcomingSchedules.length} eventos programados` },
     ];
-  }, [app.products.length, app.sales.length, app.schedules, app.wallet, formatDate, lowStock.length, money, salesToday, upcomingSchedules.length]);
+  }, [app.sales, app.wallet, formatDate, money, salesToday]);
 
   const sellerStats = useMemo(
     () => [
       { label: "Mi venta de hoy", value: money(mySalesToday), detail: activeShift ? "Tu turno esta abierto" : "Abre tu turno para registrar" },
       { label: "Cartera actual", value: money(app.wallet.saldoActual), detail: "Referencia general del negocio" },
-      { label: "Productos visibles", value: `${visibleProducts.length}`, detail: `${lowStock.length} con stock bajo` },
-      { label: "Agenda cercana", value: `${upcomingSchedules.slice(0, 3).length}`, detail: "Tus proximos turnos y tareas" },
     ],
-    [activeShift, app.wallet.saldoActual, lowStock.length, money, mySalesToday, upcomingSchedules, visibleProducts.length]
+    [activeShift, app.wallet.saldoActual, money, mySalesToday]
   );
 
   return {

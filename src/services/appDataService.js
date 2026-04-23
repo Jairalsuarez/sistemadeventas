@@ -2,6 +2,11 @@ import { supabaseReady } from "./supabaseclient";
 import { createNotice, DEFAULT_LOGO, normalizeCommunityFeedback, normalizeProduct } from "./normalizers.js";
 
 const APP_KEY = "ventas-app-v2";
+const BUSINESS_CONTACT = {
+  telefono: "+593981305654",
+  whatsapp: "593981305654",
+  horario: "Lunes a Sabado - 09:00 - 22:00",
+};
 
 function seed() {
   const localUsers = supabaseReady
@@ -35,10 +40,10 @@ function seed() {
     business: {
       nombre: "Sabores Tropicales y Algo Más",
       descripcion: "Panel comercial para ventas, inventario, clientes, turnos y control del negocio.",
-      telefono: "+593999999999",
-      whatsapp: "593999999999",
+      telefono: BUSINESS_CONTACT.telefono,
+      whatsapp: BUSINESS_CONTACT.whatsapp,
       ubicacion: "Buena Fe, Ecuador",
-      horario: "Lunes a Sabado - 08:00 - 20:00",
+      horario: BUSINESS_CONTACT.horario,
       mapaUrl: "https://maps.google.com",
       instagramUrl: "https://instagram.com",
       facebookUrl: "https://facebook.com",
@@ -52,6 +57,7 @@ function seed() {
         id: crypto.randomUUID(),
         nombre: "Jugo de mango",
         categoria: "Jugos",
+        marca: "Sabores Tropicales",
         descripcion: "Preparado fresco con fruta natural y servido al momento.",
         precio: 2.5,
         stock: 12,
@@ -62,6 +68,7 @@ function seed() {
         id: crypto.randomUUID(),
         nombre: "Batido de fresa",
         categoria: "Batidos",
+        marca: "Sabores Tropicales",
         descripcion: "Textura cremosa y sabor dulce para media tarde.",
         precio: 3.25,
         stock: 7,
@@ -72,6 +79,7 @@ function seed() {
         id: crypto.randomUUID(),
         nombre: "Combo tropical",
         categoria: "Combos",
+        marca: "Sabores Tropicales",
         descripcion: "Fruta fresca, snack y bebida para una venta rapida.",
         precio: 4.8,
         stock: 5,
@@ -119,6 +127,7 @@ export function getAppData() {
     const parsed = raw ? JSON.parse(raw) : null;
     if (!parsed) return seed();
     const merged = { ...seed(), ...parsed };
+    merged.business = { ...seed().business, ...(parsed.business || {}), ...BUSINESS_CONTACT };
     if (supabaseReady) {
       merged.users = [];
       merged.products = [];

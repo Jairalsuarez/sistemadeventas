@@ -10,8 +10,8 @@ export default function AboutPage({ app }) {
       title="About us"
     >
       <div className="grid gap-6 lg:grid-cols-2">
-        <article className="rounded-[28px] border border-[#e1ece3] bg-white/90 p-6 shadow-[0_24px_48px_rgba(24,51,37,0.06)]">
-          <span className="inline-flex h-12 w-12 items-center justify-center rounded-full bg-[#edf7ef] text-[#1f7a3a]">
+        <article className="rounded-[28px] border border-[#e1ece3] bg-white p-6 shadow-[0_24px_48px_rgba(24,51,37,0.06)]">
+          <span className="inline-flex h-12 w-12 items-center justify-center rounded-full border border-[#e1ece3] bg-white text-[#1f7a3a]">
             <Icon name="storefront" />
           </span>
           <h2 className="mt-5 text-2xl font-semibold">Nuestra propuesta</h2>
@@ -20,8 +20,8 @@ export default function AboutPage({ app }) {
           </p>
         </article>
 
-        <article className="rounded-[28px] border border-[#e1ece3] bg-white/90 p-6 shadow-[0_24px_48px_rgba(24,51,37,0.06)]">
-          <span className="inline-flex h-12 w-12 items-center justify-center rounded-full bg-[#fff2e8] text-[#f97316]">
+        <article className="rounded-[28px] border border-[#e1ece3] bg-white p-6 shadow-[0_24px_48px_rgba(24,51,37,0.06)]">
+          <span className="inline-flex h-12 w-12 items-center justify-center rounded-full border border-[#e1ece3] bg-white text-[#f97316]">
             <Icon name="support_agent" />
           </span>
           <h2 className="mt-5 text-2xl font-semibold">Como atendemos</h2>

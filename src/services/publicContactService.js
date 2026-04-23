@@ -1,3 +1,5 @@
+import { trackWhatsAppClick } from "./publicAnalyticsService.js";
+
 export function sanitizeWhatsappNumber(value) {
   const digits = String(value || "").replace(/\D/g, "");
   if (!digits) return "";
@@ -26,6 +28,7 @@ export function openWhatsAppChat({ phone, text }) {
 
   const encodedText = encodeURIComponent(text || "");
   const webUrl = `https://wa.me/${cleanPhone}${encodedText ? `?text=${encodedText}` : ""}`;
+  trackWhatsAppClick();
   window.open(webUrl, "_blank", "noopener,noreferrer");
 
   return true;

@@ -52,12 +52,33 @@ export async function fetchRemoteNotifications() {
   if (!supabaseReady || !supabase) return { ok: false, error: "Supabase no configurado." };
   const { data, error } = await supabase
     .from("notifications")
-    .select("id,tipo,mensaje,actor_id,leido,created_at")
+    .select("id,tipo,mensaje,actor_id,actor_name,leido,created_at")
     .order("created_at", { ascending: false })
     .limit(30);
 
   if (error) return { ok: false, error: error.message };
   return { ok: true, notifications: (data || []).map(normalizeNotification) };
+}
+
+export async function createRemoteNotification(notification) {
+  if (!supabaseReady || !supabase) return { ok: false, error: "Supabase no configurado." };
+  const payload = {
+    id: notification.id,
+    tipo: notification.type || "info",
+    mensaje: notification.message,
+    actor_id: notification.actorId || null,
+    actor_name: notification.actorName || "",
+    leido: false,
+  };
+
+  const { data, error } = await supabase
+    .from("notifications")
+    .insert(payload)
+    .select("id,tipo,mensaje,actor_id,actor_name,leido,created_at")
+    .single();
+
+  if (error) return { ok: false, error: error.message };
+  return { ok: true, notification: normalizeNotification(data) };
 }
 
 export async function fetchRemoteShifts() {

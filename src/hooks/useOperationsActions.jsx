@@ -1,3 +1,10 @@
+const getScheduleHours = (turno = "") => {
+  const value = String(turno).toLowerCase();
+  if (value.includes("tarde")) return { inicio: "13:30", fin: "17:00", turno: "Tarde" };
+  if (value.includes("noche")) return { inicio: "17:00", fin: "22:00", turno: "Noche" };
+  return { inicio: "08:00", fin: "13:30", turno: "Manana" };
+};
+
 export default function useOperationsActions({
   app,
   session,
@@ -43,12 +50,13 @@ export default function useOperationsActions({
   createRemoteExpense,
   createRemoteExpenseCategory,
   createRemoteDistributor,
+  createRemoteNotification,
   createRemoteSchedule,
   updateRemoteScheduleStatus,
   deleteRemoteSchedule,
   verifySupabasePassword,
 }) {
-  const isAdminRole = ["admin", "superadmin"].includes(user?.role);
+  const isAdminRole = user?.role === "admin";
 
   const findUserRoleById = (userId) => {
     if (!userId) return null;
@@ -425,13 +433,18 @@ export default function useOperationsActions({
 
   const createSchedule = async () => {
     if (!isAdminRole) return inform("Solo administracion puede programar agenda.", "warning");
-    if (!scheduleForm.fecha || !scheduleForm.inicio || !scheduleForm.fin || !scheduleForm.responsable.trim()) {
-      return inform("Completa fecha, hora inicial, hora final y responsable.", "warning");
+    const scheduleHours = getScheduleHours(scheduleForm.turno);
+    if (!scheduleForm.fecha || !scheduleForm.responsable.trim()) {
+      return inform("Completa fecha, turno y responsable.", "warning");
     }
+    const assignedSeller = (app.users || []).find((item) => item.id === scheduleForm.responsableId);
 
     const schedule = {
       id: crypto.randomUUID(),
       ...scheduleForm,
+      turno: scheduleHours.turno,
+      inicio: scheduleHours.inicio,
+      fin: scheduleHours.fin,
       responsable: scheduleForm.responsable.trim(),
       notas: scheduleForm.notas.trim(),
       estado: "programado",
@@ -446,6 +459,22 @@ export default function useOperationsActions({
       schedules: [finalSchedule, ...(current.schedules || [])],
     }));
     notify(`${personName(user)} programo un turno para ${finalSchedule.responsable} el ${finalSchedule.fecha}.`, personName(user));
+    if (assignedSeller) {
+      const scheduleNotification = {
+        id: crypto.randomUUID(),
+        message: `Tienes un turno programado el ${finalSchedule.fecha} de ${finalSchedule.inicio} a ${finalSchedule.fin}.`,
+        type: "agenda",
+        actorId: assignedSeller.id,
+        actorName: personName(assignedSeller),
+        read: false,
+        createdAt: new Date().toISOString(),
+      };
+      const remoteNotification = await createRemoteNotification(scheduleNotification);
+      commit((current) => ({
+        ...current,
+        notifications: [remoteNotification.ok ? remoteNotification.notification : scheduleNotification, ...(current.notifications || [])].slice(0, 60),
+      }));
+    }
     setScheduleForm(emptyScheduleForm);
     inform("Turno agendado correctamente.", "success");
   };

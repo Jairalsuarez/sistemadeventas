@@ -13,6 +13,7 @@ export default function ProductModal({
   const hasChanges = editing
     ? productForm.nombre !== editing.nombre ||
       productForm.categoria !== editing.categoria ||
+      productForm.marca !== (editing.marca || "") ||
       Number(productForm.precio) !== Number(editing.precio) ||
       Number(productForm.stock) !== Number(editing.stock) ||
       productForm.descripcion !== editing.descripcion ||
@@ -25,9 +26,9 @@ export default function ProductModal({
   return (
     <Modal open={open} onClose={onClose} text="Formulario sencillo y directo." title={editing ? "Editar producto" : "Nuevo producto"} wide>
       <div className="grid gap-4">
-        <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-          {["Nombre", "Categoria", "Precio", "Stock"].map((label, index) => {
-            const key = ["nombre", "categoria", "precio", "stock"][index];
+        <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-5">
+          {["Nombre", "Categoria", "Marca", "Precio", "Stock"].map((label, index) => {
+            const key = ["nombre", "categoria", "marca", "precio", "stock"][index];
             return (
               <label key={key} className="grid gap-2 text-sm font-semibold text-ink-900 dark:text-white">
                 {label}
@@ -36,7 +37,7 @@ export default function ProductModal({
                   onChange={(e) => setProductForm((current) => ({ ...current, [key]: e.target.value }))}
                   step={key === "precio" ? "0.01" : undefined}
                   type={key === "precio" || key === "stock" ? "number" : "text"}
-                  value={productForm[key]}
+                  value={productForm[key] || ""}
                 />
               </label>
             );

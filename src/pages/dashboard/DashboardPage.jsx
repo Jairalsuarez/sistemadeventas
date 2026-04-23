@@ -4,7 +4,7 @@ import AdminDashboardPage from "../admin/AdminDashboardPage";
 import SellerDashboardPage from "../seller/SellerDashboardPage";
 
 export default function DashboardPage({ onNewProduct, onNewSale, onOpenExpense, onOpenWallet }) {
-  const { activeShift, adminStats, app, lowStock, recentActivity, sellerStats, user, visibleProducts, startShift, closeShift, money, formatDate } = useAppContext();
+  const { activeShift, adminStats, app, lowStock, recentActivity, sellerStats, upcomingSchedules, user, visibleProducts, startShift, closeShift, money, formatDate } = useAppContext();
   const sellerSchedules = useMemo(() => {
     if (user?.role !== "vendedor") return [];
 
@@ -20,7 +20,7 @@ export default function DashboardPage({ onNewProduct, onNewSale, onOpenExpense, 
       .slice(0, 6);
   }, [app.schedules, user?.apellido, user?.displayName, user?.email, user?.nombre, user?.role]);
   const sellerShiftRows = useMemo(() => {
-    if (!["admin", "superadmin"].includes(user?.role)) return [];
+    if (user?.role !== "admin") return [];
 
     return (app.users || [])
       .filter((item) => item.role === "vendedor")
@@ -64,17 +64,18 @@ export default function DashboardPage({ onNewProduct, onNewSale, onOpenExpense, 
     return Date.now() >= new Date(activeShift.startedAt).getTime() + 5 * 60 * 60 * 1000;
   }, [activeShift?.startedAt, user?.role]);
 
-  if (["admin", "superadmin"].includes(user?.role)) {
+  if (user?.role === "admin") {
     return (
       <AdminDashboardPage
         adminStats={adminStats}
         formatDate={formatDate}
-        lowStock={lowStock}
         onCloseShift={closeShift}
         onNewProduct={onNewProduct}
         onNewSale={onNewSale}
+        upcomingSchedules={upcomingSchedules}
         recentActivity={recentActivity}
         sellerShiftRows={sellerShiftRows}
+        visibleProducts={visibleProducts}
       />
     );
   }

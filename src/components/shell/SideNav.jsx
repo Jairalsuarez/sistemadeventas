@@ -4,7 +4,7 @@ import Icon from "../ui/Icon";
 const baseLink =
   "flex items-center gap-3 rounded-md px-4 py-3 text-base font-medium transition";
 
-export default function SideNav({ isAdmin, canManageUsers = false }) {
+export default function SideNav({ isAdmin }) {
   const links = [
     { to: "/panel", label: "Dashboard", icon: "dashboard", end: true },
     { to: "/panel/cartera", label: "Cartera", icon: "account_balance_wallet" },
@@ -14,11 +14,9 @@ export default function SideNav({ isAdmin, canManageUsers = false }) {
 
   if (isAdmin) {
     links.splice(2, 0, { to: "/panel/agenda", label: "Agenda", icon: "calendar_month" });
-    if (canManageUsers) {
-      links.splice(3, 0, { to: "/panel/usuarios", label: "Usuarios", icon: "groups" });
-    }
-    links.splice(canManageUsers ? 4 : 3, 0, { to: "/panel/comentarios", label: "Comentarios", icon: "chat" });
-    links.splice(canManageUsers ? 5 : 4, 0, { to: "/panel/analitica", label: "Analitica", icon: "monitoring" });
+    links.splice(3, 0, { to: "/panel/usuarios", label: "Usuarios", icon: "groups" });
+    links.splice(4, 0, { to: "/panel/comentarios", label: "Comentarios", icon: "chat" });
+    links.splice(5, 0, { to: "/panel/analitica", label: "Analitica", icon: "monitoring" });
   }
 
   return (

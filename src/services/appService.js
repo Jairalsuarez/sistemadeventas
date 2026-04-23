@@ -12,6 +12,7 @@ export {
   fetchRemoteShifts,
   fetchRemoteWalletState,
   createRemoteExpense,
+  createRemoteNotification,
   createRemoteSale,
   createRemoteSchedule,
   createRemoteShift,

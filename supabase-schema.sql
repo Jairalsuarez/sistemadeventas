@@ -3,7 +3,7 @@ create extension if not exists pgcrypto;
 create table if not exists public.profiles (
   id uuid primary key references auth.users(id) on delete cascade,
   nombre text not null,
-  role text not null check (role in ('superadmin', 'admin', 'vendedor')),
+  role text not null check (role in ('admin', 'vendedor')),
   avatar_url text,
   updated_at timestamptz not null default now(),
   created_at timestamptz not null default now()
@@ -13,6 +13,7 @@ create table if not exists public.products (
   id uuid primary key default gen_random_uuid(),
   nombre text not null,
   categoria text not null default 'General',
+  marca text,
   descripcion text,
   precio numeric(10,2) not null default 0,
   stock integer not null default 0,
@@ -22,6 +23,8 @@ create table if not exists public.products (
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
 );
+
+alter table public.products add column if not exists marca text;
 
 create table if not exists public.distributors (
   id uuid primary key default gen_random_uuid(),
@@ -132,6 +135,14 @@ create table if not exists public.community_feedback (
   created_at timestamptz not null default now()
 );
 
+create table if not exists public.public_analytics_events (
+  id uuid primary key default gen_random_uuid(),
+  event_type text not null check (event_type in ('page_visit', 'whatsapp_click')),
+  page_path text,
+  user_agent text,
+  created_at timestamptz not null default now()
+);
+
 alter table public.profiles enable row level security;
 alter table public.products enable row level security;
 alter table public.wallet_movements enable row level security;
@@ -144,6 +155,7 @@ alter table public.expenses enable row level security;
 alter table public.notifications enable row level security;
 alter table public.schedules enable row level security;
 alter table public.community_feedback enable row level security;
+alter table public.public_analytics_events enable row level security;
 
 create or replace function public.is_admin()
 returns boolean
@@ -154,7 +166,7 @@ as $$
     select 1
     from public.profiles
     where profiles.id = auth.uid()
-      and profiles.role in ('superadmin', 'admin')
+      and profiles.role = 'admin'
   );
 $$;
 
@@ -167,7 +179,7 @@ as $$
     select 1
     from public.profiles
     where profiles.id = auth.uid()
-      and profiles.role in ('superadmin', 'admin', 'vendedor')
+      and profiles.role in ('admin', 'vendedor')
   );
 $$;
 
@@ -184,15 +196,10 @@ to authenticated
 using (auth.uid() = id)
 with check (
   auth.uid() = id
-  and role in ('superadmin', 'admin', 'vendedor')
+  and role in ('admin', 'vendedor')
 );
 
 drop policy if exists "profiles_update_admin" on public.profiles;
-create policy "profiles_update_admin"
-on public.profiles for update
-to authenticated
-using (public.is_admin())
-with check (role in ('superadmin', 'admin', 'vendedor'));
 
 drop policy if exists "profiles_insert_self" on public.profiles;
 create policy "profiles_insert_self"
@@ -200,7 +207,7 @@ on public.profiles for insert
 to authenticated
 with check (
   auth.uid() = id
-  and role in ('superadmin', 'admin', 'vendedor')
+  and role in ('admin', 'vendedor')
 );
 
 drop policy if exists "products_select_public_active" on public.products;
@@ -343,6 +350,12 @@ on public.notifications for select
 to authenticated
 using (public.is_staff());
 
+drop policy if exists "notifications_insert_admin" on public.notifications;
+create policy "notifications_insert_admin"
+on public.notifications for insert
+to authenticated
+with check (public.is_admin());
+
 drop policy if exists "schedules_select_authenticated" on public.schedules;
 create policy "schedules_select_authenticated"
 on public.schedules for select
@@ -350,7 +363,8 @@ to authenticated
 using (public.is_staff());
 
 drop policy if exists "schedules_superadmin_all" on public.schedules;
-create policy "schedules_superadmin_all"
+drop policy if exists "schedules_admin_all" on public.schedules;
+create policy "schedules_admin_all"
 on public.schedules for all
 to authenticated
 using (public.is_admin())
@@ -373,6 +387,18 @@ create policy "community_feedback_delete_admin"
 on public.community_feedback for delete
 to authenticated
 using (public.is_admin());
+
+drop policy if exists "public_analytics_insert_public" on public.public_analytics_events;
+create policy "public_analytics_insert_public"
+on public.public_analytics_events for insert
+to public
+with check (event_type in ('page_visit', 'whatsapp_click'));
+
+drop policy if exists "public_analytics_select_staff" on public.public_analytics_events;
+create policy "public_analytics_select_staff"
+on public.public_analytics_events for select
+to authenticated
+using (public.is_staff());
 
 insert into public.wallet_state (id, saldo_actual)
 values ('principal', 0)

@@ -17,6 +17,7 @@ import {
   createRemoteExpenseCategory,
   createRemoteCommunityFeedback,
   createRemoteExpense,
+  createRemoteNotification,
   createRemoteSale,
   createRemoteSchedule,
   createRemoteShift,
@@ -28,7 +29,7 @@ import {
   updateRemoteShift,
   upsertRemoteWalletState,
 } from "../services/operationsService.js";
-import { createRemoteManagedUser, mergeUsers, updateRemoteProfile } from "../services/profileService.js";
+import { mergeUsers, updateRemoteProfile } from "../services/profileService.js";
 import { deleteRemoteProduct, upsertRemoteProduct } from "../services/productService.js";
 import { storageReady, uploadImage } from "../services/storageService.js";
 
@@ -39,6 +40,7 @@ const EXPENSE_CATEGORIES = ["Servicios", "Mercaderia", "Pagos", "Inversion", "Tr
 const EMPTY_PRODUCT = {
   nombre: "",
   categoria: "Bebidas",
+  marca: "",
   descripcion: "",
   precio: 0,
   stock: 0,
@@ -268,6 +270,30 @@ export function AppProvider({ children }) {
     return [...sales, ...alerts];
   }, [app.sales, lowStock]);
 
+  useEffect(() => {
+    if (user?.role !== "admin" || !lowStock.length) return;
+
+    const existingIds = new Set((app.notifications || []).map((notification) => notification.id));
+    const stockNotifications = lowStock
+      .filter((product) => Number(product.stock) <= LOW_STOCK_LIMIT)
+      .map((product) => ({
+        id: `low-stock-${product.id}-${product.stock}`,
+        message: `Reponer ${product.nombre}: quedan ${product.stock} unidad(es) disponibles.`,
+        actorName: "Inventario",
+        type: "warning",
+        read: false,
+        createdAt: new Date().toISOString(),
+      }))
+      .filter((notification) => !existingIds.has(notification.id));
+
+    if (!stockNotifications.length) return;
+
+    commit((current) => ({
+      ...current,
+      notifications: [...stockNotifications, ...(current.notifications || [])].slice(0, 60),
+    }));
+  }, [app.notifications, lowStock, user?.role]);
+
   const openSaleFlow = () => {
     if (user?.role === "vendedor" && !activeShift) {
       return inform("Debes iniciar un turno antes de registrar ventas.", "warning");
@@ -373,6 +399,7 @@ export function AppProvider({ children }) {
       createRemoteExpense,
       createRemoteExpenseCategory,
       createRemoteDistributor,
+      createRemoteNotification,
       createRemoteSchedule,
       updateRemoteScheduleStatus,
       deleteRemoteSchedule,
@@ -419,7 +446,7 @@ export function AppProvider({ children }) {
   };
 
   const deleteCommunityFeedback = async (feedbackId) => {
-    if (!["admin", "superadmin"].includes(user?.role)) return inform("Solo administracion puede eliminar comentarios.", "warning");
+    if (user?.role !== "admin") return inform("Solo administracion puede eliminar comentarios.", "warning");
     const target = (app.communityFeedbacks || []).find((item) => item.id === feedbackId);
     if (!target) return { ok: false };
 
@@ -452,7 +479,6 @@ export function AppProvider({ children }) {
     inform,
     personName,
     mergeUsers,
-    createRemoteManagedUser,
     updateRemoteProfile,
   });
 

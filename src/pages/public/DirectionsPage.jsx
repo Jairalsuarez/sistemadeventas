@@ -15,7 +15,7 @@ export default function DirectionsPage({ app }) {
       title="Como llegar"
     >
       <div className="grid gap-6 lg:grid-cols-[420px_minmax(0,1fr)]">
-        <article className="rounded-[28px] border border-[#e4ece2] bg-white/92 p-6 shadow-[0_18px_40px_rgba(24,51,37,0.06)]">
+        <article className="rounded-[28px] border border-[#e4ece2] bg-white p-6 shadow-[0_18px_40px_rgba(24,51,37,0.06)]">
           <span className="text-xs font-semibold uppercase tracking-[0.18em] text-[#f97316]">Visita la tienda</span>
           <h2 className="mt-3 text-2xl font-semibold">Ven directo al local</h2>
           <div className="mt-5 space-y-4 text-sm leading-7 text-[#5b6d61]">
@@ -26,7 +26,7 @@ export default function DirectionsPage({ app }) {
               <strong className="text-[#183325]">Referencia:</strong> Buena Fe, Ecuador.
             </p>
             <p>
-              <strong className="text-[#183325]">WhatsApp:</strong> +593 {app.business.whatsapp}
+              <strong className="text-[#183325]">WhatsApp:</strong> {app.business.telefono}
             </p>
           </div>
 

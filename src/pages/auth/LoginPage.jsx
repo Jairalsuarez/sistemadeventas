@@ -50,9 +50,9 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="min-h-screen bg-[radial-gradient(circle_at_top,#f7f5ef_0%,#eef3ec_42%,#f5f7f4_100%)] px-4 py-8 text-[#183325]">
+    <div className="min-h-screen bg-white px-4 py-8 text-[#183325]">
       <div className="mx-auto max-w-6xl">
-        <div className="relative overflow-hidden rounded-[32px] border border-[#dfe7db] bg-white/80 shadow-[0_32px_90px_rgba(24,51,37,0.16)] backdrop-blur-sm">
+        <div className="relative overflow-hidden rounded-[32px] border border-[#dfe7db] bg-white shadow-[0_32px_90px_rgba(24,51,37,0.16)]">
           <div className="relative grid min-h-[720px] lg:grid-cols-[1.04fr_0.96fr]">
           <section className="relative hidden lg:block">
             {activeSlide?.type === "video" ? (
@@ -78,11 +78,10 @@ export default function LoginPage() {
             </div>
           </section>
 
-          <section className="relative flex items-center bg-[rgba(251,249,244,0.9)] px-6 py-8 sm:px-10 lg:px-12">
-            <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(255,255,255,0.72),rgba(247,244,238,0.88))]" />
+          <section className="relative flex items-center bg-white px-6 py-8 sm:px-10 lg:px-12">
             <div className="relative mx-auto w-full max-w-md">
               <button
-                className="inline-flex items-center gap-2 rounded-md border border-[#d6ddd1] bg-white/70 px-4 py-2 text-sm font-medium text-[#183325] transition duration-200 hover:border-[#c8d3c2] hover:bg-white"
+                className="inline-flex items-center gap-2 rounded-md border border-[#d6ddd1] bg-white px-4 py-2 text-sm font-medium text-[#183325] transition duration-200 hover:border-[#c8d3c2] hover:bg-white"
                 onClick={() => navigate("/")}
                 type="button"
               >
@@ -104,11 +103,11 @@ export default function LoginPage() {
                 <p className="mt-3 text-sm leading-7 text-[#5f7064]">Solo para administradores.</p>
               </div>
 
-              <div className="mt-8 rounded-[28px] border border-white/70 bg-[rgba(255,252,247,0.76)] p-6 shadow-[0_20px_50px_rgba(24,51,37,0.1)] backdrop-blur-md">
+              <div className="mt-8 rounded-[28px] border border-[#dfe7db] bg-white p-6 shadow-[0_20px_50px_rgba(24,51,37,0.1)]">
                 <form className="grid gap-4" onSubmit={submit}>
                   <label className="grid gap-2 text-sm">
                     Correo
-                    <div className="flex items-center rounded-md border border-[#d8dfd3] bg-white/80 px-4 transition duration-200 focus-within:border-[#f59e0b] focus-within:ring-2 focus-within:ring-[#f59e0b]/20">
+                    <div className="flex items-center rounded-md border border-[#d8dfd3] bg-white px-4 transition duration-200 focus-within:border-[#f59e0b] focus-within:ring-2 focus-within:ring-[#f59e0b]/20">
                       <Icon className="text-[#748377]" name="mail" />
                       <input
                         className="w-full border-0 bg-transparent px-3 py-3.5 text-[#183325] outline-none placeholder:text-[#7a877d]"
@@ -123,7 +122,7 @@ export default function LoginPage() {
 
                   <label className="grid gap-2 text-sm">
                     Contrasena
-                    <div className="flex items-center rounded-md border border-[#d8dfd3] bg-white/80 px-4 transition duration-200 focus-within:border-[#f59e0b] focus-within:ring-2 focus-within:ring-[#f59e0b]/20">
+                    <div className="flex items-center rounded-md border border-[#d8dfd3] bg-white px-4 transition duration-200 focus-within:border-[#f59e0b] focus-within:ring-2 focus-within:ring-[#f59e0b]/20">
                       <Icon className="text-[#748377]" name="lock" />
                       <input
                         className="w-full border-0 bg-transparent px-3 py-3.5 text-[#183325] outline-none placeholder:text-[#7a877d]"

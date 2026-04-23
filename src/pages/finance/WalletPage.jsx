@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import Icon from "../../components/ui/Icon";
 import PageHeader from "../../components/ui/PageHeader";
 import Pagination from "../../components/ui/Pagination";
 import SectionBlock from "../../components/ui/SectionBlock";
@@ -9,6 +10,7 @@ const EXPENSES_PER_PAGE = 8;
 
 export default function WalletPage({ expenses, isAdmin, money, onOpenExpense, onOpenWallet, wallet }) {
   const [currentPage, setCurrentPage] = useState(1);
+  const [showExpenseMovements, setShowExpenseMovements] = useState(false);
   const expensesToday = expenses.filter((item) => isToday(item.createdAt)).reduce((acc, item) => acc + Number(item.monto || 0), 0);
   const orderedExpenses = useMemo(
     () => [...expenses].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()),
@@ -58,17 +60,23 @@ export default function WalletPage({ expenses, isAdmin, money, onOpenExpense, on
         ))}
       </div>
 
-      <SectionBlock
-        description={
-          isAdmin
-            ? "Desde aqui puedes seguir los egresos del negocio y hacer ajustes manuales cuando haga falta."
-            : "Vista de consulta para seguir el saldo general y los egresos ya registrados."
-        }
-        title="Movimientos de egresos"
-      >
-        {latestExpenses.length ? (
-          <div className="space-y-4">
-            <div className="space-y-3">
+      <SectionBlock title="Movimientos de egresos">
+        <button
+          className="flex w-full items-center justify-between gap-4 rounded-xl border border-[#dfe7db] bg-white px-5 py-4 text-left transition hover:border-[#1f7a3a] dark:border-white/10 dark:bg-white/[0.03]"
+          onClick={() => setShowExpenseMovements((current) => !current)}
+          type="button"
+        >
+          <span>
+            <span className="block text-sm font-semibold text-[#183325] dark:text-white">Ver movimientos de egresos</span>
+            <span className="mt-1 block text-sm text-[#5b6d61] dark:text-white/65">{orderedExpenses.length} egreso(s) registrados</span>
+          </span>
+          <Icon className="text-[#1f7a3a]" name={showExpenseMovements ? "keyboard_arrow_up" : "keyboard_arrow_down"} />
+        </button>
+
+        {showExpenseMovements ? (
+          latestExpenses.length ? (
+            <div className="mt-4 space-y-4">
+              <div className="space-y-3">
               {latestExpenses.map((expense) => (
                 <article key={expense.id} className="flex flex-col gap-3 rounded-lg border border-[#e4ece2] px-4 py-4 dark:border-white/10 md:flex-row md:items-center md:justify-between">
                   <div className="min-w-0">
@@ -86,7 +94,7 @@ export default function WalletPage({ expenses, isAdmin, money, onOpenExpense, on
                   </div>
                 </article>
               ))}
-            </div>
+              </div>
 
             <Pagination
               currentPage={currentPage}
@@ -96,10 +104,11 @@ export default function WalletPage({ expenses, isAdmin, money, onOpenExpense, on
               totalItems={orderedExpenses.length}
               totalPages={totalPages}
             />
-          </div>
-        ) : (
-          <p className="text-sm text-[#5b6d61] dark:text-white/65">Todavia no hay egresos registrados.</p>
-        )}
+            </div>
+          ) : (
+            <p className="mt-4 text-sm text-[#5b6d61] dark:text-white/65">Todavia no hay egresos registrados.</p>
+          )
+        ) : null}
       </SectionBlock>
     </div>
   );

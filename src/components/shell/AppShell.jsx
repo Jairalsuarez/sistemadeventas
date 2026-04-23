@@ -14,8 +14,7 @@ export default function AppShell() {
     useAppContext();
   const [openNotifications, setOpenNotifications] = useState(false);
   const notificationRef = useRef(null);
-  const isAdmin = ["admin", "superadmin"].includes(user?.role);
-  const canManageUsers = user?.role === "superadmin";
+  const isAdmin = user?.role === "admin";
 
   useEffect(() => {
     setOpenNotifications(false);
@@ -81,7 +80,7 @@ export default function AppShell() {
       />
 
       <div className="mx-auto flex max-w-[1440px]">
-        <SideNav canManageUsers={canManageUsers} isAdmin={isAdmin} />
+        <SideNav isAdmin={isAdmin} />
         <div className="min-w-0 flex-1">
           <main className="px-4 py-6 lg:px-6">
             <Outlet />

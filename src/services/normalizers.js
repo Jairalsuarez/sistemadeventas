@@ -19,10 +19,9 @@ export function buildDisplayName(profile = {}) {
 export function normalizeRole(role) {
   if (!role) return "vendedor";
   const value = String(role).toLowerCase().trim();
-  if (value === "superadmin") return "superadmin";
   if (value === "admin") return "admin";
   if (value === "seller" || value === "vendedor") return "vendedor";
-  return value;
+  return "vendedor";
 }
 
 export function safeNumber(value) {
@@ -34,6 +33,7 @@ export function normalizeProduct(product) {
     id: product.id,
     nombre: product.nombre || "",
     categoria: product.categoria || "General",
+    marca: product.marca || "",
     descripcion: product.descripcion || "",
     precio: safeNumber(product.precio),
     stock: safeNumber(product.stock),

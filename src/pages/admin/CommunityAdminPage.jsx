@@ -13,9 +13,9 @@ function formatCommentDate(value) {
 
 function cardTone(index) {
   const tones = [
-    "border-[#d9efde] bg-[#f6fbf7]",
-    "border-[#fde8d9] bg-[#fffaf5]",
-    "border-[#e3e8ff] bg-[#f7f8ff]",
+    "border-[#d9efde] bg-white",
+    "border-[#fde8d9] bg-white",
+    "border-[#e3e8ff] bg-white",
   ];
   return tones[index % tones.length];
 }
@@ -56,7 +56,7 @@ export default function CommunityAdminPage({ feedbacks, onDelete }) {
                 >
                   <div className="flex items-start justify-between gap-3">
                     <div className="flex items-center gap-3">
-                      <span className="inline-flex h-10 w-10 items-center justify-center rounded-full bg-white/80 text-[#1f7a3a] dark:bg-white/10">
+                      <span className="inline-flex h-10 w-10 items-center justify-center rounded-full border border-[#e1ece3] bg-white text-[#1f7a3a] dark:bg-white/10">
                         <Icon name="chat" />
                       </span>
                       <div>

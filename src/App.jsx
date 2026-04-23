@@ -16,9 +16,9 @@ const ProfilePage = lazy(() => import("./pages/account/ProfilePage.jsx"));
 const LoginPage = lazy(() => import("./pages/auth/LoginPage.jsx"));
 const ProductsPage = lazy(() => import("./pages/catalog/ProductsPage.jsx"));
 const PublicCatalogPage = lazy(() => import("./pages/catalog/PublicCatalogPage.jsx"));
+const PublicSearchResultsPage = lazy(() => import("./pages/catalog/PublicSearchResultsPage.jsx"));
 const AboutPage = lazy(() => import("./pages/public/AboutPage.jsx"));
 const CommunityPage = lazy(() => import("./pages/public/CommunityPage.jsx"));
-const ContactPage = lazy(() => import("./pages/public/ContactPage.jsx"));
 const DirectionsPage = lazy(() => import("./pages/public/DirectionsPage.jsx"));
 const HomePage = lazy(() => import("./pages/public/HomePage.jsx"));
 const DashboardPage = lazy(() => import("./pages/dashboard/DashboardPage.jsx"));
@@ -37,7 +37,6 @@ function App() {
     createSale,
     createSchedule,
     deleteCommunityFeedback,
-    deleteManagedUser,
     deleteSchedule,
     dismissToast,
     editing,
@@ -59,7 +58,6 @@ function App() {
     saleModal,
     saleSubmitting,
     saleTotal,
-    saveManagedUser,
     saveProduct,
     saveProfile,
     scheduleForm,
@@ -119,11 +117,22 @@ function App() {
               />
             }
           />
+          <Route
+            path="/productos/resultados"
+            element={
+              <PublicSearchResultsPage
+                app={app}
+                money={money}
+                onOpenLoginPage={() => navigate("/login")}
+                onView={setSelected}
+                products={visibleProducts}
+              />
+            }
+          />
           <Route path="/login" element={<LoginPage />} />
           <Route path="/about-us" element={<AboutPage app={app} />} />
           <Route path="/comunidad" element={<CommunityPage app={app} feedbacks={communityFeedbacks} />} />
           <Route path="/como-llegar" element={<DirectionsPage app={app} />} />
-          <Route path="/contacto" element={<ContactPage app={app} />} />
 
           <Route element={<ProtectedRoute />}>
             <Route element={<PanelLayout />}>
@@ -144,7 +153,7 @@ function App() {
                 element={
                   <WalletPage
                     expenses={app.expenses || []}
-                    isAdmin={["admin", "superadmin"].includes(user?.role)}
+                    isAdmin={user?.role === "admin"}
                     money={money}
                     onOpenExpense={() => setExpenseModal(true)}
                     onOpenWallet={() => setWalletModal(true)}
@@ -157,7 +166,7 @@ function App() {
                 element={
                   <ProductsPage
                     app={app}
-                    canEdit={["admin", "superadmin"].includes(user?.role)}
+                    canEdit={user?.role === "admin"}
                     money={money}
                     onEdit={openEditProduct}
                     onNewProduct={openCreateProduct}
@@ -170,7 +179,7 @@ function App() {
             </Route>
           </Route>
 
-          <Route element={<ProtectedRoute allowedRoles={["admin", "superadmin"]} />}>
+          <Route element={<ProtectedRoute allowedRoles={["admin"]} />}>
             <Route element={<PanelLayout />}>
               <Route
                 path="/panel/agenda"
@@ -182,17 +191,13 @@ function App() {
                     setScheduleForm={setScheduleForm}
                     upcomingSchedules={upcomingSchedules}
                     updateScheduleStatus={updateScheduleStatus}
+                    users={app.users || []}
                   />
                 }
               />
               <Route path="/panel/comentarios" element={<CommunityAdminPage feedbacks={communityFeedbacks} onDelete={deleteCommunityFeedback} />} />
               <Route path="/panel/analitica" element={<SalesAnalyticsPage expenses={app.expenses || []} money={money} sales={app.sales || []} />} />
-            </Route>
-          </Route>
-
-          <Route element={<ProtectedRoute allowedRoles={["superadmin"]} />}>
-            <Route element={<PanelLayout />}>
-              <Route path="/panel/usuarios" element={<UsersPage onDelete={deleteManagedUser} onSave={saveManagedUser} sessionMode={session?.mode} users={app.users || []} />} />
+              <Route path="/panel/usuarios" element={<UsersPage users={app.users || []} />} />
             </Route>
           </Route>
 
