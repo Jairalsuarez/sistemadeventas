@@ -1,0 +1,562 @@
+/* eslint-disable react-refresh/only-export-components */
+import { createContext, useContext, useEffect, useMemo, useState } from "react";
+import useAccountActions from "../hooks/useAccountActions.jsx";
+import useAuthSession from "../hooks/useAuthSession.jsx";
+import useCatalogActions from "../hooks/useCatalogActions.jsx";
+import useDashboardMetrics from "../hooks/useDashboardMetrics.jsx";
+import useCookieState from "../hooks/useCookieState.jsx";
+import useNotificationCenter from "../hooks/useNotificationCenter.jsx";
+import useOperationsActions from "../hooks/useOperationsActions.jsx";
+import useProductEditor from "../hooks/useProductEditor.jsx";
+import useSupabaseSync from "../hooks/useSupabaseSync.jsx";
+import useToastQueue from "../hooks/useToastQueue.jsx";
+import { getAppData, saveAppData } from "../services/appDataService.js";
+import { getSession, restoreSupabaseSession, verifySupabasePassword } from "../services/authService.js";
+import {
+  createRemoteDistributor,
+  createRemoteExpenseCategory,
+  createRemoteCommunityFeedback,
+  createRemoteExpense,
+  createRemoteSale,
+  createRemoteSchedule,
+  createRemoteShift,
+  createRemoteWalletMovement,
+  deleteRemoteCommunityFeedback,
+  deleteRemoteSchedule,
+  fetchRemoteCommunityFeedback,
+  updateRemoteScheduleStatus,
+  updateRemoteShift,
+  upsertRemoteWalletState,
+} from "../services/operationsService.js";
+import { createRemoteManagedUser, mergeUsers, updateRemoteProfile } from "../services/profileService.js";
+import { deleteRemoteProduct, upsertRemoteProduct } from "../services/productService.js";
+import { storageReady, uploadImage } from "../services/storageService.js";
+
+const AppContext = createContext(null);
+
+const LOW_STOCK_LIMIT = 5;
+const EXPENSE_CATEGORIES = ["Servicios", "Mercaderia", "Pagos", "Inversion", "Transporte", "Otros"];
+const EMPTY_PRODUCT = {
+  nombre: "",
+  categoria: "Bebidas",
+  descripcion: "",
+  precio: 0,
+  stock: 0,
+  imagen_url: "",
+  activo: true,
+};
+const EMPTY_WALLET_FORM = { saldo: 0, motivo: "", password: "", confirmationAccepted: false };
+const EMPTY_EXPENSE = {
+  categoria: "Mercaderia",
+  categoryId: "",
+  categoryName: "Mercaderia",
+  isNewCategory: false,
+  newCategoryName: "",
+  descripcion: "",
+  detalleOferta: "",
+  distributorId: "",
+  distributorName: "",
+  isNewDistributor: false,
+  newDistributorName: "",
+  evidenceUrl: "",
+  evidencePreviewUrl: "",
+  evidenceName: "",
+  cantidad: 1,
+  unitCost: 0,
+  monto: 0,
+  montoInput: "",
+  confirmationAccepted: false,
+};
+const EMPTY_SALE_PAYMENT = { method: "efectivo", evidenceUrl: "", evidenceName: "" };
+const EMPTY_SCHEDULE_FORM = { fecha: "", inicio: "", fin: "", responsable: "", turno: "Mañana", notas: "" };
+
+const money = (n) => new Intl.NumberFormat("es-EC", { style: "currency", currency: "USD" }).format(Number(n || 0));
+const shortTime = (value) => new Intl.DateTimeFormat("es-EC", { timeStyle: "short" }).format(new Date(value));
+const formatDate = (value, config = { dateStyle: "medium" }) => new Intl.DateTimeFormat("es-EC", config).format(new Date(value));
+const personName = (person = {}) => [person.nombre, person.apellido].filter(Boolean).join(" ").trim() || person.nombre || "Usuario";
+
+const isMissingRelationError = (error = "") => {
+  const text = String(error || "").toLowerCase();
+  return text.includes("could not find the table") || text.includes("relation") || text.includes("schema cache") || text.includes("column");
+};
+
+export function AppProvider({ children }) {
+  const [app, setApp] = useState(() => getAppData());
+  const [session, setSession] = useState(() => getSession());
+  const [theme, setTheme] = useCookieState("ventas-theme", "light");
+  const [selected, setSelected] = useState(null);
+  const [saleModal, setSaleModal] = useState(false);
+  const [expenseModal, setExpenseModal] = useState(false);
+  const [walletModal, setWalletModal] = useState(false);
+  const [syncing, setSyncing] = useState(false);
+  const [uploading, setUploading] = useState(false);
+  const [expense, setExpense] = useState(EMPTY_EXPENSE);
+  const [walletForm, setWalletForm] = useState(() => ({ ...EMPTY_WALLET_FORM, saldo: getAppData().wallet.saldoActual }));
+  const [shiftCash, setShiftCash] = useState(0);
+  const [saleLines, setSaleLines] = useState([{ productId: "", cantidad: 1 }]);
+  const [salePayment, setSalePayment] = useState(EMPTY_SALE_PAYMENT);
+  const [scheduleForm, setScheduleForm] = useState(EMPTY_SCHEDULE_FORM);
+  const [saleSubmitting, setSaleSubmitting] = useState(false);
+  const [expenseSubmitting, setExpenseSubmitting] = useState(false);
+  const [feedbackSubmitting, setFeedbackSubmitting] = useState(false);
+  const { toasts, pushToast, dismissToast } = useToastQueue();
+  const { editing, productForm, productModal, setProductForm, setProductModal, resetProductFlow, openCreateProduct, openEditProduct } =
+    useProductEditor(EMPTY_PRODUCT);
+
+  const commit = (updater) => setApp((current) => (typeof updater === "function" ? updater(current) : updater));
+  const { notify, markNotificationRead, markAllNotificationsRead } = useNotificationCenter(commit);
+
+  const inform = (message, type = "info", shouldStore = false) => {
+    pushToast(message, type);
+    if (shouldStore) notify(message, personName(user) || "Sabores Tropicales", type);
+  };
+  const { loginModal, setLoginModal, loginLoading, authChecking, setAuthChecking, loginError, loginForm, setLoginForm, handleLogin, logout } = useAuthSession({
+    inform,
+    personName,
+    setSession,
+  });
+
+  useEffect(() => {
+    document.documentElement.dataset.theme = theme;
+    document.documentElement.classList.toggle("dark", theme === "dark");
+  }, [theme]);
+
+  useEffect(() => saveAppData(app), [app]);
+  useEffect(() => setWalletForm((current) => ({ ...current, saldo: app.wallet.saldoActual })), [app.wallet.saldoActual]);
+  useSupabaseSync(session, setSession, commit, setSyncing);
+  useEffect(() => {
+    if (session && !syncing) {
+      setAuthChecking(false);
+    }
+  }, [session, syncing, setAuthChecking]);
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      if (session) return;
+      setAuthChecking(true);
+      const restored = await restoreSupabaseSession();
+      if (cancelled) return;
+      if (restored.ok) {
+        setSession(restored.session);
+      }
+      setAuthChecking(false);
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [session, setAuthChecking]);
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      const result = await fetchRemoteCommunityFeedback();
+      if (!cancelled && result.ok) {
+        commit((current) => ({ ...current, communityFeedbacks: result.feedbacks }));
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  const user = useMemo(() => {
+    if (!session) return null;
+    const localUser = app.users.find((item) => item.id === session.userId);
+    if (localUser) {
+      return {
+        ...localUser,
+        apellido: localUser.apellido || session.apellido || "",
+        email: localUser.email || session.email,
+        telefono: localUser.telefono || session.telefono || "",
+        avatarUrl: localUser.avatarUrl || session.avatarUrl || "",
+        displayName: personName(localUser),
+      };
+    }
+    return {
+      id: session.userId,
+      nombre: session.nombre,
+      apellido: session.apellido || "",
+      email: session.email,
+      telefono: session.telefono || "",
+      role: session.role,
+      avatarUrl: session.avatarUrl || "",
+      displayName: session.displayName || personName(session),
+      source: session.mode,
+    };
+  }, [app.users, session]);
+
+  useEffect(() => {
+    const legacyAdminShifts = (app.turnos || []).filter((turno) => {
+      if (turno.estado !== "abierto") return false;
+      const owner = (app.users || []).find((item) => item.id === turno.userId);
+      return owner?.role && owner.role !== "vendedor";
+    });
+
+    if (!legacyAdminShifts.length) return;
+
+    const closedAt = new Date().toISOString();
+    const salesTotals = new Map(
+      legacyAdminShifts.map((turno) => [
+        turno.id,
+        (app.sales || []).filter((sale) => sale.shiftId === turno.id).reduce((acc, sale) => acc + Number(sale.total || 0), 0),
+      ])
+    );
+
+    const sanitizedIds = new Set(legacyAdminShifts.map((turno) => turno.id));
+
+    commit((current) => ({
+      ...current,
+      turnos: (current.turnos || []).map((turno) =>
+        sanitizedIds.has(turno.id)
+          ? {
+              ...turno,
+              estado: "cerrado",
+              totalVentas: salesTotals.get(turno.id) || turno.totalVentas || 0,
+              saldoFinal: Number(turno.saldoInicial || 0) + Number(salesTotals.get(turno.id) || turno.totalVentas || 0),
+              closedAt: turno.closedAt || closedAt,
+            }
+          : turno
+      ),
+    }));
+
+    legacyAdminShifts.forEach((turno) => {
+      updateRemoteShift({
+        ...turno,
+        estado: "cerrado",
+        totalVentas: salesTotals.get(turno.id) || turno.totalVentas || 0,
+        saldoFinal: Number(turno.saldoInicial || 0) + Number(salesTotals.get(turno.id) || turno.totalVentas || 0),
+        closedAt: turno.closedAt || closedAt,
+      });
+    });
+  }, [app.sales, app.turnos, app.users]);
+
+  const {
+    activeShift,
+    lowStock,
+    featuredProduct,
+    upcomingSchedules,
+    visibleProducts,
+    salePreview,
+    saleTotal,
+    salesToday,
+    mySalesToday,
+    unreadNotifications,
+    adminStats,
+    sellerStats,
+  } = useDashboardMetrics({
+    app,
+    session,
+    user,
+    saleLines,
+    lowStockLimit: LOW_STOCK_LIMIT,
+    money,
+    formatDate,
+    personName,
+  });
+  const recentActivity = useMemo(() => {
+    const sales = app.sales.slice(0, 4).map((sale) => ({
+      id: `sale-${sale.id}`,
+      title: `${sale.userName} registro una venta`,
+      subtitle: `${money(sale.total)} • ${formatDate(sale.createdAt, { dateStyle: "medium", timeStyle: "short" })}`,
+      tone: "success",
+    }));
+    const alerts = lowStock.slice(0, 3).map((product) => ({
+      id: `stock-${product.id}`,
+      title: `${product.nombre} necesita reposicion`,
+      subtitle: `${product.stock} unidades disponibles`,
+      tone: "warning",
+    }));
+    return [...sales, ...alerts];
+  }, [app.sales, lowStock]);
+
+  const openSaleFlow = () => {
+    if (user?.role === "vendedor" && !activeShift) {
+      return inform("Debes iniciar un turno antes de registrar ventas.", "warning");
+    }
+    setSaleLines([{ productId: "", cantidad: 1 }]);
+    setSalePayment(EMPTY_SALE_PAYMENT);
+    setSaleModal(true);
+  };
+
+  const uploadAsset = async (file, folder = "products") => {
+    try {
+      setUploading(true);
+      const url = await uploadImage(file, folder);
+      return url;
+    } catch (error) {
+      inform(error.message, "error");
+      return "";
+    } finally {
+      setUploading(false);
+    }
+  };
+
+  const uploadProductImage = async (file) => {
+    const url = await uploadAsset(file, "products");
+    if (url) {
+      setProductForm((current) => ({ ...current, imagen_url: url }));
+      inform("Imagen subida correctamente.", "success");
+    }
+  };
+  const uploadSaleEvidence = async (file) => {
+    const url = await uploadAsset(file, "sales");
+    if (url) {
+      setSalePayment((current) => ({ ...current, evidenceUrl: url, evidenceName: file.name || "evidencia" }));
+      inform("Evidencia subida correctamente.", "success");
+    }
+  };
+  const uploadExpenseEvidence = async (file) => {
+    const previewUrl = URL.createObjectURL(file);
+    const url = await uploadAsset(file, "expenses");
+    if (url) {
+      setExpense((current) => ({ ...current, evidenceUrl: url, evidencePreviewUrl: previewUrl, evidenceName: file.name || "evidencia" }));
+      inform("Evidencia subida correctamente.", "success");
+    }
+  };
+  const { saveProduct, removeProduct, setFeaturedProduct } = useCatalogActions({
+    app,
+    session,
+    user,
+    editing,
+    productForm,
+    commit,
+    notify,
+    inform,
+    personName,
+    resetProductFlow,
+    upsertRemoteProduct,
+    deleteRemoteProduct,
+  });
+  const { startShift, closeShift, createSale, createExpense, adjustWallet, createSchedule, updateScheduleStatus, deleteSchedule } =
+    useOperationsActions({
+      app,
+      session,
+      user,
+      activeShift,
+      shiftCash,
+      setShiftCash,
+      saleLines,
+      setSaleLines,
+      salePayment,
+      setSalePayment,
+      salePreview,
+      saleTotal,
+      saleSubmitting,
+      setSaleSubmitting,
+      setSaleModal,
+      expense,
+      expenseCategories: app.expenseCategories || [],
+      distributors: app.distributors || [],
+      setExpense,
+      expenseSubmitting,
+      setExpenseSubmitting,
+      setExpenseModal,
+      walletForm,
+      setWalletForm,
+      setWalletModal,
+      scheduleForm,
+      setScheduleForm,
+      commit,
+      notify,
+      inform,
+      personName,
+      money,
+      shortTime,
+      isMissingRelationError,
+      emptyWalletForm: EMPTY_WALLET_FORM,
+      emptyScheduleForm: EMPTY_SCHEDULE_FORM,
+      expenseCategories: EXPENSE_CATEGORIES,
+      createRemoteShift,
+      updateRemoteShift,
+      createRemoteSale,
+      upsertRemoteWalletState,
+      createRemoteWalletMovement,
+      createRemoteExpense,
+      createRemoteExpenseCategory,
+      createRemoteDistributor,
+      createRemoteSchedule,
+      updateRemoteScheduleStatus,
+      deleteRemoteSchedule,
+      verifySupabasePassword,
+    });
+
+  const uploadProfileAvatar = async (file) => {
+    const url = await uploadAsset(file, "avatars");
+    if (url) inform("Foto actualizada.", "success");
+    return url;
+  };
+
+  const submitCommunityFeedback = async ({ comment }) => {
+    const cleanComment = comment.trim();
+    if (!cleanComment) return inform("Escribe un comentario antes de enviarlo.", "warning");
+    if (feedbackSubmitting) return;
+
+    setFeedbackSubmitting(true);
+    const draft = {
+      id: crypto.randomUUID(),
+      comment: cleanComment,
+      createdAt: new Date().toISOString(),
+    };
+
+    commit((current) => ({
+      ...current,
+      communityFeedbacks: [draft, ...(current.communityFeedbacks || [])].slice(0, 60),
+    }));
+    inform("Gracias por compartir tu comentario.", "success");
+
+    try {
+      const remote = await createRemoteCommunityFeedback(draft);
+      if (remote.ok) {
+        commit((current) => ({
+          ...current,
+          communityFeedbacks: current.communityFeedbacks.map((item) => (item.id === draft.id ? remote.feedback : item)),
+        }));
+      }
+    } finally {
+      setFeedbackSubmitting(false);
+    }
+
+    return { ok: true };
+  };
+
+  const deleteCommunityFeedback = async (feedbackId) => {
+    if (!["admin", "superadmin"].includes(user?.role)) return inform("Solo administracion puede eliminar comentarios.", "warning");
+    const target = (app.communityFeedbacks || []).find((item) => item.id === feedbackId);
+    if (!target) return { ok: false };
+
+    commit((current) => ({
+      ...current,
+      communityFeedbacks: (current.communityFeedbacks || []).filter((item) => item.id !== feedbackId),
+    }));
+
+    const remote = await deleteRemoteCommunityFeedback(feedbackId);
+    if (session?.mode === "supabase" && !remote.ok) {
+      commit((current) => ({
+        ...current,
+        communityFeedbacks: [target, ...(current.communityFeedbacks || [])].sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt)),
+      }));
+      inform("No se pudo eliminar el comentario. Intenta de nuevo.", "error");
+      return { ok: false };
+    }
+
+    notify(`${personName(user)} elimino un comentario de la comunidad.`, personName(user), "warning");
+    inform("Comentario eliminado.", "success");
+    return { ok: true };
+  };
+  const { saveProfile, saveManagedUser, deleteManagedUser } = useAccountActions({
+    session,
+    user,
+    users: app.users || [],
+    commit,
+    setSession,
+    notify,
+    inform,
+    personName,
+    mergeUsers,
+    createRemoteManagedUser,
+    updateRemoteProfile,
+  });
+
+  const value = {
+    app,
+    session,
+    user,
+    theme,
+    setTheme,
+    selected,
+    setSelected,
+    productModal,
+    setProductModal,
+    saleModal,
+    setSaleModal,
+    expenseModal,
+    setExpenseModal,
+    walletModal,
+    setWalletModal,
+    loginModal,
+    setLoginModal,
+    editing,
+    syncing,
+    uploading,
+    saleSubmitting,
+    expenseSubmitting,
+    feedbackSubmitting,
+    authChecking,
+    loginLoading,
+    loginError,
+    loginForm,
+    setLoginForm,
+    productForm,
+    setProductForm,
+    expense,
+    setExpense,
+    walletForm,
+    setWalletForm,
+    shiftCash,
+    setShiftCash,
+    saleLines,
+    setSaleLines,
+    salePayment,
+    setSalePayment,
+    scheduleForm,
+    setScheduleForm,
+    activeShift,
+    lowStock,
+    featuredProduct,
+    upcomingSchedules,
+    visibleProducts,
+    salePreview,
+    saleTotal,
+    salesToday,
+    mySalesToday,
+    recentActivity,
+    adminStats,
+    sellerStats,
+    toasts,
+    dismissToast,
+    notifications: app.notifications || [],
+    communityFeedbacks: app.communityFeedbacks || [],
+    distributors: app.distributors || [],
+    expenseCategories: app.expenseCategories || [],
+    unreadNotifications,
+    money,
+    formatDate,
+    storageReady,
+    resetProductFlow,
+    openCreateProduct,
+    openEditProduct,
+    openSaleFlow,
+    handleLogin,
+    saveProduct,
+    removeProduct,
+    uploadProductImage,
+    uploadSaleEvidence,
+    uploadExpenseEvidence,
+    startShift,
+    closeShift,
+    createSale,
+    createExpense,
+    adjustWallet,
+    createSchedule,
+    deleteSchedule,
+    updateScheduleStatus,
+    setFeaturedProduct,
+    saveProfile,
+    uploadProfileAvatar,
+    submitCommunityFeedback,
+    deleteCommunityFeedback,
+    saveManagedUser,
+    deleteManagedUser,
+    markNotificationRead,
+    markAllNotificationsRead,
+    inform,
+    logout,
+  };
+
+  return <AppContext.Provider value={value}>{children}</AppContext.Provider>;
+}
+
+export function useAppContext() {
+  const context = useContext(AppContext);
+  if (!context) throw new Error("useAppContext must be used within AppProvider");
+  return context;
+}
