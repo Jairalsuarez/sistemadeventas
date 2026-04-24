@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import ActivityFeed from "../../components/dashboard/ActivityFeed";
+import CloseShiftModal from "../../components/modals/CloseShiftModal";
 import StartShiftModal from "../../components/modals/StartShiftModal";
 import Icon from "../../components/ui/Icon";
 import PageHeader from "../../components/ui/PageHeader";
@@ -31,6 +32,7 @@ export default function SellerDashboardPage({
   sellerStats,
 }) {
   const [startShiftModalOpen, setStartShiftModalOpen] = useState(false);
+  const [closeShiftModalOpen, setCloseShiftModalOpen] = useState(false);
   const [showRecentActivity, setShowRecentActivity] = useState(false);
   const [now, setNow] = useState(() => Date.now());
   const canRegisterSale = Boolean(activeShift);
@@ -98,7 +100,7 @@ export default function SellerDashboardPage({
             <button
               className="rounded-xl border border-[#dfe7db] px-4 py-3 text-sm font-semibold disabled:cursor-not-allowed disabled:opacity-50 dark:border-[#314056] dark:bg-[#182235] dark:text-[#f8fafc] sm:px-6 sm:py-4 sm:text-base"
               disabled={Boolean(activeShift) && !canCloseShift}
-              onClick={activeShift ? onCloseShift : () => setStartShiftModalOpen(true)}
+              onClick={activeShift ? () => setCloseShiftModalOpen(true) : () => setStartShiftModalOpen(true)}
               type="button"
             >
               {activeShift ? "Cerrar turno" : "Iniciar turno"}
@@ -192,6 +194,14 @@ export default function SellerDashboardPage({
           onStartShift();
         }}
         open={startShiftModalOpen}
+      />
+      <CloseShiftModal
+        onClose={() => setCloseShiftModalOpen(false)}
+        onConfirm={() => {
+          setCloseShiftModalOpen(false);
+          onCloseShift();
+        }}
+        open={closeShiftModalOpen}
       />
     </div>
   );

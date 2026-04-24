@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import ActivityFeed from "../../components/dashboard/ActivityFeed";
+import CloseShiftModal from "../../components/modals/CloseShiftModal";
 import Icon from "../../components/ui/Icon";
 import PageHeader from "../../components/ui/PageHeader";
 import SectionBlock from "../../components/ui/SectionBlock";
@@ -18,6 +19,7 @@ export default function AdminDashboardPage({
 }) {
   const [showRecentActivity, setShowRecentActivity] = useState(false);
   const [publicAnalytics, setPublicAnalytics] = useState(() => getPublicAnalytics());
+  const [shiftToClose, setShiftToClose] = useState(null);
   const scheduleRows = upcomingSchedules || [];
   const sellers = sellerShiftRows || [];
   const nextSchedule = scheduleRows[0] || null;
@@ -116,7 +118,7 @@ export default function AdminDashboardPage({
                 {seller.activeShift ? (
                   <button
                     className="mt-4 rounded-md border border-[#f0c7ba] bg-[#fff7f4] px-4 py-2 text-sm font-medium text-[#b42318] transition hover:bg-[#ffefe8] dark:border-[#4b5563] dark:bg-[#111827] dark:text-[#fca5a5] dark:hover:bg-[#172033]"
-                    onClick={() => onCloseShift(seller.activeShift)}
+                    onClick={() => setShiftToClose(seller.activeShift)}
                     type="button"
                   >
                     Terminar turno
@@ -158,6 +160,17 @@ export default function AdminDashboardPage({
           </article>
         </div>
       </SectionBlock>
+
+      <CloseShiftModal
+        onClose={() => setShiftToClose(null)}
+        onConfirm={() => {
+          onCloseShift(shiftToClose);
+          setShiftToClose(null);
+        }}
+        open={Boolean(shiftToClose)}
+        text={shiftToClose ? `Desea cerrar manualmente el turno de ${shiftToClose.userName || "este vendedor"}?` : "Desea cerrar manualmente este turno?"}
+        title="Cerrar turno del vendedor"
+      />
     </div>
   );
 }

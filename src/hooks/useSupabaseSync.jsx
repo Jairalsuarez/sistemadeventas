@@ -15,6 +15,11 @@ import {
 import { fetchRemoteProducts } from "../services/productService.js";
 import { fetchRemoteProfiles, mergeUsers } from "../services/profileService.js";
 
+const getTimestamp = (value) => {
+  const time = new Date(value || 0).getTime();
+  return Number.isFinite(time) ? time : 0;
+};
+
 export default function useSupabaseSync(session, setSession, commit, setSyncing) {
   const syncRemoteData = async () => {
     if (!supabaseReady || !supabase) return;
@@ -47,20 +52,26 @@ export default function useSupabaseSync(session, setSession, commit, setSyncing)
       fetchRemoteCommunityFeedback(),
     ]);
 
-    commit((current) => ({
-      ...current,
-      products: productsResult.ok ? productsResult.products : current.products,
-      turnos: shiftsResult.ok ? shiftsResult.shifts : current.turnos,
-      wallet: walletResult.ok ? walletResult.wallet : current.wallet,
-      schedules: schedulesResult.ok ? schedulesResult.schedules : current.schedules,
-      sales: salesResult.ok ? salesResult.sales : current.sales,
-      expenses: expensesResult.ok ? expensesResult.expenses : current.expenses,
-      distributors: distributorsResult.ok ? distributorsResult.distributors : current.distributors,
-      expenseCategories: categoriesResult.ok ? categoriesResult.categories : current.expenseCategories,
-      users: profilesResult.ok ? mergeUsers(current.users, profilesResult.profiles) : current.users,
-      notifications: notificationsResult.ok ? notificationsResult.notifications : current.notifications,
-      communityFeedbacks: feedbackResult.ok ? feedbackResult.feedbacks : current.communityFeedbacks,
-    }));
+    commit((current) => {
+      const shouldKeepLocalWallet =
+        walletResult.ok &&
+        getTimestamp(current.wallet?.updatedAt) > getTimestamp(walletResult.wallet?.updatedAt);
+
+      return {
+        ...current,
+        products: productsResult.ok ? productsResult.products : current.products,
+        turnos: shiftsResult.ok ? shiftsResult.shifts : current.turnos,
+        wallet: walletResult.ok && !shouldKeepLocalWallet ? walletResult.wallet : current.wallet,
+        schedules: schedulesResult.ok ? schedulesResult.schedules : current.schedules,
+        sales: salesResult.ok ? salesResult.sales : current.sales,
+        expenses: expensesResult.ok ? expensesResult.expenses : current.expenses,
+        distributors: distributorsResult.ok ? distributorsResult.distributors : current.distributors,
+        expenseCategories: categoriesResult.ok ? categoriesResult.categories : current.expenseCategories,
+        users: profilesResult.ok ? mergeUsers(current.users, profilesResult.profiles) : current.users,
+        notifications: notificationsResult.ok ? notificationsResult.notifications : current.notifications,
+        communityFeedbacks: feedbackResult.ok ? feedbackResult.feedbacks : current.communityFeedbacks,
+      };
+    });
 
     setSyncing(false);
   };

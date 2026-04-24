@@ -326,6 +326,9 @@ export default function useOperationsActions({
 
       const saleRecord = saleRemote.ok ? saleRemote.sale : draftSale;
       const walletRemote = await upsertRemoteWalletState(nextWallet, session?.mode === "supabase" ? session.userId : null);
+      if (session?.mode === "supabase" && !walletRemote.ok) {
+        inform(`La venta se registro, pero no se pudo actualizar la cartera en Supabase. ${walletRemote.error || "Revisa wallet_state."}`, "warning");
+      }
 
       if (session?.mode === "supabase") {
         await createRemoteWalletMovement({

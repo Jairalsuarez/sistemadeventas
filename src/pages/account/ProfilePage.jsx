@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import Modal from "../../components/Modal";
 import Icon from "../../components/ui/Icon";
@@ -10,6 +10,11 @@ export default function ProfilePage({ onSave, onUploadAvatar, user }) {
   const [form, setForm] = useState({ nombre: user?.nombre || "", apellido: user?.apellido || "", telefono: user?.telefono || "", avatarUrl: user?.avatarUrl || "" });
   const [avatarModalOpen, setAvatarModalOpen] = useState(false);
   const [avatarBusy, setAvatarBusy] = useState(false);
+  const formRef = useRef(form);
+
+  useEffect(() => {
+    formRef.current = form;
+  }, [form]);
 
   useEffect(() => {
     setForm({ nombre: user?.nombre || "", apellido: user?.apellido || "", telefono: user?.telefono || "", avatarUrl: user?.avatarUrl || "" });
@@ -46,10 +51,10 @@ export default function ProfilePage({ onSave, onUploadAvatar, user }) {
     setAvatarBusy(true);
     const url = await onUploadAvatar(file);
     if (url) {
-      const nextForm = { ...form, avatarUrl: url };
+      const nextForm = { ...formRef.current, avatarUrl: url };
       setForm(nextForm);
-      await onSave(nextForm);
-      setAvatarModalOpen(false);
+      const result = await onSave(nextForm);
+      if (result?.ok) setAvatarModalOpen(false);
     }
     setAvatarBusy(false);
     event.target.value = "";
@@ -58,11 +63,11 @@ export default function ProfilePage({ onSave, onUploadAvatar, user }) {
   const removeAvatar = async () => {
     if (!form.avatarUrl) return setAvatarModalOpen(false);
     setAvatarBusy(true);
-    const nextForm = { ...form, avatarUrl: "" };
+    const nextForm = { ...formRef.current, avatarUrl: "" };
     setForm(nextForm);
-    await onSave(nextForm);
+    const result = await onSave(nextForm);
     setAvatarBusy(false);
-    setAvatarModalOpen(false);
+    if (result?.ok) setAvatarModalOpen(false);
   };
 
   return (
