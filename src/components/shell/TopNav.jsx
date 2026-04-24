@@ -1,5 +1,6 @@
 import { NavLink } from "react-router-dom";
 import Icon from "../ui/Icon";
+import { getOptimizedImageUrl } from "../../services/storageService.js";
 
 function fullName(user = {}) {
   return [user.nombre, user.apellido].filter(Boolean).join(" ").trim() || user.nombre || "Usuario";
@@ -15,7 +16,7 @@ function initials(user = {}) {
 
 function UserAvatar({ user }) {
   if (user?.avatarUrl) {
-    return <img alt={fullName(user)} className="h-9 w-9 rounded-full object-cover" src={user.avatarUrl} />;
+    return <img alt={fullName(user)} className="h-9 w-9 rounded-full object-cover" decoding="async" loading="lazy" src={getOptimizedImageUrl(user.avatarUrl, { width: 72, height: 72 })} />;
   }
 
   return <div className="grid h-9 w-9 place-items-center rounded-full border border-[#e1ece3] bg-white text-sm font-semibold text-[#183325] dark:border-[#314056] dark:bg-[#182235] dark:text-[#f8fafc]">{initials(user)}</div>;

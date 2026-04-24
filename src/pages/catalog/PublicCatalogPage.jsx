@@ -7,6 +7,7 @@ import PageSkeleton from "../../components/ui/PageSkeleton.jsx";
 import TopNav from "../../components/shell/TopNav";
 import { trackPublicPageVisit } from "../../services/publicAnalyticsService.js";
 import { openWhatsAppChat, resolveBusinessWhatsapp } from "../../services/publicContactService.js";
+import { getOptimizedImageUrl } from "../../services/storageService.js";
 
 const PRICE_RANGES = [
   { label: "Todos los precios", value: "todos" },
@@ -83,7 +84,13 @@ function ProductCarouselCard({ money, onView, onWhatsApp, product }) {
           <Icon className="text-[18px]" name="north_east" />
         </button>
         <button className="h-[180px] w-full overflow-hidden rounded-[18px] bg-[#f7faf8]" onClick={() => onView(product)} type="button">
-          <img alt={product.nombre} className="h-full w-full object-cover transition duration-500 group-hover:scale-105" src={product.imagen_url} />
+          <img
+            alt={product.nombre}
+            className="h-full w-full object-cover transition duration-500 group-hover:scale-105"
+            decoding="async"
+            loading="lazy"
+            src={getOptimizedImageUrl(product.imagen_url, { width: 440, height: 360 })}
+          />
         </button>
       </div>
 

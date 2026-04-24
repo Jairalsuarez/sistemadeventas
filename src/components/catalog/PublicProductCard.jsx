@@ -1,4 +1,5 @@
 import Icon from "../ui/Icon";
+import { getOptimizedImageUrl } from "../../services/storageService.js";
 
 export default function PublicProductCard({ money, onView, onWhatsApp, product }) {
   const description = product.descripcion?.trim() || "Sin descripcion";
@@ -12,7 +13,13 @@ export default function PublicProductCard({ money, onView, onWhatsApp, product }
   return (
     <article className="flex h-full min-h-[500px] flex-col overflow-hidden rounded-[28px] border border-[#e1ece3] bg-white shadow-[0_18px_34px_rgba(15,23,42,0.06)] transition hover:-translate-y-1 hover:shadow-[0_26px_45px_rgba(15,23,42,0.1)]">
       <button className="relative h-60 overflow-hidden bg-white" onClick={() => onView(product)} type="button">
-        <img alt={product.nombre} className="h-full w-full object-cover transition duration-500 hover:scale-105" src={product.imagen_url} />
+        <img
+          alt={product.nombre}
+          className="h-full w-full object-cover transition duration-500 hover:scale-105"
+          decoding="async"
+          loading="lazy"
+          src={getOptimizedImageUrl(product.imagen_url, { width: 640, height: 480 })}
+        />
         <div className="absolute left-4 top-4 flex items-center gap-2">
           <span className="rounded-full bg-white px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.16em] text-[#5a7163] shadow-sm">{product.categoria}</span>
         </div>

@@ -4,6 +4,7 @@ import Modal from "../../components/Modal";
 import Icon from "../../components/ui/Icon";
 import PageHeader from "../../components/ui/PageHeader";
 import SectionBlock from "../../components/ui/SectionBlock";
+import { getOptimizedImageUrl } from "../../services/storageService.js";
 
 export default function ProfilePage({ onSave, onUploadAvatar, user }) {
   const navigate = useNavigate();
@@ -83,7 +84,7 @@ export default function ProfilePage({ onSave, onUploadAvatar, user }) {
               type="button"
             >
               {form.avatarUrl ? (
-                <img alt={fullName} className="h-full w-full object-cover" src={form.avatarUrl} />
+                <img alt={fullName} className="h-full w-full object-cover" decoding="async" loading="lazy" src={getOptimizedImageUrl(form.avatarUrl, { width: 320, height: 320 })} />
               ) : (
                 <span className="text-4xl font-semibold text-[#183325] dark:text-white">{initials}</span>
               )}
@@ -133,7 +134,7 @@ export default function ProfilePage({ onSave, onUploadAvatar, user }) {
           <div className="flex flex-col items-start gap-4 sm:flex-row sm:items-center">
             <div className="grid h-20 w-20 place-items-center overflow-hidden rounded-lg border border-[#dfe7db] bg-[#f8faf6] dark:border-[#314056] dark:bg-[#0f172a]">
               {form.avatarUrl ? (
-                <img alt={fullName} className="h-full w-full object-cover" src={form.avatarUrl} />
+                <img alt={fullName} className="h-full w-full object-cover" decoding="async" loading="lazy" src={getOptimizedImageUrl(form.avatarUrl, { width: 160, height: 160 })} />
               ) : (
                 <span className="text-2xl font-semibold text-[#183325] dark:text-white">{initials}</span>
               )}

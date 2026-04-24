@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import Icon from "../ui/Icon";
+import { getOptimizedImageUrl } from "../../services/storageService.js";
 
 const RECENT_SEARCHES_KEY = "public-catalog-recent-searches";
 
@@ -123,7 +124,7 @@ export default function PublicSearchBox({ onChange, products, value }) {
                 onClick={() => goToResults(product.nombre)}
                 type="button"
               >
-                <img alt={product.nombre} className="h-12 w-12 rounded-xl object-cover" src={product.imagen_url} />
+                <img alt={product.nombre} className="h-12 w-12 rounded-xl object-cover" decoding="async" loading="lazy" src={getOptimizedImageUrl(product.imagen_url, { width: 96, height: 96 })} />
                 <span className="min-w-0 flex-1">
                   <span className="block truncate text-sm font-semibold text-[#183325]">{product.nombre}</span>
                   <span className="block truncate text-xs text-[#6a7b70]">{product.categoria}{product.marca ? ` - ${product.marca}` : ""}</span>

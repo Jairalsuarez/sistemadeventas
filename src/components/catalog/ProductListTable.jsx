@@ -1,4 +1,5 @@
 import Icon from "../ui/Icon";
+import { getOptimizedImageUrl } from "../../services/storageService.js";
 
 function StockBadge({ stock }) {
   const tone =
@@ -27,7 +28,7 @@ export default function ProductListTable({ canEdit = false, emptyMessage, money,
           <article key={product.id} className="rounded-xl border border-[#edf1ea] p-4 dark:border-[#23314d] dark:bg-[#182235]">
             <div className="flex gap-3">
               <button className="h-20 w-20 shrink-0 overflow-hidden rounded-lg border border-[#e4ece2] bg-[#f7faf6] dark:border-[#314056] dark:bg-[#0f172a]" onClick={() => onView(product)} type="button">
-                <img alt={product.nombre} className="h-full w-full object-cover" src={product.imagen_url} />
+                <img alt={product.nombre} className="h-full w-full object-cover" decoding="async" loading="lazy" src={getOptimizedImageUrl(product.imagen_url, { width: 160, height: 160 })} />
               </button>
               <div className="min-w-0 flex-1">
                 <strong className="block font-semibold text-[#183325] dark:text-[#f8fafc]">{product.nombre}</strong>
@@ -77,7 +78,7 @@ export default function ProductListTable({ canEdit = false, emptyMessage, money,
               <td className="py-4">
                 <div className="flex gap-3">
                   <button className="h-16 w-16 overflow-hidden rounded-md border border-[#e4ece2] bg-[#f7faf6] dark:border-[#314056] dark:bg-[#0f172a]" onClick={() => onView(product)} type="button">
-                    <img alt={product.nombre} className="h-full w-full object-cover" src={product.imagen_url} />
+                    <img alt={product.nombre} className="h-full w-full object-cover" decoding="async" loading="lazy" src={getOptimizedImageUrl(product.imagen_url, { width: 128, height: 128 })} />
                   </button>
                   <div className="min-w-0">
                     <strong className="block font-semibold text-[#183325] dark:text-[#f8fafc]">{product.nombre}</strong>

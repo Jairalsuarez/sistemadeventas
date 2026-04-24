@@ -8,6 +8,37 @@ export const cloudinaryReady = Boolean(
 
 export const storageReady = Boolean(supabaseReady && STORAGE_BUCKET);
 
+export function getOptimizedImageUrl(url, options = {}) {
+  const source = String(url || "").trim();
+  if (!source) return "";
+
+  const {
+    width,
+    height,
+    crop = "fill",
+    gravity = "auto",
+    quality = "auto",
+    format = "auto",
+  } = options;
+
+  if (!source.includes("res.cloudinary.com") || source.includes("/image/upload/")) {
+    if (!source.includes("res.cloudinary.com")) return source;
+  }
+
+  const transformations = [
+    "f_auto",
+    "q_auto",
+    width ? `w_${width}` : "",
+    height ? `h_${height}` : "",
+    width || height ? `c_${crop}` : "",
+    width || height ? `g_${gravity}` : "",
+  ].filter(Boolean);
+
+  if (!transformations.length) return source;
+
+  return source.replace("/image/upload/", `/image/upload/${transformations.join(",")}/`);
+}
+
 async function uploadToCloudinary(file) {
   if (!cloudinaryReady) {
     throw new Error("Supabase Storage no responde y Cloudinary no esta configurado.");
