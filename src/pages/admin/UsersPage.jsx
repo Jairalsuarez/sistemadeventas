@@ -10,7 +10,7 @@ export default function UsersPage({ users }) {
 
   return (
     <div className="space-y-6">
-      <PageHeader eyebrow="Admin" title="Usuarios y permisos" description="Consulta las cuentas que operan el sistema. La creacion y cambios de usuarios se gestionan directamente en Supabase." />
+      <PageHeader eyebrow="Admin" title="Usuarios y permisos" />
 
       <SectionBlock description="Estos son los perfiles activos para operar el negocio." title="Cuentas activas">
         {orderedUsers.length ? (

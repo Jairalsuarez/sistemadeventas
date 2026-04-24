@@ -10,307 +10,282 @@ function startOfDay(date) {
   return next;
 }
 
-function startOfWeek(date) {
-  const next = startOfDay(date);
-  const day = next.getDay();
-  const diff = (day + 6) % 7;
-  next.setDate(next.getDate() - diff);
-  return next;
-}
-
 function startOfMonth(date) {
   return new Date(date.getFullYear(), date.getMonth(), 1);
 }
 
-function startOfYear(date) {
-  return new Date(date.getFullYear(), 0, 1);
+function endOfMonth(date) {
+  return new Date(date.getFullYear(), date.getMonth() + 1, 0, 23, 59, 59, 999);
 }
 
-function endOfRange(date) {
-  const next = new Date(date);
-  next.setHours(23, 59, 59, 999);
-  return next;
+function sumAmount(items, key) {
+  return items.reduce((acc, item) => acc + Number(item?.[key] || 0), 0);
 }
 
-function isInRange(value, start, end) {
-  const time = new Date(value).getTime();
-  return time >= start.getTime() && time <= end.getTime();
+function formatPaymentMethod(value = "") {
+  const map = {
+    efectivo: "Efectivo",
+    transferencia_directa: "Transferencia directa",
+    deuna: "Deuna",
+  };
+  return map[value] || value || "Sin definir";
 }
 
-function sumAmount(items) {
-  return items.reduce((acc, item) => acc + Number(item.total ?? item.monto ?? 0), 0);
-}
+function buildMonthlySeries({ expenses, sales, today }) {
+  return Array.from({ length: 6 }, (_, index) => {
+    const date = new Date(today.getFullYear(), today.getMonth() - (5 - index), 1);
+    const start = startOfMonth(date);
+    const end = endOfMonth(date);
+    const monthSales = sales.filter((item) => {
+      const time = new Date(item.createdAt).getTime();
+      return time >= start.getTime() && time <= end.getTime();
+    });
+    const monthExpenses = expenses.filter((item) => {
+      const time = new Date(item.createdAt).getTime();
+      return time >= start.getTime() && time <= end.getTime();
+    });
 
-function groupSalesBy(items, getKey) {
-  const map = new Map();
-
-  items.forEach((item) => {
-    const key = getKey(item);
-    const current = map.get(key) || { label: key, sales: 0, amount: 0 };
-    current.sales += 1;
-    current.amount += Number(item.total || 0);
-    map.set(key, current);
+    return {
+      id: `${date.getFullYear()}-${date.getMonth()}`,
+      label: new Intl.DateTimeFormat("es-EC", { month: "short" }).format(date),
+      fullLabel: new Intl.DateTimeFormat("es-EC", { month: "long", year: "numeric" }).format(date),
+      income: sumAmount(monthSales, "total"),
+      expense: sumAmount(monthExpenses, "monto"),
+      salesCount: monthSales.length,
+    };
   });
-
-  return [...map.values()];
 }
 
 export default function SalesAnalyticsPage({ expenses, money, sales }) {
   const today = new Date();
-  const dayStart = startOfDay(today);
-  const weekStart = startOfWeek(today);
-  const monthStart = startOfMonth(today);
-  const yearStart = startOfYear(today);
-  const periodEnd = endOfRange(today);
+  const todayStart = startOfDay(today);
+  const currentMonthStart = startOfMonth(today);
+  const currentMonthEnd = endOfMonth(today);
 
-  const dailySales = useMemo(() => sales.filter((item) => isInRange(item.createdAt, dayStart, periodEnd)), [dayStart, periodEnd, sales]);
-  const weeklySales = useMemo(() => sales.filter((item) => isInRange(item.createdAt, weekStart, periodEnd)), [periodEnd, sales, weekStart]);
-  const monthlySales = useMemo(() => sales.filter((item) => isInRange(item.createdAt, monthStart, periodEnd)), [monthStart, periodEnd, sales]);
-  const yearlySales = useMemo(() => sales.filter((item) => isInRange(item.createdAt, yearStart, periodEnd)), [periodEnd, sales, yearStart]);
+  const salesThisMonth = useMemo(
+    () =>
+      sales.filter((item) => {
+        const time = new Date(item.createdAt).getTime();
+        return time >= currentMonthStart.getTime() && time <= currentMonthEnd.getTime();
+      }),
+    [currentMonthEnd, currentMonthStart, sales]
+  );
 
-  const dailyExpenses = useMemo(() => expenses.filter((item) => isInRange(item.createdAt, dayStart, periodEnd)), [dayStart, expenses, periodEnd]);
-  const weeklyExpenses = useMemo(() => expenses.filter((item) => isInRange(item.createdAt, weekStart, periodEnd)), [expenses, periodEnd, weekStart]);
-  const monthlyExpenses = useMemo(() => expenses.filter((item) => isInRange(item.createdAt, monthStart, periodEnd)), [expenses, monthStart, periodEnd]);
-  const yearlyExpenses = useMemo(() => expenses.filter((item) => isInRange(item.createdAt, yearStart, periodEnd)), [expenses, periodEnd, yearStart]);
+  const expensesThisMonth = useMemo(
+    () =>
+      expenses.filter((item) => {
+        const time = new Date(item.createdAt).getTime();
+        return time >= currentMonthStart.getTime() && time <= currentMonthEnd.getTime();
+      }),
+    [currentMonthEnd, currentMonthStart, expenses]
+  );
 
-  const periods = [
-    { label: "Hoy", sales: dailySales, expenses: dailyExpenses, accent: "green" },
-    { label: "Semana", sales: weeklySales, expenses: weeklyExpenses, accent: "orange" },
-    { label: "Mes", sales: monthlySales, expenses: monthlyExpenses, accent: "yellow" },
-    { label: "Año", sales: yearlySales, expenses: yearlyExpenses, accent: "green" },
-  ];
+  const salesToday = useMemo(
+    () =>
+      sales.filter((item) => {
+        const time = new Date(item.createdAt).getTime();
+        return time >= todayStart.getTime();
+      }),
+    [sales, todayStart]
+  );
 
-  const summaryCards = periods.map((period) => {
-    const salesAmount = sumAmount(period.sales);
-    const expensesAmount = sumAmount(period.expenses);
-    const net = salesAmount - expensesAmount;
-    return {
-      label: `${period.label} neto`,
-      value: money(net),
-      detail: `${period.sales.length} ventas · ${money(salesAmount)} en ingresos`,
-      accent: period.accent,
-    };
-  });
+  const monthlySeries = useMemo(() => buildMonthlySeries({ expenses, sales, today }), [expenses, sales, today]);
+  const chartMax = Math.max(1, ...monthlySeries.flatMap((item) => [item.income, item.expense]));
 
-  const salesBySeller = useMemo(() => {
+  const summary = useMemo(() => {
+    const incomeMonth = sumAmount(salesThisMonth, "total");
+    const expenseMonth = sumAmount(expensesThisMonth, "monto");
+    const incomeToday = sumAmount(salesToday, "total");
+    return [
+      {
+        label: "Total por mes",
+        value: money(incomeMonth),
+        detail: `${salesThisMonth.length} venta(s) registradas este mes`,
+        accent: "green",
+      },
+      {
+        label: "Egresos del mes",
+        value: money(expenseMonth),
+        detail: `${expensesThisMonth.length} egreso(s) cargados este mes`,
+        accent: "orange",
+      },
+      {
+        label: "Total de hoy",
+        value: money(incomeToday),
+        detail: `${salesToday.length} venta(s) registradas hoy`,
+        accent: "yellow",
+      },
+    ];
+  }, [expensesThisMonth, money, salesThisMonth, salesToday]);
+
+  const recentSales = useMemo(
+    () =>
+      [...sales]
+        .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+        .slice(0, 12),
+    [sales]
+  );
+
+  const sellerRows = useMemo(() => {
     const map = new Map();
-    yearlySales.forEach((sale) => {
+    salesThisMonth.forEach((sale) => {
       const key = sale.userName || "Sin nombre";
-      const current = map.get(key) || { seller: key, sales: 0, amount: 0 };
-      current.sales += 1;
-      current.amount += Number(sale.total || 0);
+      const current = map.get(key) || { seller: key, total: 0, count: 0, lastSaleAt: sale.createdAt };
+      current.total += Number(sale.total || 0);
+      current.count += 1;
+      if (new Date(sale.createdAt).getTime() > new Date(current.lastSaleAt).getTime()) {
+        current.lastSaleAt = sale.createdAt;
+      }
       map.set(key, current);
     });
-    return [...map.values()].sort((a, b) => b.amount - a.amount);
-  }, [yearlySales]);
 
-  const recentDailyTrend = useMemo(() => {
-    const days = Array.from({ length: 7 }, (_, index) => {
-      const date = new Date(today);
-      date.setDate(today.getDate() - (6 - index));
-      const start = startOfDay(date);
-      const end = endOfRange(date);
-      const daySales = sales.filter((item) => isInRange(item.createdAt, start, end));
-      const dayExpenses = expenses.filter((item) => isInRange(item.createdAt, start, end));
+    return [...map.values()].sort((a, b) => b.total - a.total);
+  }, [salesThisMonth]);
 
-      return {
-        label: new Intl.DateTimeFormat("es-EC", { weekday: "short", day: "numeric" }).format(date),
-        salesCount: daySales.length,
-        income: sumAmount(daySales),
-        expense: sumAmount(dayExpenses),
-      };
-    });
-
-    return days;
-  }, [expenses, sales, today]);
-
-  const monthlyTrend = useMemo(() => {
-    const months = Array.from({ length: 6 }, (_, index) => {
-      const date = new Date(today.getFullYear(), today.getMonth() - (5 - index), 1);
-      const start = startOfMonth(date);
-      const end = new Date(date.getFullYear(), date.getMonth() + 1, 0, 23, 59, 59, 999);
-      const monthSales = sales.filter((item) => isInRange(item.createdAt, start, end));
-      const monthExpenses = expenses.filter((item) => isInRange(item.createdAt, start, end));
-      return {
-        label: new Intl.DateTimeFormat("es-EC", { month: "short", year: "2-digit" }).format(date),
-        income: sumAmount(monthSales),
-        expense: sumAmount(monthExpenses),
-        net: sumAmount(monthSales) - sumAmount(monthExpenses),
-      };
-    });
-
-    return months;
-  }, [expenses, sales, today]);
-
-  const paymentMix = useMemo(() => {
-    const map = new Map();
-    yearlySales.forEach((sale) => {
-      const key = sale.paymentMethod || "efectivo";
-      const current = map.get(key) || { method: key, sales: 0, amount: 0 };
-      current.sales += 1;
-      current.amount += Number(sale.total || 0);
-      map.set(key, current);
-    });
-    return [...map.values()].sort((a, b) => b.amount - a.amount);
-  }, [yearlySales]);
-
-  const topProducts = useMemo(() => {
-    const map = new Map();
-    yearlySales.forEach((sale) => {
-      (sale.items || []).forEach((item) => {
-        const key = item.nombre || "Producto";
-        const current = map.get(key) || { product: key, units: 0, amount: 0 };
-        current.units += Number(item.cantidad || 0);
-        current.amount += Number(item.subtotal || 0);
-        map.set(key, current);
-      });
-    });
-    return [...map.values()].sort((a, b) => b.amount - a.amount).slice(0, 5);
-  }, [yearlySales]);
+  const formatDateTime = (value) =>
+    new Intl.DateTimeFormat("es-EC", {
+      dateStyle: "medium",
+      timeStyle: "short",
+    }).format(new Date(value));
 
   return (
     <div className="space-y-6">
       <PageHeader
         eyebrow="Admin"
-        title="Analitica de ventas"
-        description="Resumen financiero vivo del negocio con lectura diaria, semanal, mensual y anual segun las ventas registradas."
+        title="Ventas"
+        description="Revision clara de ingresos, egresos y ventas recientes para saber quien vendio, cuando y cuanto se movio."
       />
 
-      <div className="grid gap-4 xl:grid-cols-4">
-        {summaryCards.map((card) => (
+      <div className="grid gap-4 xl:grid-cols-3">
+        {summary.map((card) => (
           <StatCard key={card.label} accent={card.accent} detail={card.detail} label={card.label} value={card.value} />
         ))}
       </div>
 
-      <SectionBlock description="Cruce entre ingresos por ventas y egresos registrados para leer la salud financiera del negocio." title="Resumen por periodo">
-        <div className="overflow-x-auto">
-          <table className="min-w-full text-left text-sm">
-            <thead className="text-[#6a7b70] dark:text-white/55">
-              <tr>
-                <th className="pb-3">Periodo</th>
-                <th className="pb-3">Ventas</th>
-                <th className="pb-3">Ingresos</th>
-                <th className="pb-3">Egresos</th>
-                <th className="pb-3">Neto</th>
-                <th className="pb-3">Ticket promedio</th>
-              </tr>
-            </thead>
-            <tbody>
-              {periods.map((period) => {
-                const income = sumAmount(period.sales);
-                const outgoing = sumAmount(period.expenses);
-                const net = income - outgoing;
-                const avgTicket = period.sales.length ? income / period.sales.length : 0;
-                return (
-                  <tr key={period.label} className="border-t border-[#edf1ea] dark:border-white/10">
-                    <td className="py-3 font-medium">{period.label}</td>
-                    <td className="py-3">{period.sales.length}</td>
-                    <td className="py-3">{money(income)}</td>
-                    <td className="py-3">{money(outgoing)}</td>
-                    <td className={`py-3 font-semibold ${net >= 0 ? "text-[#1f7a3a]" : "text-[#b42318]"}`}>{money(net)}</td>
-                    <td className="py-3">{money(avgTicket)}</td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
-        </div>
+      <SectionBlock
+        title="Ingresos y egresos"
+        description="Comparacion mensual de los ultimos seis meses para leer rapido como se viene moviendo el negocio."
+      >
+        {monthlySeries.length ? (
+          <div className="space-y-5">
+            <div className="flex flex-wrap gap-4 text-sm text-[#5b6d61] dark:text-[#c7d2e0]">
+              <span className="inline-flex items-center gap-2">
+                <span className="h-3 w-3 rounded-full bg-[#1f7a3a] dark:bg-[#60a5fa]" />
+                Ingresos
+              </span>
+              <span className="inline-flex items-center gap-2">
+                <span className="h-3 w-3 rounded-full bg-[#f97316]" />
+                Egresos
+              </span>
+            </div>
+
+            <div className="grid gap-4 md:grid-cols-6">
+              {monthlySeries.map((item) => (
+                <article key={item.id} className="rounded-xl border border-[#e4ece2] bg-white p-4 dark:border-[#23314d] dark:bg-[#182235]">
+                  <div className="flex h-44 items-end justify-center gap-3">
+                    <div className="flex h-full flex-col items-center justify-end gap-2">
+                      <div
+                        className="w-8 rounded-t-xl bg-[#1f7a3a] shadow-[0_10px_20px_rgba(31,122,58,0.22)] dark:bg-[#60a5fa] dark:shadow-[0_10px_20px_rgba(96,165,250,0.2)]"
+                        style={{ height: `${Math.max((item.income / chartMax) * 100, item.income ? 8 : 0)}%` }}
+                      />
+                      <span className="text-[11px] font-semibold uppercase tracking-[0.12em] text-[#6a7b70] dark:text-[#94a3b8]">Ing</span>
+                    </div>
+                    <div className="flex h-full flex-col items-center justify-end gap-2">
+                      <div
+                        className="w-8 rounded-t-xl bg-[#f97316] shadow-[0_10px_20px_rgba(249,115,22,0.22)]"
+                        style={{ height: `${Math.max((item.expense / chartMax) * 100, item.expense ? 8 : 0)}%` }}
+                      />
+                      <span className="text-[11px] font-semibold uppercase tracking-[0.12em] text-[#6a7b70] dark:text-[#94a3b8]">Egr</span>
+                    </div>
+                  </div>
+                  <div className="mt-4 space-y-1">
+                    <strong className="block text-sm font-semibold text-[#183325] dark:text-[#f8fafc]">{item.fullLabel}</strong>
+                    <p className="text-xs text-[#5b6d61] dark:text-[#c7d2e0]">Ingresos: {money(item.income)}</p>
+                    <p className="text-xs text-[#5b6d61] dark:text-[#c7d2e0]">Egresos: {money(item.expense)}</p>
+                    <p className="text-xs text-[#6a7b70] dark:text-[#94a3b8]">{item.salesCount} venta(s)</p>
+                  </div>
+                </article>
+              ))}
+            </div>
+          </div>
+        ) : (
+          <EmptyState title="Sin movimientos" description="Todavia no hay datos suficientes para construir la grafica." />
+        )}
       </SectionBlock>
 
-      <div className="grid gap-6 xl:grid-cols-2">
-        <SectionBlock description="Ultimos 7 dias para ver si el ritmo comercial viene subiendo o bajando." title="Tendencia diaria">
-          {recentDailyTrend.length ? (
-            <div className="space-y-3">
-              {recentDailyTrend.map((item) => (
-                <article key={item.label} className="rounded-lg border border-[#e4ece2] px-4 py-4 dark:border-white/10">
-                  <div className="flex items-center justify-between gap-3">
-                    <strong className="text-sm font-semibold text-[#183325] dark:text-white">{item.label}</strong>
-                    <span className="text-sm text-[#5b6d61] dark:text-white/68">{item.salesCount} ventas</span>
-                  </div>
-                  <div className="mt-3 grid gap-2 text-sm text-[#5b6d61] dark:text-white/68 md:grid-cols-3">
-                    <span>Ingresos: {money(item.income)}</span>
-                    <span>Egresos: {money(item.expense)}</span>
-                    <span>Neto: {money(item.income - item.expense)}</span>
-                  </div>
-                </article>
-              ))}
+      <div className="grid gap-6 xl:grid-cols-[minmax(0,1.45fr)_360px]">
+        <SectionBlock
+          title="Registro de ventas"
+          description="Vista directa para revisar quien hizo cada venta, cuando la hizo y el monto registrado."
+        >
+          {recentSales.length ? (
+            <div className="overflow-x-auto">
+              <table className="min-w-full text-left text-sm">
+                <thead className="text-[#6a7b70] dark:text-[#94a3b8]">
+                  <tr>
+                    <th className="pb-3">Fecha</th>
+                    <th className="pb-3">Vendedor</th>
+                    <th className="pb-3">Tipo</th>
+                    <th className="pb-3">Pago</th>
+                    <th className="pb-3 text-right">Total</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {recentSales.map((sale) => (
+                    <tr key={sale.id} className="border-t border-[#edf1ea] dark:border-[#23314d]">
+                      <td className="py-3 text-[#183325] dark:text-[#f8fafc]">{formatDateTime(sale.createdAt)}</td>
+                      <td className="py-3">
+                        <div>
+                          <strong className="block text-sm font-semibold text-[#183325] dark:text-[#f8fafc]">{sale.userName || "Sin nombre"}</strong>
+                          {sale.description ? <span className="mt-1 block text-xs text-[#5b6d61] dark:text-[#c7d2e0]">{sale.description}</span> : null}
+                        </div>
+                      </td>
+                      <td className="py-3">
+                        <span
+                          className={`inline-flex rounded-full px-3 py-1 text-xs font-semibold ${
+                            sale.informal
+                              ? "bg-[#fff7ed] text-[#c2410c] dark:bg-[#3b1d12] dark:text-[#fdba74]"
+                              : "bg-[#f0fdf4] text-[#166534] dark:bg-[#0f172a] dark:text-[#93c5fd]"
+                          }`}
+                        >
+                          {sale.informal ? "Informal" : "Con productos"}
+                        </span>
+                      </td>
+                      <td className="py-3 text-[#5b6d61] dark:text-[#c7d2e0]">{formatPaymentMethod(sale.paymentMethod)}</td>
+                      <td className="py-3 text-right font-semibold text-[#183325] dark:text-[#f8fafc]">{money(sale.total)}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
             </div>
           ) : (
-            <EmptyState title="Sin datos diarios" description="Aun no hay ventas suficientes para construir la tendencia." />
+            <EmptyState title="Sin ventas recientes" description="Cuando registres ventas, aqui aparecera el historial mas reciente." />
           )}
         </SectionBlock>
 
-        <SectionBlock description="Lectura mensual del rendimiento financiero reciente." title="Tendencia mensual">
-          {monthlyTrend.length ? (
+        <SectionBlock
+          title="Ventas por vendedor"
+          description="Resumen del mes actual para ver quien esta moviendo mas dinero."
+        >
+          {sellerRows.length ? (
             <div className="space-y-3">
-              {monthlyTrend.map((item) => (
-                <article key={item.label} className="rounded-lg border border-[#e4ece2] px-4 py-4 dark:border-white/10">
-                  <div className="flex items-center justify-between gap-3">
-                    <strong className="text-sm font-semibold text-[#183325] dark:text-white">{item.label}</strong>
-                    <strong className={`text-sm ${item.net >= 0 ? "text-[#1f7a3a]" : "text-[#b42318]"}`}>{money(item.net)}</strong>
+              {sellerRows.map((item) => (
+                <article key={item.seller} className="rounded-xl border border-[#e4ece2] bg-white px-4 py-4 dark:border-[#23314d] dark:bg-[#182235]">
+                  <div className="flex items-start justify-between gap-3">
+                    <div>
+                      <strong className="block text-sm font-semibold text-[#183325] dark:text-[#f8fafc]">{item.seller}</strong>
+                      <p className="mt-1 text-sm text-[#5b6d61] dark:text-[#c7d2e0]">
+                        {item.count} venta(s) este mes
+                      </p>
+                    </div>
+                    <strong className="text-sm font-semibold text-[#183325] dark:text-[#f8fafc]">{money(item.total)}</strong>
                   </div>
-                  <div className="mt-3 grid gap-2 text-sm text-[#5b6d61] dark:text-white/68 md:grid-cols-2">
-                    <span>Ingresos: {money(item.income)}</span>
-                    <span>Egresos: {money(item.expense)}</span>
-                  </div>
+                  <p className="mt-3 text-xs text-[#6a7b70] dark:text-[#94a3b8]">Ultima venta: {formatDateTime(item.lastSaleAt)}</p>
                 </article>
               ))}
             </div>
           ) : (
-            <EmptyState title="Sin datos mensuales" description="No hay ventas registradas para este tramo de tiempo." />
-          )}
-        </SectionBlock>
-      </div>
-
-      <div className="grid gap-6 xl:grid-cols-3">
-        <SectionBlock description="Quien esta moviendo mas ventas en el acumulado anual." title="Rendimiento por vendedor">
-          {salesBySeller.length ? (
-            <div className="space-y-3">
-              {salesBySeller.map((item) => (
-                <article key={item.seller} className="rounded-lg border border-[#e4ece2] px-4 py-4 dark:border-white/10">
-                  <strong className="block text-sm font-semibold text-[#183325] dark:text-white">{item.seller}</strong>
-                  <p className="mt-1 text-sm text-[#5b6d61] dark:text-white/68">
-                    {item.sales} ventas · {money(item.amount)}
-                  </p>
-                </article>
-              ))}
-            </div>
-          ) : (
-            <EmptyState title="Sin vendedores con ventas" description="Aun no hay registros para comparar rendimiento." />
-          )}
-        </SectionBlock>
-
-        <SectionBlock description="Metodos de pago que mas aportan a las ventas." title="Mix de pagos">
-          {paymentMix.length ? (
-            <div className="space-y-3">
-              {paymentMix.map((item) => (
-                <article key={item.method} className="rounded-lg border border-[#e4ece2] px-4 py-4 dark:border-white/10">
-                  <strong className="block text-sm font-semibold text-[#183325] dark:text-white">{item.method}</strong>
-                  <p className="mt-1 text-sm text-[#5b6d61] dark:text-white/68">
-                    {item.sales} ventas · {money(item.amount)}
-                  </p>
-                </article>
-              ))}
-            </div>
-          ) : (
-            <EmptyState title="Sin pagos registrados" description="La mezcla de metodos aparecera cuando existan ventas." />
-          )}
-        </SectionBlock>
-
-        <SectionBlock description="Productos con mayor aporte en ingresos durante el año." title="Top productos">
-          {topProducts.length ? (
-            <div className="space-y-3">
-              {topProducts.map((item) => (
-                <article key={item.product} className="rounded-lg border border-[#e4ece2] px-4 py-4 dark:border-white/10">
-                  <strong className="block text-sm font-semibold text-[#183325] dark:text-white">{item.product}</strong>
-                  <p className="mt-1 text-sm text-[#5b6d61] dark:text-white/68">
-                    {item.units} unidades · {money(item.amount)}
-                  </p>
-                </article>
-              ))}
-            </div>
-          ) : (
-            <EmptyState title="Sin ranking de productos" description="El ranking aparecera cuando ya existan ventas con items." />
+            <EmptyState title="Sin ventas en el mes" description="Todavia no hay ventas registradas este mes para comparar vendedores." />
           )}
         </SectionBlock>
       </div>

@@ -2,13 +2,13 @@ import Icon from "../ui/Icon";
 
 export default function NotificationPanel({ notifications, onClose, onMarkAllRead, onRead }) {
   return (
-    <div className="absolute right-0 top-[calc(100%+0.75rem)] z-50 w-[360px] rounded-lg border border-[#dfe7db] bg-white p-4 shadow-[0_24px_50px_rgba(24,51,37,0.14)] dark:border-white/10 dark:bg-[#122117]">
+    <div className="absolute right-0 top-[calc(100%+0.75rem)] z-50 w-[min(360px,calc(100vw-2rem))] rounded-lg border border-[#dfe7db] bg-white p-4 shadow-[0_24px_50px_rgba(24,51,37,0.14)] dark:border-[#23314d] dark:bg-[#111827]">
       <div className="flex items-center justify-between gap-3">
         <div className="flex items-start gap-2">
           <Icon className="mt-0.5 text-[#f97316]" name="notifications_active" />
           <div>
           <h3 className="text-sm font-semibold text-[#183325] dark:text-white">Novedades</h3>
-          <p className="text-xs text-[#5b6d61] dark:text-white/60">Aqui ves los movimientos recientes del negocio.</p>
+          <p className="text-xs text-[#5b6d61] dark:text-[#94a3b8]">Aqui ves los movimientos recientes del negocio.</p>
           </div>
         </div>
         <button className="text-xs font-semibold text-[#f97316]" onClick={onMarkAllRead} type="button">
@@ -30,17 +30,17 @@ export default function NotificationPanel({ notifications, onClose, onMarkAllRea
                   <Icon className="text-[#1f7a3a]" name={notification.read ? "draft" : "mark_email_unread"} />
                   <strong className="text-sm font-semibold text-[#183325] dark:text-white">{notification.actorName || "Sabores Tropicales"}</strong>
                 </div>
-                <span className="text-[11px] text-[#738378] dark:text-white/50">{new Date(notification.createdAt).toLocaleString("es-EC")}</span>
+                <span className="text-[11px] text-[#738378] dark:text-[#94a3b8]">{new Date(notification.createdAt).toLocaleString("es-EC")}</span>
               </div>
-              <p className="mt-2 text-sm leading-6 text-[#5b6d61] dark:text-white/70">{notification.message}</p>
+              <p className="mt-2 text-sm leading-6 text-[#5b6d61] dark:text-[#c7d2e0]">{notification.message}</p>
             </button>
           ))
         ) : (
-          <p className="text-sm text-[#5b6d61] dark:text-white/65">Todavia no hay novedades recientes.</p>
+          <p className="text-sm text-[#5b6d61] dark:text-[#c7d2e0]">Todavia no hay novedades recientes.</p>
         )}
       </div>
 
-      <button className="mt-4 inline-flex w-full items-center justify-center gap-2 rounded-md border border-[#dfe7db] px-3 py-2 text-sm font-medium text-[#183325] dark:border-white/10 dark:text-white" onClick={onClose} type="button">
+      <button className="mt-4 inline-flex w-full items-center justify-center gap-2 rounded-md border border-[#dfe7db] px-3 py-2 text-sm font-medium text-[#183325] dark:border-[#314056] dark:text-[#f8fafc]" onClick={onClose} type="button">
         <Icon name="close" />
         Cerrar
       </button>

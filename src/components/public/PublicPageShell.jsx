@@ -40,7 +40,6 @@ export default function PublicPageShell({ app, children, title, description, bad
         publicActions={null}
         publicLinks={[
           { label: "About us", to: "/about-us" },
-          { label: "Comunidad", to: "/comunidad" },
           { label: "Como llegar", to: "/como-llegar" },
         ]}
         publicVariant="catalog"

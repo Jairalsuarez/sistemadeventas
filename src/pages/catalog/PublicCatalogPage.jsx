@@ -1,7 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import PublicProductCard from "../../components/catalog/PublicProductCard.jsx";
 import PublicSearchBox from "../../components/catalog/PublicSearchBox.jsx";
-import CommunityFeedbackSection from "../../components/community/CommunityFeedbackSection.jsx";
 import EmptyState from "../../components/ui/EmptyState.jsx";
 import Icon from "../../components/ui/Icon";
 import PageSkeleton from "../../components/ui/PageSkeleton.jsx";
@@ -19,9 +18,9 @@ const PRICE_RANGES = [
 
 function SectionHeading({ title, action }) {
   return (
-    <div className="flex flex-wrap items-end justify-between gap-4">
+    <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
       <div>
-        <h2 className="text-2xl font-semibold text-[#183325]">{title}</h2>
+        <h2 className="text-2xl font-semibold text-[#183325] sm:text-3xl">{title}</h2>
       </div>
       {action}
     </div>
@@ -30,9 +29,9 @@ function SectionHeading({ title, action }) {
 
 function FilterDropdown({ activeLabel, children, icon, name, onToggle, open }) {
   return (
-    <div className="relative">
+    <div className="relative w-full sm:w-auto">
       <button
-        className={`inline-flex min-w-[170px] items-center justify-between gap-3 rounded-2xl border px-4 py-3 text-sm font-semibold transition ${
+        className={`inline-flex w-full min-w-0 items-center justify-between gap-3 rounded-2xl border px-4 py-3 text-sm font-semibold transition sm:min-w-[170px] sm:w-auto ${
           open ? "border-[#1f7a3a] bg-white text-[#1f7a3a] shadow-[0_14px_28px_rgba(31,122,58,0.12)]" : "border-[#dfe7db] bg-white text-[#183325] hover:border-[#b9d2bf]"
         }`}
         onClick={onToggle}
@@ -48,7 +47,7 @@ function FilterDropdown({ activeLabel, children, icon, name, onToggle, open }) {
         </span>
       </button>
 
-      <div className={`absolute left-0 top-[calc(100%+10px)] z-20 min-w-[240px] rounded-2xl border border-[#dfe7db] bg-white p-2 shadow-[0_22px_45px_rgba(15,23,42,0.12)] ${open ? "block" : "hidden"}`}>
+      <div className={`absolute left-0 right-0 top-[calc(100%+10px)] z-20 min-w-full rounded-2xl border border-[#dfe7db] bg-white p-2 shadow-[0_22px_45px_rgba(15,23,42,0.12)] sm:right-auto sm:min-w-[240px] ${open ? "block" : "hidden"}`}>
         {children}
       </div>
     </div>
@@ -74,7 +73,7 @@ function ProductCarouselCard({ money, onView, onWhatsApp, product }) {
   const description = product.descripcion?.trim() || "Sin descripcion";
 
   return (
-    <article className="group flex min-w-[220px] max-w-[220px] flex-col overflow-hidden rounded-[22px] border border-[#e3e9e4] bg-white shadow-[0_14px_28px_rgba(15,23,42,0.06)] transition hover:-translate-y-1 hover:shadow-[0_22px_36px_rgba(15,23,42,0.1)]">
+    <article className="group flex min-w-[230px] max-w-[230px] flex-col overflow-hidden rounded-[22px] border border-[#e3e9e4] bg-white shadow-[0_14px_28px_rgba(15,23,42,0.06)] transition hover:-translate-y-1 hover:shadow-[0_22px_36px_rgba(15,23,42,0.1)] sm:min-w-[220px] sm:max-w-[220px]">
       <div className="relative p-3">
         <button
           className="absolute right-3 top-3 z-10 inline-flex h-8 w-8 items-center justify-center rounded-full border border-white/80 bg-white/90 text-[#6c7f73] shadow-sm"
@@ -108,7 +107,7 @@ function ProductCarouselCard({ money, onView, onWhatsApp, product }) {
   );
 }
 
-export default function PublicCatalogPage({ app, communityFeedbacks, feedbackSubmitting, money, onOpenLoginPage, onSubmitFeedback, onView, products }) {
+export default function PublicCatalogPage({ app, money, onOpenLoginPage, onView, products }) {
   const contact = resolveBusinessWhatsapp(app);
   const [activeBrand, setActiveBrand] = useState("Todas");
   const [activeCategory, setActiveCategory] = useState("Todas");
@@ -205,7 +204,6 @@ export default function PublicCatalogPage({ app, communityFeedbacks, feedbackSub
         }
         publicLinks={[
           { label: "About us", to: "/about-us" },
-          { label: "Comunidad", to: "/comunidad" },
           { label: "Como llegar", to: "/como-llegar" },
         ]}
         publicVariant="catalog"
@@ -214,14 +212,14 @@ export default function PublicCatalogPage({ app, communityFeedbacks, feedbackSub
         user={null}
       />
 
-      <main className="mx-auto max-w-[1440px] px-4 py-8 lg:px-6 lg:py-10">
+      <main className="mx-auto max-w-[1440px] px-4 py-6 lg:px-6 lg:py-10">
         <div className="space-y-8">
           {heroProducts.length ? (
-            <section className="relative overflow-hidden rounded-[34px] border border-[#dfe7db] bg-white p-6 text-[#183325] shadow-[0_24px_60px_rgba(24,51,37,0.08)]">
+            <section className="relative overflow-hidden rounded-[28px] border border-[#dfe7db] bg-white p-4 text-[#183325] shadow-[0_24px_60px_rgba(24,51,37,0.08)] sm:rounded-[34px] sm:p-6">
               <div className="relative z-10 flex flex-col gap-6">
                 <div className="flex flex-wrap items-start justify-between gap-4">
                   <div className="flex-1 text-center">
-                    <h2 className="text-3xl font-semibold text-[#183325]">Recomendados del momento</h2>
+                    <h2 className="text-2xl font-semibold text-[#183325] sm:text-3xl">Recomendados del momento</h2>
                   </div>
 
                   <div className="flex items-center gap-2">
@@ -234,7 +232,7 @@ export default function PublicCatalogPage({ app, communityFeedbacks, feedbackSub
                   </div>
                 </div>
 
-                <div className="flex gap-4 overflow-x-auto pb-1">
+                <div className="-mx-1 flex gap-4 overflow-x-auto px-1 pb-1">
                   {visibleHeroProducts.map((product) => (
                     <ProductCarouselCard
                       key={`hero-${product.id}`}
@@ -262,11 +260,11 @@ export default function PublicCatalogPage({ app, communityFeedbacks, feedbackSub
           ) : null}
 
           <div className="space-y-8">
-            <section className="rounded-[32px] border border-[#dbe8dd] bg-white p-6 shadow-[0_24px_55px_rgba(15,23,42,0.06)]">
+            <section className="rounded-[28px] border border-[#dbe8dd] bg-white p-4 shadow-[0_24px_55px_rgba(15,23,42,0.06)] sm:rounded-[32px] sm:p-6">
               <SectionHeading
                 title="Todos los productos"
                 action={
-                  <button className="inline-flex items-center gap-2 rounded-xl border border-[#dfe7db] bg-white px-4 py-3 text-sm font-semibold text-[#183325]" onClick={() => {
+                  <button className="inline-flex w-full items-center justify-center gap-2 rounded-xl border border-[#dfe7db] bg-white px-4 py-3 text-sm font-semibold text-[#183325] sm:w-auto" onClick={() => {
                     setSearch("");
                     setActiveBrand("Todas");
                     setActiveCategory("Todas");
@@ -280,7 +278,7 @@ export default function PublicCatalogPage({ app, communityFeedbacks, feedbackSub
                 }
               />
 
-              <div className="mt-6 flex flex-wrap gap-3">
+          <div className="mt-6 flex flex-col gap-3 sm:flex-row sm:flex-wrap">
                 <FilterDropdown
                   activeLabel={activeCategory}
                   icon="category"
@@ -346,7 +344,7 @@ export default function PublicCatalogPage({ app, communityFeedbacks, feedbackSub
               </div>
 
               {featuredProducts.length ? (
-                <div className="mt-8 grid items-stretch gap-5 md:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4">
+                <div className="mt-8 grid items-stretch gap-4 sm:gap-5 md:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4">
                   {featuredProducts.map((product) => (
                     <PublicProductCard
                       key={product.id}
@@ -363,8 +361,6 @@ export default function PublicCatalogPage({ app, communityFeedbacks, feedbackSub
                 </div>
               )}
             </section>
-
-            <CommunityFeedbackSection feedbackSubmitting={feedbackSubmitting} feedbacks={communityFeedbacks} onSubmit={onSubmitFeedback} />
           </div>
         </div>
       </main>

@@ -3,7 +3,7 @@ import { useAppContext } from "../../context/AppContext";
 import AdminDashboardPage from "../admin/AdminDashboardPage";
 import SellerDashboardPage from "../seller/SellerDashboardPage";
 
-export default function DashboardPage({ onNewProduct, onNewSale, onOpenExpense, onOpenWallet }) {
+export default function DashboardPage({ onNewProduct, onNewSale, onNewInformalSale, onOpenExpense, onOpenWallet }) {
   const { activeShift, adminStats, app, lowStock, recentActivity, sellerStats, upcomingSchedules, user, visibleProducts, startShift, closeShift, money, formatDate } = useAppContext();
   const sellerSchedules = useMemo(() => {
     if (user?.role !== "vendedor") return [];
@@ -70,6 +70,7 @@ export default function DashboardPage({ onNewProduct, onNewSale, onOpenExpense, 
         adminStats={adminStats}
         formatDate={formatDate}
         onCloseShift={closeShift}
+        onNewInformalSale={onNewInformalSale}
         onNewProduct={onNewProduct}
         onNewSale={onNewSale}
         upcomingSchedules={upcomingSchedules}
@@ -86,6 +87,7 @@ export default function DashboardPage({ onNewProduct, onNewSale, onOpenExpense, 
       canCloseShift={canSellerCloseShift}
       formatDate={formatDate}
       onCloseShift={closeShift}
+      onNewInformalSale={onNewInformalSale}
       onNewSale={onNewSale}
       onStartShift={startShift}
       recentActivity={sellerRecentActivity}

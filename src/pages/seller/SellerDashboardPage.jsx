@@ -6,19 +6,32 @@ import PageHeader from "../../components/ui/PageHeader";
 import SectionBlock from "../../components/ui/SectionBlock";
 import StatCard from "../../components/ui/StatCard";
 
+const formatEcShortDate = (value) => {
+  if (!value) return "";
+  const parsed = new Date(`${value}T00:00:00`);
+  if (Number.isNaN(parsed.getTime())) return value;
+  return new Intl.DateTimeFormat("es-EC", {
+    timeZone: "America/Guayaquil",
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric",
+  }).format(parsed);
+};
+
 export default function SellerDashboardPage({
   activeShift,
   canCloseShift,
   formatDate,
   onCloseShift,
+  onNewInformalSale,
   onNewSale,
   onStartShift,
   recentActivity,
   sellerSchedules,
   sellerStats,
-  visibleProducts,
 }) {
   const [startShiftModalOpen, setStartShiftModalOpen] = useState(false);
+  const [showRecentActivity, setShowRecentActivity] = useState(false);
   const [now, setNow] = useState(() => Date.now());
   const canRegisterSale = Boolean(activeShift);
 
@@ -54,22 +67,28 @@ export default function SellerDashboardPage({
       <PageHeader
         eyebrow="Vendedor"
         title="Operacion comercial"
-        description="Tu vista prioriza cartera, ventas del dia, inventario visible y ritmo de trabajo."
         action={
-          <>
+          <div className="flex flex-wrap items-end gap-3">
             <button
-              className={`inline-flex items-center gap-3 rounded-xl px-6 py-4 text-base font-semibold transition ${
+              className="inline-flex items-center px-1 py-2 text-sm font-semibold text-[#64748b] underline underline-offset-4 transition hover:text-[#334155] dark:text-[#94a3b8] dark:hover:text-white"
+              onClick={onNewInformalSale}
+              type="button"
+            >
+              Agregar venta informal
+            </button>
+            <button
+              className={`inline-flex items-center justify-center gap-3 rounded-xl px-4 py-3 text-sm font-semibold transition sm:px-6 sm:py-4 sm:text-base ${
                 canRegisterSale
-                  ? "bg-[#1f7a3a] text-white shadow-[0_16px_30px_rgba(31,122,58,0.24)] hover:-translate-y-0.5"
-                  : "cursor-not-allowed bg-[#d9dfdb] text-[#6f7d74] shadow-none"
+                  ? "bg-[#1f7a3a] text-white shadow-[0_16px_30px_rgba(31,122,58,0.24)] hover:-translate-y-0.5 dark:bg-[linear-gradient(135deg,#2563eb,#1d4ed8)] dark:shadow-[0_16px_30px_rgba(37,99,235,0.24)]"
+                  : "cursor-not-allowed bg-[#d9dfdb] text-[#6f7d74] shadow-none dark:bg-[#1f2937] dark:text-[#94a3b8]"
               }`}
               disabled={!canRegisterSale}
               onClick={onNewSale}
               type="button"
             >
               <span
-                className={`inline-flex h-10 w-10 items-center justify-center rounded-full text-2xl ${
-                  canRegisterSale ? "bg-white/15 text-white" : "bg-white/70 text-[#6f7d74]"
+                className={`inline-flex h-9 w-9 items-center justify-center rounded-full text-xl sm:h-10 sm:w-10 sm:text-2xl ${
+                  canRegisterSale ? "bg-white/15 text-white dark:bg-white/10" : "bg-white/70 text-[#6f7d74] dark:bg-[#0f172a] dark:text-[#94a3b8]"
                 }`}
               >
                 <Icon name="add" />
@@ -77,76 +96,82 @@ export default function SellerDashboardPage({
               Registrar venta
             </button>
             <button
-              className="rounded-xl border border-[#dfe7db] px-6 py-4 text-base font-semibold disabled:cursor-not-allowed disabled:opacity-50 dark:border-white/10"
+              className="rounded-xl border border-[#dfe7db] px-4 py-3 text-sm font-semibold disabled:cursor-not-allowed disabled:opacity-50 dark:border-[#314056] dark:bg-[#182235] dark:text-[#f8fafc] sm:px-6 sm:py-4 sm:text-base"
               disabled={Boolean(activeShift) && !canCloseShift}
               onClick={activeShift ? onCloseShift : () => setStartShiftModalOpen(true)}
               type="button"
             >
               {activeShift ? "Cerrar turno" : "Iniciar turno"}
             </button>
-          </>
+          </div>
         }
       />
 
-      <div className="grid gap-4 xl:grid-cols-4">
+      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
         {sellerStats.map((stat, index) => (
           <StatCard key={stat.label} accent={index === 1 ? "orange" : "green"} detail={stat.detail} label={stat.label} value={stat.value} />
         ))}
       </div>
 
       <div className="grid gap-6 xl:grid-cols-[minmax(0,1.2fr)_360px]">
-        <SectionBlock description="Movimientos recientes y alertas utiles para vender mas rapido." title="Mi ritmo del dia">
-          <ActivityFeed items={recentActivity} />
+        <SectionBlock title="Actividad reciente">
+          <button
+            className="flex w-full items-center justify-between gap-4 rounded-xl border border-[#dfe7db] bg-white px-5 py-4 text-left transition hover:border-[#1f7a3a] dark:border-[#314056] dark:bg-[#182235] dark:hover:border-[#60a5fa]"
+            onClick={() => setShowRecentActivity((current) => !current)}
+            type="button"
+          >
+            <span>
+              <span className="block text-sm font-semibold text-[#183325] dark:text-[#f8fafc]">Ver actividad reciente</span>
+              <span className="mt-1 block text-sm text-[#5b6d61] dark:text-[#c7d2e0]">{recentActivity.length} movimiento(s) disponibles</span>
+            </span>
+            <Icon className="text-[#1f7a3a] dark:text-[#60a5fa]" name={showRecentActivity ? "keyboard_arrow_up" : "keyboard_arrow_down"} />
+          </button>
+
+          {showRecentActivity ? (
+            <div className="mt-4">
+              <ActivityFeed items={recentActivity} />
+            </div>
+          ) : null}
         </SectionBlock>
 
-        <SectionBlock description="Sigue el reloj del turno y el tiempo que falta para poder cerrarlo." title="Tiempo de turno">
-          <div className="space-y-4">
-            <div className="rounded-lg border border-[#e4ece2] bg-[#f8faf6] px-4 py-4 dark:border-white/10 dark:bg-[#0d1710]">
-              <span className="block text-sm text-[#5b6d61] dark:text-white/65">Reloj actual</span>
-              <strong className="mt-1 block text-3xl font-black tracking-tight text-[#183325] dark:text-white">{clockLabel}</strong>
+        <SectionBlock title="Tiempo de turno">
+          {activeShift ? (
+            <div className="rounded-2xl border border-[#e4ece2] bg-white px-5 py-5 shadow-sm dark:border-[#23314d] dark:bg-[#182235]">
+              <span className="block text-sm font-medium text-[#5b6d61] dark:text-[#c7d2e0]">Hora actual: {clockLabel}</span>
+              <span className="mt-3 block text-sm text-[#5b6d61] dark:text-[#c7d2e0]">
+                {shiftCountdown?.ready ? "Ya puedes cerrar tu turno" : "Tiempo restante para cerrar"}
+              </span>
+              <strong className={`mt-1 block text-3xl font-black tracking-tight ${shiftCountdown?.ready ? "text-[#1f7a3a] dark:text-[#60a5fa]" : "text-[#183325] dark:text-[#f8fafc]"}`}>
+                {shiftCountdown?.ready ? "Listo" : shiftCountdown?.remainingLabel}
+              </strong>
+              <p className="mt-3 text-sm leading-6 text-[#5b6d61] dark:text-[#c7d2e0]">
+                {shiftCountdown?.ready
+                  ? "Ya cumpliste las 5 horas minimas del turno y puedes cerrarlo cuando lo necesites."
+                  : `Podras cerrarlo a partir de ${shiftCountdown?.unlockLabel}.`}
+              </p>
             </div>
-
-            {activeShift ? (
-              <div className="rounded-lg border border-[#e4ece2] bg-white px-4 py-4 dark:border-white/10 dark:bg-[#0d1710]">
-                <span className="block text-sm text-[#5b6d61] dark:text-white/65">
-                  {shiftCountdown?.ready ? "Ya puedes cerrar tu turno" : "Tiempo restante para cerrar"}
-                </span>
-                <strong className={`mt-1 block text-3xl font-black tracking-tight ${shiftCountdown?.ready ? "text-[#1f7a3a]" : "text-[#183325] dark:text-white"}`}>
-                  {shiftCountdown?.ready ? "Listo" : shiftCountdown?.remainingLabel}
-                </strong>
-                <p className="mt-3 text-sm leading-6 text-[#5b6d61] dark:text-white/65">
-                  {shiftCountdown?.ready
-                    ? "Ya cumpliste las 5 horas minimas del turno y puedes cerrarlo cuando lo necesites."
-                    : `Podras cerrarlo a partir de ${shiftCountdown?.unlockLabel}.`}
-                </p>
-              </div>
-            ) : (
-              <div className="rounded-lg border border-dashed border-[#dfe7db] px-4 py-4 text-sm leading-6 text-[#5b6d61] dark:border-white/10 dark:text-white/65">
-                Cuando abras tu turno veras aqui el tiempo restante para poder cerrarlo.
-              </div>
-            )}
-
-            <div className="rounded-lg border border-[#e4ece2] bg-[#f8faf6] px-4 py-4 text-sm leading-6 text-[#5b6d61] dark:border-white/10 dark:bg-[#0d1710] dark:text-white/65">
-              Productos visibles hoy: <strong className="text-[#183325] dark:text-white">{visibleProducts.length}</strong>
+          ) : (
+            <div className="rounded-2xl border border-dashed border-[#dfe7db] px-4 py-4 text-sm leading-6 text-[#5b6d61] dark:border-[#314056] dark:text-[#c7d2e0]">
+              Cuando abras tu turno veras aqui el tiempo restante para poder cerrarlo.
             </div>
-          </div>
+          )}
         </SectionBlock>
       </div>
 
-      <SectionBlock description="Estos son los turnos que administracion te ha asignado en la agenda." title="Mis turnos programados">
+      <SectionBlock title="Mis turnos programados">
         {sellerSchedules?.length ? (
           <div className="space-y-3">
             {sellerSchedules.map((item) => (
-              <article key={item.id} className="rounded-lg border border-[#e4ece2] px-4 py-4 dark:border-white/10">
-                <div className="flex flex-wrap items-start justify-between gap-3">
+              <article key={item.id} className="rounded-xl border border-[#e4ece2] px-4 py-4 dark:border-[#23314d] dark:bg-[#182235]">
+                <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
                   <div>
-                    <strong className="block text-sm font-semibold text-[#183325] dark:text-white">{item.turno}</strong>
-                    <p className="mt-1 text-sm text-[#5b6d61] dark:text-white/68">
-                      {item.fecha} • {item.inicio} - {item.fin}
+                    <strong className="block text-sm font-semibold text-[#183325] dark:text-[#f8fafc]">{formatEcShortDate(item.fecha)}</strong>
+                    <p className="mt-1 text-sm text-[#5b6d61] dark:text-[#c7d2e0]">
+                      {item.inicio} - {item.fin} - {item.turno}
                     </p>
-                    {item.notas ? <p className="mt-2 text-sm text-[#5b6d61] dark:text-white/60">{item.notas}</p> : null}
+                    {item.notas ? <p className="mt-2 text-sm text-[#5b6d61] dark:text-[#94a3b8]">{item.notas}</p> : null}
                   </div>
-                  <span className="rounded-full bg-[#f4f8ef] px-3 py-2 text-xs font-semibold text-[#56705d] dark:bg-[#1d3425] dark:text-white/70">
+                  <span className="inline-flex w-fit rounded-full bg-[#f4f8ef] px-3 py-2 text-xs font-semibold text-[#56705d] dark:bg-[#0f172a] dark:text-[#93c5fd]">
                     {item.estado}
                   </span>
                 </div>
@@ -154,7 +179,7 @@ export default function SellerDashboardPage({
             ))}
           </div>
         ) : (
-          <div className="rounded-lg border border-dashed border-[#dfe7db] px-4 py-5 text-sm text-[#5b6d61] dark:border-white/10 dark:text-white/65">
+          <div className="rounded-2xl border border-dashed border-[#dfe7db] px-4 py-5 text-sm text-[#5b6d61] dark:border-[#314056] dark:text-[#c7d2e0]">
             Aun no tienes turnos asignados por administracion.
           </div>
         )}

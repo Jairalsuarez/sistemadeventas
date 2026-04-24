@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { Outlet, useLocation, useNavigate } from "react-router-dom";
 import { useAppContext } from "../../context/AppContext";
+import Modal from "../Modal";
 import NotificationPanel from "../notifications/NotificationPanel";
 import Icon from "../ui/Icon";
 import SideNav from "./SideNav";
@@ -13,6 +14,7 @@ export default function AppShell() {
   const { activeShift, app, logout, markAllNotificationsRead, markNotificationRead, notifications, session, theme, unreadNotifications, user, setTheme } =
     useAppContext();
   const [openNotifications, setOpenNotifications] = useState(false);
+  const [logoutModalOpen, setLogoutModalOpen] = useState(false);
   const notificationRef = useRef(null);
   const isAdmin = user?.role === "admin";
 
@@ -29,12 +31,12 @@ export default function AppShell() {
   const notificationButton = (
     <div ref={notificationRef} className="relative">
       <button
-        className="relative inline-flex items-center gap-2 rounded-md border border-[#dfe7db] px-4 py-2.5 text-sm font-medium text-[#183325] dark:border-white/10 dark:text-white"
+        className="relative inline-flex items-center gap-2 rounded-md border border-[#dfe7db] bg-white px-3 py-2.5 text-sm font-medium text-[#183325] dark:border-[#314056] dark:bg-[#111827] dark:text-[#f8fafc] sm:px-4"
         onClick={() => setOpenNotifications((current) => !current)}
         type="button"
       >
         <Icon name="notifications" />
-        Notificaciones
+        <span className="hidden sm:inline">Notificaciones</span>
         {visibleUnreadNotifications ? (
           <span className="ml-2 rounded-full bg-[#f97316] px-2 py-0.5 text-[11px] font-semibold text-white">{visibleUnreadNotifications}</span>
         ) : null}
@@ -57,7 +59,7 @@ export default function AppShell() {
   );
 
   return (
-    <div className="min-h-screen bg-white text-[#183325] dark:bg-[#0d1710] dark:text-white">
+    <div className="min-h-screen bg-white text-[#183325] dark:bg-[#0b1220] dark:text-[#f8fafc]">
       <TopNav
         activeShift={activeShift}
         businessName={app.business.nombre}
@@ -65,7 +67,7 @@ export default function AppShell() {
         notificationButton={notificationButton}
         onLogout={() => {
           setOpenNotifications(false);
-          logout();
+          setLogoutModalOpen(true);
         }}
         onOpenLoginPage={() => {
           setOpenNotifications(false);
@@ -79,7 +81,7 @@ export default function AppShell() {
         user={user}
       />
 
-      <div className="mx-auto flex max-w-[1440px]">
+      <div className="mx-auto flex max-w-[1440px] flex-col lg:flex-row">
         <SideNav isAdmin={isAdmin} />
         <div className="min-w-0 flex-1">
           <main className="px-4 py-6 lg:px-6">
@@ -87,6 +89,30 @@ export default function AppShell() {
           </main>
         </div>
       </div>
+
+      <Modal containerClassName="max-w-[420px] p-4" open={logoutModalOpen} onClose={() => setLogoutModalOpen(false)} text="Desea cerrar la sesion?" title="Cerrar sesion">
+        <div className="mx-auto w-full max-w-[280px]">
+          <div className="mt-3 flex flex-wrap items-center justify-center gap-3">
+            <button
+              className="rounded-xl bg-[#dc2626] px-5 py-3 text-sm font-semibold text-white transition hover:bg-[#b91c1c] dark:bg-[#ef4444] dark:hover:bg-[#dc2626]"
+              onClick={() => {
+                setLogoutModalOpen(false);
+                logout();
+              }}
+              type="button"
+            >
+              Cerrar sesion
+            </button>
+            <button
+              className="rounded-xl border border-[#d8dee4] px-5 py-3 text-sm font-semibold text-[#1f2937] transition hover:bg-[#f8fafc] dark:border-[#334155] dark:bg-[#172033] dark:text-white dark:hover:bg-[#22304a]"
+              onClick={() => setLogoutModalOpen(false)}
+              type="button"
+            >
+              Cancelar
+            </button>
+          </div>
+        </div>
+      </Modal>
     </div>
   );
 }

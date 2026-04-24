@@ -5,6 +5,66 @@ const getScheduleHours = (turno = "") => {
   return { inicio: "08:00", fin: "13:30", turno: "Manana" };
 };
 
+const SCHEDULE_MATCH_TOLERANCE_MINUTES = 45;
+
+const normalizeText = (value = "") =>
+  String(value || "")
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .trim()
+    .toLowerCase();
+
+const toMinutes = (value = "") => {
+  const [hours = "0", minutes = "0"] = String(value || "").split(":");
+  return Number(hours) * 60 + Number(minutes);
+};
+
+const formatLocalDate = (value) =>
+  new Intl.DateTimeFormat("sv-SE", {
+    timeZone: "America/Guayaquil",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).format(new Date(value));
+
+const formatLocalTime = (value) =>
+  new Intl.DateTimeFormat("en-GB", {
+    timeZone: "America/Guayaquil",
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: false,
+  }).format(new Date(value));
+
+const findMatchingSchedule = ({ schedules = [], startedAt, userName }) => {
+  const localDate = formatLocalDate(startedAt);
+  const startMinutes = toMinutes(formatLocalTime(startedAt));
+  const normalizedUserName = normalizeText(userName);
+
+  const matches = schedules
+    .filter((schedule) => {
+      if (!["programado", "en_progreso"].includes(schedule.estado)) return false;
+      if (schedule.fecha !== localDate) return false;
+      if (normalizeText(schedule.responsable) !== normalizedUserName) return false;
+
+      const scheduleStart = toMinutes(schedule.inicio);
+      const scheduleEnd = toMinutes(schedule.fin);
+      return startMinutes >= scheduleStart - SCHEDULE_MATCH_TOLERANCE_MINUTES && startMinutes <= scheduleEnd;
+    })
+    .sort((a, b) => Math.abs(toMinutes(a.inicio) - startMinutes) - Math.abs(toMinutes(b.inicio) - startMinutes));
+
+  return matches[0] || null;
+};
+
+const completedScheduledShift = ({ closedAt, matchedSchedule, startedAt }) => {
+  if (!matchedSchedule) return false;
+  const realStartMinutes = toMinutes(formatLocalTime(startedAt));
+  const realEndMinutes = toMinutes(formatLocalTime(closedAt));
+  const scheduledStartMinutes = toMinutes(matchedSchedule.inicio);
+  const scheduledEndMinutes = toMinutes(matchedSchedule.fin);
+
+  return realStartMinutes <= scheduledStartMinutes + SCHEDULE_MATCH_TOLERANCE_MINUTES && realEndMinutes >= scheduledEndMinutes;
+};
+
 export default function useOperationsActions({
   app,
   session,
@@ -16,11 +76,18 @@ export default function useOperationsActions({
   setSaleLines,
   salePayment,
   setSalePayment,
+  informalSale,
+  setInformalSale,
+  informalSalePayment,
+  setInformalSalePayment,
   salePreview,
   saleTotal,
   saleSubmitting,
   setSaleSubmitting,
+  informalSaleSubmitting,
+  setInformalSaleSubmitting,
   setSaleModal,
+  setInformalSaleModal,
   expense,
   expenseCategories,
   distributors,
@@ -45,6 +112,7 @@ export default function useOperationsActions({
   createRemoteShift,
   updateRemoteShift,
   createRemoteSale,
+  createRemoteInformalSale,
   upsertRemoteWalletState,
   createRemoteWalletMovement,
   createRemoteExpense,
@@ -97,6 +165,23 @@ export default function useOperationsActions({
 
     const finalShift = remote.ok ? remote.shift : draftShift;
     commit((current) => ({ ...current, turnos: [finalShift, ...current.turnos] }));
+
+    const matchedSchedule = findMatchingSchedule({
+      schedules: app.schedules || [],
+      startedAt: finalShift.startedAt,
+      userName: finalShift.userName,
+    });
+
+    if (matchedSchedule) {
+      const remoteSchedule = await updateRemoteScheduleStatus(matchedSchedule.id, "en_progreso");
+      const nextSchedule = remoteSchedule.ok ? remoteSchedule.schedule : { ...matchedSchedule, estado: "en_progreso" };
+
+      commit((current) => ({
+        ...current,
+        schedules: (current.schedules || []).map((item) => (item.id === matchedSchedule.id ? nextSchedule : item)),
+      }));
+    }
+
     notify(`${personName(user)} inicio un turno.`, personName(user), "success");
     inform(`Inicio de turno registrado a las ${shortTime(finalShift.startedAt)}.`, "success");
   };
@@ -142,6 +227,31 @@ export default function useOperationsActions({
       ...current,
       turnos: current.turnos.map((turno) => (turno.id === targetShift.id ? finalShift : turno)),
     }));
+
+    const matchedSchedule = findMatchingSchedule({
+      schedules: app.schedules || [],
+      startedAt: targetShift.startedAt,
+      userName: targetShift.userName,
+    });
+
+    if (matchedSchedule) {
+      const nextStatus = completedScheduledShift({
+        closedAt: finalShift.closedAt,
+        matchedSchedule,
+        startedAt: targetShift.startedAt,
+      })
+        ? "completado"
+        : "en_progreso";
+
+      const remoteSchedule = await updateRemoteScheduleStatus(matchedSchedule.id, nextStatus);
+      const nextSchedule = remoteSchedule.ok ? remoteSchedule.schedule : { ...matchedSchedule, estado: nextStatus };
+
+      commit((current) => ({
+        ...current,
+        schedules: (current.schedules || []).map((item) => (item.id === matchedSchedule.id ? nextSchedule : item)),
+      }));
+    }
+
     notify(
       isAdminClosing
         ? `${personName(user)} cerro el turno de ${targetShift.userName}.`
@@ -200,8 +310,15 @@ export default function useOperationsActions({
 
     try {
       const saleRemote = await createRemoteSale(draftSale);
-      if (session?.mode === "supabase" && !saleRemote.ok && !isMissingRelationError(saleRemote.error)) {
-        inform("No se pudo guardar la venta. Intenta de nuevo.", "error");
+      if (session?.mode === "supabase" && !saleRemote.ok) {
+        commit((current) => ({
+          ...current,
+          sales: app.sales,
+          wallet: app.wallet,
+          products: app.products,
+          turnos: app.turnos,
+        }));
+        inform(`No se pudo guardar la venta en Supabase. ${saleRemote.error || "Intenta de nuevo."}`, "error");
         return;
       }
 
@@ -227,8 +344,96 @@ export default function useOperationsActions({
         wallet: finalWallet,
         turnos: finalShift ? current.turnos.map((turno) => (turno.id === activeShift.id ? finalShift : turno)) : current.turnos,
       }));
+    } catch (error) {
+      commit((current) => ({
+        ...current,
+        sales: app.sales,
+        wallet: app.wallet,
+        products: app.products,
+        turnos: app.turnos,
+      }));
+      inform(`No se pudo completar la venta. ${error?.message || "Intenta de nuevo."}`, "error");
     } finally {
       setSaleSubmitting(false);
+    }
+  };
+
+  const createInformalSale = async () => {
+    if (informalSaleSubmitting) return;
+    if (user?.role === "vendedor" && !activeShift) return inform("Debes iniciar un turno.", "warning");
+
+    const total = parseMoneyInput(informalSale.totalInput || informalSale.total);
+    const description = String(informalSale.description || "").trim();
+    if (total <= 0) return inform("Ingresa un valor total valido.", "warning");
+    if (!description) return inform("Escribe una descripcion de la venta.", "warning");
+    if (!informalSalePayment.method) return inform("Selecciona un metodo de pago.", "warning");
+    if (["transferencia_directa", "deuna"].includes(informalSalePayment.method) && !informalSalePayment.evidenceUrl) {
+      return inform("Debes subir la evidencia del pago antes de finalizar.", "warning");
+    }
+
+    setInformalSaleSubmitting(true);
+
+    const draftSale = {
+      id: crypto.randomUUID(),
+      shiftId: activeShift?.id || null,
+      userId: user.id,
+      userName: personName(user),
+      items: [],
+      total,
+      description,
+      informal: true,
+      paymentMethod: informalSalePayment.method,
+      paymentEvidenceUrl: informalSalePayment.evidenceUrl || "",
+      paymentEvidenceName: informalSalePayment.evidenceName || "",
+      createdAt: new Date().toISOString(),
+    };
+
+    const nextWallet = { saldoActual: app.wallet.saldoActual + total, updatedAt: new Date().toISOString() };
+    const nextShift = activeShift ? { ...activeShift, totalVentas: activeShift.totalVentas + total } : null;
+
+    commit((current) => ({
+      ...current,
+      sales: [draftSale, ...current.sales],
+      wallet: nextWallet,
+      turnos: nextShift ? current.turnos.map((turno) => (turno.id === activeShift.id ? nextShift : turno)) : current.turnos,
+    }));
+
+    try {
+      const saleRemote = await createRemoteInformalSale(draftSale);
+      if (session?.mode === "supabase" && !saleRemote.ok) {
+        commit((current) => ({
+          ...current,
+          sales: app.sales,
+          wallet: app.wallet,
+          turnos: app.turnos,
+        }));
+        inform(`No se pudo guardar la venta informal en Supabase. ${saleRemote.error || "Intenta de nuevo."}`, "error");
+        return;
+      }
+
+      notify(`${personName(user)} registro una venta informal por ${money(total)}.`, personName(user), "success");
+      setInformalSale({ total: 0, totalInput: "", description: "" });
+      setInformalSalePayment({ method: "efectivo", evidenceUrl: "", evidenceName: "" });
+      setInformalSaleModal(false);
+      inform("Venta informal registrada con exito.", "success");
+
+      const saleRecord = saleRemote.ok ? saleRemote.sale : draftSale;
+      commit((current) => ({
+        ...current,
+        sales: current.sales.map((sale) => (sale.id === draftSale.id ? saleRecord : sale)),
+        wallet: nextWallet,
+        turnos: nextShift ? current.turnos.map((turno) => (turno.id === activeShift.id ? nextShift : turno)) : current.turnos,
+      }));
+    } catch (error) {
+      commit((current) => ({
+        ...current,
+        sales: app.sales,
+        wallet: app.wallet,
+        turnos: app.turnos,
+      }));
+      inform(`No se pudo completar la venta informal. ${error?.message || "Intenta de nuevo."}`, "error");
+    } finally {
+      setInformalSaleSubmitting(false);
     }
   };
 
@@ -513,6 +718,7 @@ export default function useOperationsActions({
     startShift,
     closeShift,
     createSale,
+    createInformalSale,
     createExpense,
     adjustWallet,
     createSchedule,

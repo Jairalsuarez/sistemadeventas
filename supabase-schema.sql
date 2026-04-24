@@ -68,8 +68,13 @@ create table if not exists public.sales (
   shift_id uuid references public.shifts(id),
   user_id uuid not null references public.profiles(id),
   total numeric(10,2) not null default 0,
+  descripcion text,
+  informal boolean not null default false,
   created_at timestamptz not null default now()
 );
+
+alter table public.sales add column if not exists descripcion text;
+alter table public.sales add column if not exists informal boolean not null default false;
 
 create table if not exists public.sale_items (
   id uuid primary key default gen_random_uuid(),
@@ -125,7 +130,7 @@ create table if not exists public.schedules (
   responsable text not null,
   turno text not null default 'Mañana',
   notas text,
-  estado text not null default 'programado' check (estado in ('programado', 'completado', 'cancelado')),
+  estado text not null default 'programado' check (estado in ('programado', 'en_progreso', 'completado', 'cancelado')),
   created_at timestamptz not null default now()
 );
 
@@ -183,6 +188,213 @@ as $$
   );
 $$;
 
+create or replace function public.create_sale_with_items(
+  p_shift_id uuid,
+  p_user_id uuid,
+  p_total numeric,
+  p_payment_method text,
+  p_payment_evidence_url text,
+  p_payment_evidence_name text,
+  p_created_at timestamptz,
+  p_items jsonb
+)
+returns uuid
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_sale_id uuid;
+  v_item jsonb;
+  v_product_id uuid;
+  v_quantity integer;
+  v_available_stock integer;
+begin
+  if auth.uid() is null then
+    raise exception 'Debes iniciar sesion para registrar ventas.';
+  end if;
+
+  if not public.is_staff() then
+    raise exception 'No tienes permisos para registrar ventas.';
+  end if;
+
+  if p_user_id is distinct from auth.uid() and not public.is_admin() then
+    raise exception 'Solo puedes registrar ventas con tu propio usuario.';
+  end if;
+
+  if p_items is null or jsonb_typeof(p_items) <> 'array' or jsonb_array_length(p_items) = 0 then
+    raise exception 'La venta debe incluir al menos un producto.';
+  end if;
+
+  for v_item in
+    select value from jsonb_array_elements(p_items)
+  loop
+    v_product_id := nullif(v_item->>'product_id', '')::uuid;
+    v_quantity := greatest(coalesce((v_item->>'cantidad')::integer, 0), 0);
+
+    if v_product_id is null or v_quantity <= 0 then
+      raise exception 'Cada item debe incluir un producto y una cantidad valida.';
+    end if;
+
+    select stock
+    into v_available_stock
+    from public.products
+    where id = v_product_id
+    for update;
+
+    if not found then
+      raise exception 'Uno de los productos ya no existe.';
+    end if;
+
+    if coalesce(v_available_stock, 0) < v_quantity then
+      raise exception 'Stock insuficiente para uno de los productos.';
+    end if;
+  end loop;
+
+  insert into public.sales (shift_id, user_id, total, payment_method, payment_evidence_url, payment_evidence_name, created_at)
+  values (
+    p_shift_id,
+    p_user_id,
+    coalesce(p_total, 0),
+    coalesce(nullif(trim(p_payment_method), ''), 'efectivo'),
+    nullif(trim(coalesce(p_payment_evidence_url, '')), ''),
+    nullif(trim(coalesce(p_payment_evidence_name, '')), ''),
+    coalesce(p_created_at, now())
+  )
+  returning id into v_sale_id;
+
+  for v_item in
+    select value from jsonb_array_elements(p_items)
+  loop
+    v_product_id := (v_item->>'product_id')::uuid;
+    v_quantity := (v_item->>'cantidad')::integer;
+
+    insert into public.sale_items (sale_id, product_id, nombre, precio, cantidad, subtotal)
+    values (
+      v_sale_id,
+      v_product_id,
+      coalesce(v_item->>'nombre', ''),
+      coalesce((v_item->>'precio')::numeric, 0),
+      v_quantity,
+      coalesce((v_item->>'subtotal')::numeric, 0)
+    );
+
+    update public.products
+    set stock = greatest(stock - v_quantity, 0),
+        updated_at = now(),
+        updated_by = auth.uid()
+    where id = v_product_id;
+  end loop;
+
+  return v_sale_id;
+end;
+$$;
+
+revoke all on function public.create_sale_with_items(uuid, uuid, numeric, text, text, text, timestamptz, jsonb) from public;
+grant execute on function public.create_sale_with_items(uuid, uuid, numeric, text, text, text, timestamptz, jsonb) to authenticated;
+
+drop function if exists public.create_informal_sale(bigint, uuid, numeric, text, text, text, text, timestamptz);
+create or replace function public.create_informal_sale(
+  p_shift_id bigint,
+  p_user_id uuid,
+  p_total numeric,
+  p_description text,
+  p_payment_method text,
+  p_payment_evidence_url text,
+  p_payment_evidence_name text,
+  p_created_at timestamptz
+)
+returns uuid
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_sale_id uuid;
+  v_next_wallet numeric;
+begin
+  if auth.uid() is null then
+    raise exception 'Debes iniciar sesion para registrar ventas.';
+  end if;
+
+  if not public.is_staff() then
+    raise exception 'No tienes permisos para registrar ventas.';
+  end if;
+
+  if p_user_id is distinct from auth.uid() and not public.is_admin() then
+    raise exception 'Solo puedes registrar ventas con tu propio usuario.';
+  end if;
+
+  if coalesce(p_total, 0) <= 0 then
+    raise exception 'La venta informal debe tener un total mayor a cero.';
+  end if;
+
+  if nullif(trim(coalesce(p_description, '')), '') is null then
+    raise exception 'La descripcion es obligatoria para la venta informal.';
+  end if;
+
+  insert into public.sales (
+    shift_id,
+    user_id,
+    total,
+    descripcion,
+    informal,
+    payment_method,
+    payment_evidence_url,
+    payment_evidence_name,
+    created_at
+  )
+  values (
+    p_shift_id,
+    p_user_id,
+    coalesce(p_total, 0),
+    trim(coalesce(p_description, '')),
+    true,
+    coalesce(nullif(trim(p_payment_method), ''), 'efectivo'),
+    nullif(trim(coalesce(p_payment_evidence_url, '')), ''),
+    nullif(trim(coalesce(p_payment_evidence_name, '')), ''),
+    coalesce(p_created_at, now())
+  )
+  returning id into v_sale_id;
+
+  select coalesce(saldo_actual, 0) + coalesce(p_total, 0)
+  into v_next_wallet
+  from public.wallet_state
+  where id = 'principal'
+  for update;
+
+  if v_next_wallet is null then
+    v_next_wallet := coalesce(p_total, 0);
+    insert into public.wallet_state (id, saldo_actual, updated_at, updated_by)
+    values ('principal', v_next_wallet, now(), auth.uid())
+    on conflict (id) do update
+    set saldo_actual = excluded.saldo_actual,
+        updated_at = excluded.updated_at,
+        updated_by = excluded.updated_by;
+  else
+    update public.wallet_state
+    set saldo_actual = v_next_wallet,
+        updated_at = now(),
+        updated_by = auth.uid()
+    where id = 'principal';
+  end if;
+
+  insert into public.wallet_movements (tipo, monto, descripcion, created_by)
+  values ('venta', coalesce(p_total, 0), 'Venta informal: ' || trim(coalesce(p_description, '')), auth.uid());
+
+  if p_shift_id is not null then
+    update public.shifts
+    set total_ventas = coalesce(total_ventas, 0) + coalesce(p_total, 0)
+    where id = p_shift_id;
+  end if;
+
+  return v_sale_id;
+end;
+$$;
+
+revoke all on function public.create_informal_sale(bigint, uuid, numeric, text, text, text, text, timestamptz) from public;
+grant execute on function public.create_informal_sale(bigint, uuid, numeric, text, text, text, text, timestamptz) to authenticated;
+
 drop policy if exists "profiles_select_authenticated" on public.profiles;
 create policy "profiles_select_authenticated"
 on public.profiles for select
@@ -223,8 +435,14 @@ to authenticated
 using (true);
 
 drop policy if exists "products_write_admin" on public.products;
+drop policy if exists "products_insert_staff" on public.products;
+create policy "products_insert_staff"
+on public.products for insert
+to authenticated
+with check (public.is_staff());
+
 create policy "products_write_admin"
-on public.products for all
+on public.products for update, delete
 to authenticated
 using (public.is_admin())
 with check (public.is_admin());

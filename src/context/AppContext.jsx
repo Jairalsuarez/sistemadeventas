@@ -17,6 +17,7 @@ import {
   createRemoteExpenseCategory,
   createRemoteCommunityFeedback,
   createRemoteExpense,
+  createRemoteInformalSale,
   createRemoteNotification,
   createRemoteSale,
   createRemoteSchedule,
@@ -70,6 +71,7 @@ const EMPTY_EXPENSE = {
   confirmationAccepted: false,
 };
 const EMPTY_SALE_PAYMENT = { method: "efectivo", evidenceUrl: "", evidenceName: "" };
+const EMPTY_INFORMAL_SALE = { total: 0, totalInput: "", description: "" };
 const EMPTY_SCHEDULE_FORM = { fecha: "", inicio: "", fin: "", responsable: "", turno: "Mañana", notas: "" };
 
 const money = (n) => new Intl.NumberFormat("es-EC", { style: "currency", currency: "USD" }).format(Number(n || 0));
@@ -88,17 +90,22 @@ export function AppProvider({ children }) {
   const [theme, setTheme] = useCookieState("ventas-theme", "light");
   const [selected, setSelected] = useState(null);
   const [saleModal, setSaleModal] = useState(false);
+  const [informalSaleModal, setInformalSaleModal] = useState(false);
   const [expenseModal, setExpenseModal] = useState(false);
   const [walletModal, setWalletModal] = useState(false);
   const [syncing, setSyncing] = useState(false);
   const [uploading, setUploading] = useState(false);
+  const [skipNextSessionRestore, setSkipNextSessionRestore] = useState(false);
   const [expense, setExpense] = useState(EMPTY_EXPENSE);
   const [walletForm, setWalletForm] = useState(() => ({ ...EMPTY_WALLET_FORM, saldo: getAppData().wallet.saldoActual }));
   const [shiftCash, setShiftCash] = useState(0);
   const [saleLines, setSaleLines] = useState([{ productId: "", cantidad: 1 }]);
   const [salePayment, setSalePayment] = useState(EMPTY_SALE_PAYMENT);
+  const [informalSale, setInformalSale] = useState(EMPTY_INFORMAL_SALE);
+  const [informalSalePayment, setInformalSalePayment] = useState(EMPTY_SALE_PAYMENT);
   const [scheduleForm, setScheduleForm] = useState(EMPTY_SCHEDULE_FORM);
   const [saleSubmitting, setSaleSubmitting] = useState(false);
+  const [informalSaleSubmitting, setInformalSaleSubmitting] = useState(false);
   const [expenseSubmitting, setExpenseSubmitting] = useState(false);
   const [feedbackSubmitting, setFeedbackSubmitting] = useState(false);
   const { toasts, pushToast, dismissToast } = useToastQueue();
@@ -116,11 +123,11 @@ export function AppProvider({ children }) {
     inform,
     personName,
     setSession,
+    setSkipNextSessionRestore,
   });
 
   useEffect(() => {
     document.documentElement.dataset.theme = theme;
-    document.documentElement.classList.toggle("dark", theme === "dark");
   }, [theme]);
 
   useEffect(() => saveAppData(app), [app]);
@@ -135,6 +142,11 @@ export function AppProvider({ children }) {
     let cancelled = false;
     (async () => {
       if (session) return;
+      if (skipNextSessionRestore) {
+        setSkipNextSessionRestore(false);
+        setAuthChecking(false);
+        return;
+      }
       setAuthChecking(true);
       const restored = await restoreSupabaseSession();
       if (cancelled) return;
@@ -146,7 +158,7 @@ export function AppProvider({ children }) {
     return () => {
       cancelled = true;
     };
-  }, [session, setAuthChecking]);
+  }, [session, setAuthChecking, skipNextSessionRestore]);
   useEffect(() => {
     let cancelled = false;
     (async () => {
@@ -303,6 +315,15 @@ export function AppProvider({ children }) {
     setSaleModal(true);
   };
 
+  const openInformalSaleFlow = () => {
+    if (user?.role === "vendedor" && !activeShift) {
+      return inform("Debes iniciar un turno antes de registrar ventas.", "warning");
+    }
+    setInformalSale(EMPTY_INFORMAL_SALE);
+    setInformalSalePayment(EMPTY_SALE_PAYMENT);
+    setInformalSaleModal(true);
+  };
+
   const uploadAsset = async (file, folder = "products") => {
     try {
       setUploading(true);
@@ -330,6 +351,13 @@ export function AppProvider({ children }) {
       inform("Evidencia subida correctamente.", "success");
     }
   };
+  const uploadInformalSaleEvidence = async (file) => {
+    const url = await uploadAsset(file, "sales");
+    if (url) {
+      setInformalSalePayment((current) => ({ ...current, evidenceUrl: url, evidenceName: file.name || "evidencia" }));
+      inform("Evidencia subida correctamente.", "success");
+    }
+  };
   const uploadExpenseEvidence = async (file) => {
     const previewUrl = URL.createObjectURL(file);
     const url = await uploadAsset(file, "expenses");
@@ -352,7 +380,7 @@ export function AppProvider({ children }) {
     upsertRemoteProduct,
     deleteRemoteProduct,
   });
-  const { startShift, closeShift, createSale, createExpense, adjustWallet, createSchedule, updateScheduleStatus, deleteSchedule } =
+  const { startShift, closeShift, createSale, createInformalSale, createExpense, adjustWallet, createSchedule, updateScheduleStatus, deleteSchedule } =
     useOperationsActions({
       app,
       session,
@@ -364,11 +392,18 @@ export function AppProvider({ children }) {
       setSaleLines,
       salePayment,
       setSalePayment,
+      informalSale,
+      setInformalSale,
+      informalSalePayment,
+      setInformalSalePayment,
       salePreview,
       saleTotal,
       saleSubmitting,
       setSaleSubmitting,
+      informalSaleSubmitting,
+      setInformalSaleSubmitting,
       setSaleModal,
+      setInformalSaleModal,
       expense,
       expenseCategories: app.expenseCategories || [],
       distributors: app.distributors || [],
@@ -394,6 +429,7 @@ export function AppProvider({ children }) {
       createRemoteShift,
       updateRemoteShift,
       createRemoteSale,
+      createRemoteInformalSale,
       upsertRemoteWalletState,
       createRemoteWalletMovement,
       createRemoteExpense,
@@ -494,6 +530,8 @@ export function AppProvider({ children }) {
     setProductModal,
     saleModal,
     setSaleModal,
+    informalSaleModal,
+    setInformalSaleModal,
     expenseModal,
     setExpenseModal,
     walletModal,
@@ -504,6 +542,7 @@ export function AppProvider({ children }) {
     syncing,
     uploading,
     saleSubmitting,
+    informalSaleSubmitting,
     expenseSubmitting,
     feedbackSubmitting,
     authChecking,
@@ -523,6 +562,10 @@ export function AppProvider({ children }) {
     setSaleLines,
     salePayment,
     setSalePayment,
+    informalSale,
+    setInformalSale,
+    informalSalePayment,
+    setInformalSalePayment,
     scheduleForm,
     setScheduleForm,
     activeShift,
@@ -551,15 +594,18 @@ export function AppProvider({ children }) {
     openCreateProduct,
     openEditProduct,
     openSaleFlow,
+    openInformalSaleFlow,
     handleLogin,
     saveProduct,
     removeProduct,
     uploadProductImage,
     uploadSaleEvidence,
+    uploadInformalSaleEvidence,
     uploadExpenseEvidence,
     startShift,
     closeShift,
     createSale,
+    createInformalSale,
     createExpense,
     adjustWallet,
     createSchedule,

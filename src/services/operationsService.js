@@ -106,7 +106,7 @@ export async function fetchRemoteSales() {
 
   const { data: sales, error: salesError } = await supabase
     .from("sales")
-    .select("id,shift_id,user_id,total,payment_method,payment_evidence_url,payment_evidence_name,created_at,profiles(nombre,apellido)")
+    .select("id,shift_id,user_id,total,descripcion,informal,payment_method,payment_evidence_url,payment_evidence_name,created_at,profiles(nombre,apellido)")
     .order("created_at", { ascending: false });
 
   if (salesError) return { ok: false, error: salesError.message };
@@ -134,39 +134,85 @@ export async function createRemoteSale(sale) {
   if (!supabaseReady || !supabase) return { ok: false, error: "Supabase no configurado." };
 
   const salePayload = {
-    shift_id: sale.shiftId,
-    user_id: sale.userId,
-    total: safeNumber(sale.total),
-    payment_method: sale.paymentMethod || "efectivo",
-    payment_evidence_url: sale.paymentEvidenceUrl || null,
-    payment_evidence_name: sale.paymentEvidenceName || null,
-    created_at: sale.createdAt,
+    p_shift_id: sale.shiftId,
+    p_user_id: sale.userId,
+    p_total: safeNumber(sale.total),
+    p_payment_method: sale.paymentMethod || "efectivo",
+    p_payment_evidence_url: sale.paymentEvidenceUrl || null,
+    p_payment_evidence_name: sale.paymentEvidenceName || null,
+    p_created_at: sale.createdAt,
+    p_items: sale.items.map((item) => ({
+      product_id: item.productId,
+      nombre: item.nombre,
+      precio: safeNumber(item.precio),
+      cantidad: safeNumber(item.cantidad),
+      subtotal: safeNumber(item.subtotal),
+    })),
   };
+
+  const { data: saleId, error: rpcError } = await supabase.rpc("create_sale_with_items", salePayload);
+
+  if (rpcError) {
+    return {
+      ok: false,
+      error:
+        rpcError.message?.includes("create_sale_with_items")
+          ? "Falta la funcion create_sale_with_items en Supabase. Aplica el SQL del esquema actualizado para descontar stock remotamente."
+          : rpcError.message,
+    };
+  }
 
   const { data: createdSale, error: saleError } = await supabase
     .from("sales")
-    .insert(salePayload)
-    .select("id,shift_id,user_id,total,payment_method,payment_evidence_url,payment_evidence_name,created_at,profiles(nombre,apellido)")
+    .select("id,shift_id,user_id,total,descripcion,informal,payment_method,payment_evidence_url,payment_evidence_name,created_at,profiles(nombre,apellido)")
+    .eq("id", saleId)
     .single();
 
   if (saleError) return { ok: false, error: saleError.message };
 
-  const itemPayload = sale.items.map((item) => ({
-    sale_id: createdSale.id,
-    product_id: item.productId,
-    nombre: item.nombre,
-    precio: safeNumber(item.precio),
-    cantidad: safeNumber(item.cantidad),
-    subtotal: safeNumber(item.subtotal),
-  }));
-
   const { data: createdItems, error: itemError } = await supabase
     .from("sale_items")
-    .insert(itemPayload)
-    .select("id,sale_id,product_id,nombre,precio,cantidad,subtotal");
+    .select("id,sale_id,product_id,nombre,precio,cantidad,subtotal")
+    .eq("sale_id", saleId);
 
   if (itemError) return { ok: false, error: itemError.message };
   return { ok: true, sale: normalizeSale(createdSale, createdItems || []) };
+}
+
+export async function createRemoteInformalSale(sale) {
+  if (!supabaseReady || !supabase) return { ok: false, error: "Supabase no configurado." };
+
+  const salePayload = {
+    p_shift_id: sale.shiftId ?? null,
+    p_user_id: sale.userId,
+    p_total: safeNumber(sale.total),
+    p_description: sale.description?.trim() || "",
+    p_payment_method: sale.paymentMethod || "efectivo",
+    p_payment_evidence_url: sale.paymentEvidenceUrl || null,
+    p_payment_evidence_name: sale.paymentEvidenceName || null,
+    p_created_at: sale.createdAt,
+  };
+
+  const { data: saleId, error: rpcError } = await supabase.rpc("create_informal_sale", salePayload);
+
+  if (rpcError) {
+    return {
+      ok: false,
+      error:
+        rpcError.message?.includes("create_informal_sale")
+          ? "Falta la funcion create_informal_sale en Supabase. Aplica el SQL actualizado para registrar ventas informales remotamente."
+          : rpcError.message,
+    };
+  }
+
+  const { data, error } = await supabase
+    .from("sales")
+    .select("id,shift_id,user_id,total,descripcion,informal,payment_method,payment_evidence_url,payment_evidence_name,created_at,profiles(nombre,apellido)")
+    .eq("id", saleId)
+    .single();
+
+  if (error) return { ok: false, error: error.message };
+  return { ok: true, sale: normalizeSale(data, []) };
 }
 
 export async function fetchRemoteExpenses() {

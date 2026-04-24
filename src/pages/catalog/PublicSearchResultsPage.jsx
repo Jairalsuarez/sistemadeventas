@@ -50,7 +50,6 @@ export default function PublicSearchResultsPage({ app, money, onOpenLoginPage, o
         publicSearch={<PublicSearchBox onChange={setSearch} products={products} value={search} />}
         publicLinks={[
           { label: "About us", to: "/about-us" },
-          { label: "Comunidad", to: "/comunidad" },
           { label: "Como llegar", to: "/como-llegar" },
         ]}
         publicVariant="catalog"

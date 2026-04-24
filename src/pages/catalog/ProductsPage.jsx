@@ -8,7 +8,7 @@ import useCatalogFilters from "../../hooks/useCatalogFilters.jsx";
 
 const PRODUCTS_PER_PAGE = 8;
 
-function ProductsInventoryView({ canEdit, money, onEdit, onNewProduct, onView, products }) {
+function ProductsInventoryView({ canCreate, canEdit, money, onEdit, onNewProduct, onView, products }) {
   const { category, categories, filteredProducts, search, setCategory, setSearch, setSortBy, setStockFilter, sortBy, stockFilter } =
     useCatalogFilters(products);
   const [currentPage, setCurrentPage] = useState(1);
@@ -32,17 +32,12 @@ function ProductsInventoryView({ canEdit, money, onEdit, onNewProduct, onView, p
     <div className="space-y-6">
       <PageHeader
         action={
-          canEdit ? (
-            <button className="inline-flex items-center gap-2 rounded-md bg-[#1f7a3a] px-4 py-2 text-sm font-medium text-white" onClick={onNewProduct} type="button">
+          canCreate ? (
+            <button className="inline-flex items-center gap-2 rounded-md bg-[#1f7a3a] px-4 py-2 text-sm font-medium text-white dark:bg-[linear-gradient(135deg,#2563eb,#1d4ed8)]" onClick={onNewProduct} type="button">
               <Icon name="add" />
               Agregar producto
             </button>
           ) : null
-        }
-        description={
-          canEdit
-            ? "Vista de gestion para revisar stock, precios, categorias y editar productos rapido."
-            : "Vista en lista para ventas, con filtros rapidos y acceso directo al detalle del producto."
         }
         eyebrow="Inventario"
         title={canEdit ? "Productos del panel" : "Productos disponibles"}
@@ -53,7 +48,7 @@ function ProductsInventoryView({ canEdit, money, onEdit, onNewProduct, onView, p
           <label className="grid gap-2 text-sm">
             Buscar
             <input
-              className="rounded-md border border-[#dfe7db] bg-[#fbfcfa] px-3 py-2 dark:border-white/10 dark:bg-[#0d1710]"
+              className="rounded-md border border-[#dfe7db] bg-[#fbfcfa] px-3 py-2 dark:border-[#314056] dark:bg-[#0f172a] dark:text-[#f8fafc]"
               onChange={(event) => setSearch(event.target.value)}
               placeholder="Nombre, categoria o descripcion"
               value={search}
@@ -62,7 +57,7 @@ function ProductsInventoryView({ canEdit, money, onEdit, onNewProduct, onView, p
 
           <label className="grid gap-2 text-sm">
             Categoria
-            <select className="rounded-md border border-[#dfe7db] bg-[#fbfcfa] px-3 py-2 dark:border-white/10 dark:bg-[#0d1710]" onChange={(event) => setCategory(event.target.value)} value={category}>
+            <select className="rounded-md border border-[#dfe7db] bg-[#fbfcfa] px-3 py-2 dark:border-[#314056] dark:bg-[#0f172a] dark:text-[#f8fafc]" onChange={(event) => setCategory(event.target.value)} value={category}>
               {categories.map((item) => (
                 <option key={item} value={item}>
                   {item}
@@ -73,7 +68,7 @@ function ProductsInventoryView({ canEdit, money, onEdit, onNewProduct, onView, p
 
           <label className="grid gap-2 text-sm">
             Disponibilidad
-            <select className="rounded-md border border-[#dfe7db] bg-[#fbfcfa] px-3 py-2 dark:border-white/10 dark:bg-[#0d1710]" onChange={(event) => setStockFilter(event.target.value)} value={stockFilter}>
+            <select className="rounded-md border border-[#dfe7db] bg-[#fbfcfa] px-3 py-2 dark:border-[#314056] dark:bg-[#0f172a] dark:text-[#f8fafc]" onChange={(event) => setStockFilter(event.target.value)} value={stockFilter}>
               <option value="todos">Todos</option>
               <option value="disponibles">Disponibles</option>
               <option value="bajo">Bajo stock</option>
@@ -83,7 +78,7 @@ function ProductsInventoryView({ canEdit, money, onEdit, onNewProduct, onView, p
 
           <label className="grid gap-2 text-sm">
             Ordenar
-            <select className="rounded-md border border-[#dfe7db] bg-[#fbfcfa] px-3 py-2 dark:border-white/10 dark:bg-[#0d1710]" onChange={(event) => setSortBy(event.target.value)} value={sortBy}>
+            <select className="rounded-md border border-[#dfe7db] bg-[#fbfcfa] px-3 py-2 dark:border-[#314056] dark:bg-[#0f172a] dark:text-[#f8fafc]" onChange={(event) => setSortBy(event.target.value)} value={sortBy}>
               <option value="nombre-asc">Nombre A-Z</option>
               <option value="nombre-desc">Nombre Z-A</option>
               <option value="precio-asc">Menor precio</option>
@@ -119,6 +114,6 @@ function ProductsInventoryView({ canEdit, money, onEdit, onNewProduct, onView, p
   );
 }
 
-export default function ProductsPage({ canEdit, money, onNewProduct, onEdit, onView, products }) {
-  return <ProductsInventoryView canEdit={canEdit} money={money} onEdit={onEdit} onNewProduct={onNewProduct} onView={onView} products={products} />;
+export default function ProductsPage({ canCreate, canEdit, money, onNewProduct, onEdit, onView, products }) {
+  return <ProductsInventoryView canCreate={canCreate} canEdit={canEdit} money={money} onEdit={onEdit} onNewProduct={onNewProduct} onView={onView} products={products} />;
 }

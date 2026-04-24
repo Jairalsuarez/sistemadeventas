@@ -39,7 +39,6 @@ export default function WalletPage({ expenses, isAdmin, money, onOpenExpense, on
       <PageHeader
         eyebrow="Cartera"
         title="Control de cartera"
-        description="Aqui revisas el saldo general y los egresos registrados del negocio."
         action={
           <>
             <button className="rounded-md border border-[#dfe7db] px-4 py-2 text-sm font-medium dark:border-white/10" onClick={onOpenExpense} type="button">

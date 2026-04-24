@@ -1,7 +1,8 @@
-import { Suspense, lazy } from "react";
-import { Navigate, Route, Routes, useNavigate } from "react-router-dom";
+import { Suspense, lazy, useEffect } from "react";
+import { Navigate, Route, Routes, useLocation, useNavigate } from "react-router-dom";
 import ProductDetailsModal from "./components/modals/ProductDetailsModal";
 import ExpenseModal from "./components/modals/ExpenseModal";
+import InformalSaleModal from "./components/modals/InformalSaleModal";
 import ProductModal from "./components/modals/ProductModal";
 import SaleModal from "./components/modals/SaleModal";
 import WalletModal from "./components/modals/WalletModal";
@@ -18,25 +19,24 @@ const ProductsPage = lazy(() => import("./pages/catalog/ProductsPage.jsx"));
 const PublicCatalogPage = lazy(() => import("./pages/catalog/PublicCatalogPage.jsx"));
 const PublicSearchResultsPage = lazy(() => import("./pages/catalog/PublicSearchResultsPage.jsx"));
 const AboutPage = lazy(() => import("./pages/public/AboutPage.jsx"));
-const CommunityPage = lazy(() => import("./pages/public/CommunityPage.jsx"));
 const DirectionsPage = lazy(() => import("./pages/public/DirectionsPage.jsx"));
 const HomePage = lazy(() => import("./pages/public/HomePage.jsx"));
 const DashboardPage = lazy(() => import("./pages/dashboard/DashboardPage.jsx"));
 const WalletPage = lazy(() => import("./pages/finance/WalletPage.jsx"));
 const SchedulePage = lazy(() => import("./pages/admin/SchedulePage.jsx"));
 const UsersPage = lazy(() => import("./pages/admin/UsersPage.jsx"));
-const CommunityAdminPage = lazy(() => import("./pages/admin/CommunityAdminPage.jsx"));
 const SalesAnalyticsPage = lazy(() => import("./pages/admin/SalesAnalyticsPage.jsx"));
 
 function App() {
   const navigate = useNavigate();
+  const location = useLocation();
   const {
     activeShift,
     app,
     createExpense,
+    createInformalSale,
     createSale,
     createSchedule,
-    deleteCommunityFeedback,
     deleteSchedule,
     dismissToast,
     editing,
@@ -44,11 +44,15 @@ function App() {
     expenseCategories,
     expenseModal,
     expenseSubmitting,
-    feedbackSubmitting,
+    informalSale,
+    informalSaleModal,
+    informalSalePayment,
+    informalSaleSubmitting,
     money,
     openCreateProduct,
     openEditProduct,
     openSaleFlow,
+    openInformalSaleFlow,
     productForm,
     productModal,
     removeProduct,
@@ -63,9 +67,12 @@ function App() {
     scheduleForm,
     selected,
     session,
-    submitCommunityFeedback,
+    authChecking,
     setExpense,
     setExpenseModal,
+    setInformalSale,
+    setInformalSaleModal,
+    setInformalSalePayment,
     setProductForm,
     setSaleLines,
     setSaleModal,
@@ -75,12 +82,14 @@ function App() {
     setWalletForm,
     setWalletModal,
     storageReady,
+    syncing,
     toasts,
     upcomingSchedules,
     uploading,
     updateScheduleStatus,
     uploadProductImage,
     uploadExpenseEvidence,
+    uploadInformalSaleEvidence,
     uploadSaleEvidence,
     uploadProfileAvatar,
     user,
@@ -88,14 +97,19 @@ function App() {
     walletForm,
     walletModal,
     adjustWallet,
-    communityFeedbacks,
     distributors,
+    theme,
   } = useAppContext();
+
+  useEffect(() => {
+    const isPanelRoute = location.pathname.startsWith("/panel");
+    document.documentElement.classList.toggle("dark", isPanelRoute && theme === "dark");
+  }, [location.pathname, theme]);
 
   return (
     <>
       <CookieBanner />
-      <ToastViewport onDismiss={dismissToast} toasts={toasts} />
+      <ToastViewport onDismiss={dismissToast} suspended={authChecking || syncing} toasts={toasts} />
       <Suspense fallback={<PageSkeleton />}>
         <Routes>
           <Route
@@ -107,11 +121,8 @@ function App() {
             element={
               <PublicCatalogPage
                 app={app}
-                communityFeedbacks={communityFeedbacks}
-                feedbackSubmitting={feedbackSubmitting}
                 money={money}
                 onOpenLoginPage={() => navigate("/login")}
-                onSubmitFeedback={submitCommunityFeedback}
                 onView={setSelected}
                 products={visibleProducts}
               />
@@ -131,7 +142,6 @@ function App() {
           />
           <Route path="/login" element={<LoginPage />} />
           <Route path="/about-us" element={<AboutPage app={app} />} />
-          <Route path="/comunidad" element={<CommunityPage app={app} feedbacks={communityFeedbacks} />} />
           <Route path="/como-llegar" element={<DirectionsPage app={app} />} />
 
           <Route element={<ProtectedRoute />}>
@@ -142,6 +152,7 @@ function App() {
                 element={
                   <DashboardPage
                     onNewProduct={openCreateProduct}
+                    onNewInformalSale={openInformalSaleFlow}
                     onNewSale={openSaleFlow}
                     onOpenExpense={() => setExpenseModal(true)}
                     onOpenWallet={() => setWalletModal(true)}
@@ -166,6 +177,7 @@ function App() {
                 element={
                   <ProductsPage
                     app={app}
+                    canCreate={["admin", "vendedor"].includes(user?.role)}
                     canEdit={user?.role === "admin"}
                     money={money}
                     onEdit={openEditProduct}
@@ -195,7 +207,6 @@ function App() {
                   />
                 }
               />
-              <Route path="/panel/comentarios" element={<CommunityAdminPage feedbacks={communityFeedbacks} onDelete={deleteCommunityFeedback} />} />
               <Route path="/panel/analitica" element={<SalesAnalyticsPage expenses={app.expenses || []} money={money} sales={app.sales || []} />} />
               <Route path="/panel/usuarios" element={<UsersPage users={app.users || []} />} />
             </Route>
@@ -219,6 +230,23 @@ function App() {
         setSaleLines={setSaleLines}
         setSalePayment={setSalePayment}
         uploadSaleEvidence={uploadSaleEvidence}
+        uploading={uploading}
+        userRole={user?.role}
+        wallet={app.wallet}
+      />
+
+      <InformalSaleModal
+        activeShift={activeShift}
+        createInformalSale={createInformalSale}
+        informalSale={informalSale}
+        informalSalePayment={informalSalePayment}
+        informalSaleSubmitting={informalSaleSubmitting}
+        money={money}
+        onClose={() => setInformalSaleModal(false)}
+        open={informalSaleModal}
+        setInformalSale={setInformalSale}
+        setInformalSalePayment={setInformalSalePayment}
+        uploadInformalSaleEvidence={uploadInformalSaleEvidence}
         uploading={uploading}
         userRole={user?.role}
         wallet={app.wallet}

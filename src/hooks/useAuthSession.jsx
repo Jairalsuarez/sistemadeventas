@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { clearSession, loginUser, logoutSupabaseSession } from "../services/authService.js";
 
-export default function useAuthSession({ inform, personName, setSession }) {
+export default function useAuthSession({ inform, personName, setSession, setSkipNextSessionRestore }) {
   const [loginModal, setLoginModal] = useState(false);
   const [loginLoading, setLoginLoading] = useState(false);
   const [loginError, setLoginError] = useState("");
@@ -28,6 +28,8 @@ export default function useAuthSession({ inform, personName, setSession }) {
   };
 
   const logout = () => {
+    setSkipNextSessionRestore(true);
+    setAuthChecking(false);
     clearSession();
     logoutSupabaseSession();
     setSession(null);

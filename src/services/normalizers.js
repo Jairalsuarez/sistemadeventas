@@ -96,6 +96,8 @@ export function normalizeSale(sale, items = []) {
     userId: sale.user_id || sale.userId || null,
     userName: sale.user_name || sale.userName || profileName,
     total: safeNumber(sale.total),
+    description: sale.descripcion || sale.description || "",
+    informal: sale.informal ?? sale.isInformal ?? false,
     paymentMethod: sale.payment_method || sale.paymentMethod || "efectivo",
     paymentEvidenceUrl: sale.payment_evidence_url || sale.paymentEvidenceUrl || "",
     paymentEvidenceName: sale.payment_evidence_name || sale.paymentEvidenceName || "",

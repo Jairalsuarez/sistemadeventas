@@ -46,10 +46,12 @@ export default function ProductDetailsModal({ money, onClose, open, product, var
           </div>
 
           <div className="mt-auto grid gap-3 pt-5">
-            <a className="inline-flex w-full items-center justify-center gap-2 rounded-md bg-[#25d366] px-4 py-3 text-sm font-medium text-white" href={whatsapp} onClick={isPublic ? trackWhatsAppClick : undefined} rel="noreferrer" target="_blank">
-              <Icon name="chat" />
-              {isPublic ? "Consultar por WhatsApp" : "Comprar en WhatsApp"}
-            </a>
+            {isPublic ? (
+              <a className="inline-flex w-full items-center justify-center gap-2 rounded-md bg-[#25d366] px-4 py-3 text-sm font-medium text-white" href={whatsapp} onClick={trackWhatsAppClick} rel="noreferrer" target="_blank">
+                <Icon name="chat" />
+                Consultar por WhatsApp
+              </a>
+            ) : null}
 
             <button className="inline-flex w-full items-center justify-center gap-2 rounded-md border border-[#dfe7db] px-4 py-3 text-sm font-medium dark:border-white/10" onClick={onClose} type="button">
               <Icon name="close" />

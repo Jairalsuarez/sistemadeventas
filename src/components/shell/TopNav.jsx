@@ -18,12 +18,12 @@ function UserAvatar({ user }) {
     return <img alt={fullName(user)} className="h-9 w-9 rounded-full object-cover" src={user.avatarUrl} />;
   }
 
-  return <div className="grid h-9 w-9 place-items-center rounded-full border border-[#e1ece3] bg-white text-sm font-semibold text-[#183325]">{initials(user)}</div>;
+  return <div className="grid h-9 w-9 place-items-center rounded-full border border-[#e1ece3] bg-white text-sm font-semibold text-[#183325] dark:border-[#314056] dark:bg-[#182235] dark:text-[#f8fafc]">{initials(user)}</div>;
 }
 
 function NavItem({ link }) {
   const className =
-    "inline-flex items-center rounded-md px-3 py-2 text-sm font-medium text-[#56685d] transition hover:bg-[#f4f7f2] hover:text-[#183325]";
+    "inline-flex items-center rounded-md px-3 py-2 text-sm font-medium text-[#56685d] transition hover:bg-[#f4f7f2] hover:text-[#183325] dark:text-[#c7d2e0] dark:hover:bg-[#182235] dark:hover:text-white";
 
   if (link.to) {
     return (
@@ -61,31 +61,32 @@ export default function TopNav({
   const isLanding = isPublic && publicVariant === "landing";
 
   return (
-    <header className={isLanding ? "sticky top-0 z-40 px-4 pt-3 lg:px-6 lg:pt-5" : "sticky top-0 z-40 border-b border-[#e7ede3] bg-white"}>
+    <header className={isLanding ? "sticky top-0 z-40 px-4 pt-3 lg:px-6 lg:pt-5" : "sticky top-0 z-40 border-b border-[#e7ede3] bg-white dark:border-[#23314d] dark:bg-[#0f172a]"}>
       <div className={isLanding ? "mx-auto max-w-[1440px]" : "mx-auto max-w-[1440px] px-4 lg:px-6"}>
         <div
           className={
             isLanding
-              ? "mx-auto flex w-full max-w-[1320px] items-center justify-between gap-4 rounded-[24px] border border-[#e7ede3] bg-white px-5 py-3 shadow-[0_12px_34px_rgba(24,51,37,0.08)]"
-              : `flex w-full items-center justify-between gap-4 ${isPublic ? "py-4" : "px-1 py-4"}`
+              ? "mx-auto flex w-full max-w-[1320px] flex-wrap items-center justify-between gap-3 rounded-[24px] border border-[#e7ede3] bg-white px-4 py-3 shadow-[0_12px_34px_rgba(24,51,37,0.08)] sm:px-5"
+              : `flex w-full flex-wrap items-center justify-between gap-3 ${isPublic ? "py-4" : "px-1 py-4"}`
           }
         >
-          <NavLink className="flex min-w-0 items-center gap-3" to={session ? "/panel" : "/"}>
+          <NavLink className={`flex min-w-0 items-center gap-3 ${isLanding ? "w-full sm:flex-1" : "flex-1 sm:flex-none"}`} to={session ? "/panel" : "/"}>
             <img alt="Sabores Tropicales" className="h-12 w-12 shrink-0 object-contain" src="/images/IcoSinFondo.png" />
             <div className="min-w-0">
-              <strong className="block truncate text-[17px] font-semibold text-[#183325]">{businessName}</strong>
+              <strong className="block truncate text-base font-semibold text-[#183325] dark:text-[#f8fafc] sm:text-[17px]">{businessName}</strong>
             </div>
           </NavLink>
 
-          <div className="flex items-center gap-2">
-            {!session && publicSearch ? <div className="hidden min-w-[360px] flex-1 xl:flex xl:justify-center">{publicSearch}</div> : null}
+          {!session && publicSearch ? <div className="order-3 w-full lg:order-none lg:flex-1 lg:px-4 xl:flex xl:min-w-[360px] xl:justify-center">{publicSearch}</div> : null}
+
+          <div className={`flex items-center gap-2 sm:flex-wrap sm:gap-3 ${isLanding ? "w-full justify-between sm:w-auto sm:justify-end" : "w-full justify-end sm:w-auto"}`}>
             {!session && publicLinks.length ? <nav className="hidden items-center gap-1 lg:flex">{publicLinks.map((link) => <NavItem key={link.label} link={link} />)}</nav> : null}
 
             {showActiveShiftBadge ? (
-              <div className="hidden items-center gap-2 rounded-xl border border-[#cfe5d5] bg-white px-3 py-2 text-sm font-semibold text-[#1f7a3a] shadow-[0_8px_20px_rgba(31,122,58,0.08)] md:inline-flex">
+              <div className="hidden items-center gap-2 rounded-xl border border-[#cfe5d5] bg-white px-3 py-2 text-sm font-semibold text-[#1f7a3a] shadow-[0_8px_20px_rgba(31,122,58,0.08)] dark:border-[#314056] dark:bg-[#182235] dark:text-[#93c5fd] dark:shadow-[0_8px_20px_rgba(37,99,235,0.12)] md:inline-flex">
                 <span className="relative inline-flex h-3 w-3">
-                  <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-[#2b8e46]/35" />
-                  <span className="relative inline-flex h-3 w-3 rounded-full bg-[#1f7a3a]" />
+                  <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-[#2b8e46]/35 dark:bg-[#60a5fa]/35" />
+                  <span className="relative inline-flex h-3 w-3 rounded-full bg-[#1f7a3a] dark:bg-[#60a5fa]" />
                 </span>
                 Turno activo
               </div>
@@ -95,50 +96,70 @@ export default function TopNav({
 
             {showThemeToggle ? (
               <button
-                className={`inline-flex items-center gap-2 border border-[#dfe7db] bg-white text-sm font-medium text-[#183325] transition hover:bg-[#f6faf4] ${
+                aria-label={darkMode ? "Cambiar a modo claro" : "Cambiar a modo oscuro"}
+                className={`relative inline-flex h-11 w-[68px] shrink-0 items-center rounded-full border transition ${
                   isLanding
-                    ? "rounded-xl px-3.5 py-2.5 shadow-[0_6px_18px_rgba(24,51,37,0.04)]"
-                    : "rounded-md px-4 py-2.5"
+                    ? "border-[#dfe7db] bg-white shadow-[0_6px_18px_rgba(24,51,37,0.04)]"
+                    : "border-[#dfe7db] bg-[#f8faf6] dark:border-[#314056] dark:bg-[#111827]"
                 }`}
                 onClick={onToggleTheme}
                 type="button"
               >
-                <Icon name={darkMode ? "light_mode" : "dark_mode"} />
-                {darkMode ? "Modo claro" : "Modo oscuro"}
+                <span className="absolute left-3 text-[#f59e0b]">
+                  <Icon name="light_mode" />
+                </span>
+                <span className="absolute right-3 text-[#cbd5e1]">
+                  <Icon name="dark_mode" />
+                </span>
+                <span
+                  className={`absolute top-1 grid h-9 w-9 place-items-center rounded-full bg-white text-[#183325] shadow-[0_8px_18px_rgba(15,23,42,0.16)] transition ${
+                    darkMode ? "translate-x-[30px] bg-[#1e293b] text-[#f8fafc]" : "translate-x-[2px]"
+                  }`}
+                >
+                  <Icon name={darkMode ? "dark_mode" : "light_mode"} />
+                </span>
               </button>
             ) : null}
 
             {session ? (
               <>
                 {notificationButton}
-                <NavLink className="hidden rounded-md px-2 py-2 text-sm font-medium text-[#5b6d61] md:block" to="/panel/perfil">
+                <NavLink className="hidden rounded-md px-2 py-2 text-sm font-medium text-[#5b6d61] dark:text-[#f8fafc] lg:block" to="/panel/perfil">
                   {fullName(user)}
                 </NavLink>
                 <UserAvatar user={user} />
                 <button
-                  className={`inline-flex items-center gap-2 bg-[linear-gradient(135deg,#1f7a3a,#2b8e46)] text-sm font-medium text-white transition hover:-translate-y-0.5 hover:shadow-lg ${
+                  className={`inline-flex items-center gap-2 bg-[linear-gradient(135deg,#1f7a3a,#2b8e46)] text-sm font-medium text-white transition hover:-translate-y-0.5 hover:shadow-lg dark:bg-[linear-gradient(135deg,#2563eb,#1d4ed8)] ${
                     isLanding
                       ? "rounded-xl px-4 py-2.5 shadow-[0_10px_24px_rgba(31,122,58,0.18)]"
-                      : "rounded-md px-4 py-2.5 shadow-[0_8px_20px_rgba(31,122,58,0.14)]"
+                      : "rounded-md px-3 py-2.5 shadow-[0_8px_20px_rgba(31,122,58,0.14)] sm:px-4"
                   }`}
                   onClick={onLogout}
                   type="button"
                 >
                   <Icon name="logout" />
-                  Salir
+                  <span className="hidden md:inline">Salir</span>
                 </button>
               </>
             ) : (
               <button
-                className="inline-flex items-center gap-2 rounded-md bg-[linear-gradient(135deg,#1f7a3a,#2b8e46)] px-4 py-2.5 text-sm font-semibold text-white shadow-[0_12px_24px_rgba(31,122,58,0.18)] transition hover:-translate-y-0.5 hover:shadow-lg"
+                className={`inline-flex items-center justify-center gap-2 rounded-md bg-[linear-gradient(135deg,#1f7a3a,#2b8e46)] px-3 py-2.5 text-sm font-semibold text-white shadow-[0_12px_24px_rgba(31,122,58,0.18)] transition hover:-translate-y-0.5 hover:shadow-lg dark:bg-[linear-gradient(135deg,#2563eb,#1d4ed8)] dark:shadow-[0_12px_24px_rgba(37,99,235,0.2)] ${isLanding ? "min-w-[48px]" : ""} sm:px-4`}
                 onClick={onOpenLoginPage}
                 type="button"
               >
                 <Icon name="login" />
-                Iniciar sesion
+                <span className={`${isLanding ? "hidden sm:inline" : "hidden md:inline"}`}>Iniciar sesion</span>
               </button>
             )}
           </div>
+
+          {!session && publicLinks.length ? (
+            <nav className={`order-4 flex w-full overflow-x-auto pb-1 lg:hidden ${isLanding ? "justify-between gap-1" : "gap-2"}`}>
+              {publicLinks.map((link) => (
+                <NavItem key={link.label} link={link} />
+              ))}
+            </nav>
+          ) : null}
         </div>
       </div>
     </header>

@@ -3,13 +3,13 @@ import Modal from "../Modal";
 import Icon from "../ui/Icon";
 
 const fieldClassName =
-  "rounded-md border border-[#dfe7db] bg-[#f8faf6] px-4 py-3 text-[#183325] transition focus:border-[#f59e0b] focus:outline-none focus:ring-2 focus:ring-[#f59e0b]/20 dark:border-white/10 dark:bg-[#0d1710] dark:text-white";
+  "rounded-md border border-[#dfe7db] bg-[#f8faf6] px-4 py-3 text-[#183325] transition focus:border-[#f59e0b] focus:outline-none focus:ring-2 focus:ring-[#f59e0b]/20 dark:border-[#314056] dark:bg-[#0f172a] dark:text-white";
 
 const subtleButtonClassName =
-  "rounded-md border border-[#dfe7db] px-4 py-3 text-sm font-medium text-[#183325] transition hover:bg-[#f7faf6] dark:border-white/10 dark:text-white dark:hover:bg-[#183325]";
+  "rounded-md border border-[#dfe7db] px-4 py-3 text-sm font-medium text-[#183325] transition hover:bg-[#f7faf6] dark:border-[#314056] dark:bg-[#0f172a] dark:text-white dark:hover:bg-[#182235]";
 
 const primaryButtonClassName =
-  "rounded-md bg-[#1f7a3a] px-4 py-3 text-sm font-medium text-white transition hover:bg-[#17612d] disabled:cursor-not-allowed disabled:opacity-60";
+  "rounded-md bg-[#1f7a3a] px-4 py-3 text-sm font-medium text-white transition hover:bg-[#17612d] disabled:cursor-not-allowed disabled:opacity-60 dark:bg-[linear-gradient(135deg,#2563eb,#1d4ed8)] dark:hover:brightness-110";
 
 function parseMoneyInput(value) {
   const normalized = String(value || "")
@@ -31,22 +31,22 @@ function OptionCard({ active, description, icon, onClick, title }) {
     <button
       className={`rounded-lg border px-4 py-4 text-left transition ${
         active
-          ? "border-[#f59e0b]/40 bg-[#fff7ed] shadow-[0_14px_30px_rgba(245,158,11,0.12)]"
-          : "border-[#e4ece2] bg-white hover:bg-[#fafcf9]"
+          ? "border-[#f59e0b]/40 bg-[#fff7ed] shadow-[0_14px_30px_rgba(245,158,11,0.12)] dark:border-[#314056] dark:bg-[#182235]"
+          : "border-[#e4ece2] bg-white hover:bg-[#fafcf9] dark:border-[#23314d] dark:bg-[#111827] dark:hover:bg-[#182235]"
       }`}
       onClick={onClick}
       type="button"
     >
       <div className="flex items-start justify-between gap-3">
-        <span className={`inline-flex h-11 w-11 items-center justify-center rounded-full text-xl ${active ? "bg-white text-[#183325]" : "bg-[#eef6f0] text-[#1f7a3a]"}`}>
+        <span className={`inline-flex h-11 w-11 items-center justify-center rounded-full text-xl ${active ? "bg-white text-[#183325] dark:bg-[#0f172a] dark:text-[#93c5fd]" : "bg-[#eef6f0] text-[#1f7a3a] dark:bg-[#0f172a] dark:text-[#93c5fd]"}`}>
           <Icon name={icon} />
         </span>
-        <span className={`inline-flex rounded-full px-2.5 py-1 text-xs font-semibold ${active ? "bg-[#f59e0b] text-white" : "bg-[#edf1ea] text-[#5b6d61]"}`}>
+        <span className={`inline-flex rounded-full px-2.5 py-1 text-xs font-semibold ${active ? "bg-[#f59e0b] text-white" : "bg-[#edf1ea] text-[#5b6d61] dark:bg-[#0f172a] dark:text-[#94a3b8]"}`}>
           {active ? "Seleccionado" : "Elegir"}
         </span>
       </div>
-      <strong className="mt-4 block text-sm font-semibold text-[#183325]">{title}</strong>
-      <span className="mt-1 block text-sm leading-6 text-[#5b6d61]">{description}</span>
+      <strong className="mt-4 block text-sm font-semibold text-[#183325] dark:text-[#f8fafc]">{title}</strong>
+      <span className="mt-1 block text-sm leading-6 text-[#5b6d61] dark:text-[#c7d2e0]">{description}</span>
     </button>
   );
 }
@@ -140,23 +140,23 @@ export default function ExpenseModal({
                 key={item.id}
                 className={`flex min-h-[96px] rounded-lg border px-4 py-3 transition ${
                   active
-                    ? "border-[#f59e0b]/40 bg-[#fff7ed]"
+                    ? "border-[#f59e0b]/40 bg-[#fff7ed] dark:border-[#314056] dark:bg-[#182235]"
                     : completed
-                      ? "border-[#cde4d3] bg-[#f6faf4]"
-                      : "border-[#e4ece2] bg-white"
+                      ? "border-[#cde4d3] bg-[#f6faf4] dark:border-[#314056] dark:bg-[#182235]"
+                      : "border-[#e4ece2] bg-white dark:border-[#23314d] dark:bg-[#111827]"
                 }`}
               >
                 <div className="flex items-center gap-3">
                   <span
                     className={`inline-flex h-8 w-8 items-center justify-center rounded-full text-sm font-semibold ${
-                      active ? "bg-[#f59e0b] text-white" : completed ? "bg-[#1f7a3a] text-white" : "bg-[#edf1ea] text-[#183325]"
+                      active ? "bg-[#f59e0b] text-white" : completed ? "bg-[#1f7a3a] text-white dark:bg-[#2563eb]" : "bg-[#edf1ea] text-[#183325] dark:bg-[#0f172a] dark:text-[#f8fafc]"
                     }`}
                   >
                     {completed ? <Icon name="check" /> : item.id}
                   </span>
                   <div>
-                    <p className="text-sm font-semibold text-[#183325]">{item.title}</p>
-                    <p className="text-xs text-[#6a7b70]">Paso {item.id}</p>
+                    <p className="text-sm font-semibold text-[#183325] dark:text-[#f8fafc]">{item.title}</p>
+                    <p className="text-xs text-[#6a7b70] dark:text-[#94a3b8]">Paso {item.id}</p>
                   </div>
                 </div>
               </div>
@@ -225,9 +225,9 @@ export default function ExpenseModal({
                 </label>
               )}
 
-              <div className="rounded-lg border border-[#e4ece2] bg-[#f8faf6] p-4">
-                <p className="text-sm font-semibold text-[#183325]">Categoria actual</p>
-                <p className="mt-1 text-sm text-[#5b6d61]">{categoryName || "Todavia no has seleccionado una categoria."}</p>
+              <div className="rounded-lg border border-[#e4ece2] bg-[#f8faf6] p-4 dark:border-[#23314d] dark:bg-[#182235]">
+                <p className="text-sm font-semibold text-[#183325] dark:text-[#f8fafc]">Categoria actual</p>
+                <p className="mt-1 text-sm text-[#5b6d61] dark:text-[#c7d2e0]">{categoryName || "Todavia no has seleccionado una categoria."}</p>
               </div>
             </div>
           </div>
@@ -317,9 +317,9 @@ export default function ExpenseModal({
                 />
               </label>
 
-              <div className="rounded-lg border border-[#dbe6d8] bg-[#f8faf6] p-4">
-                <p className="text-sm font-semibold text-[#183325]">Consejo</p>
-                <p className="mt-1 text-sm text-[#5b6d61]">En la evidencia debe ir la factura y el producto, o una prueba clara del gasto realizado.</p>
+              <div className="rounded-lg border border-[#dbe6d8] bg-[#f8faf6] p-4 dark:border-[#23314d] dark:bg-[#182235]">
+                <p className="text-sm font-semibold text-[#183325] dark:text-[#f8fafc]">Consejo</p>
+                <p className="mt-1 text-sm text-[#5b6d61] dark:text-[#c7d2e0]">En la evidencia debe ir la factura y el producto, o una prueba clara del gasto realizado.</p>
                 <div className="mt-4 flex flex-wrap items-center gap-3">
                   <label className={subtleButtonClassName}>
                     <span>{uploading ? "Subiendo..." : expense.evidenceUrl ? "Cambiar evidencia" : "Agregar evidencia"}</span>
@@ -334,7 +334,7 @@ export default function ExpenseModal({
                       type="file"
                     />
                   </label>
-                  {expense.evidenceName ? <span className="text-sm text-[#5b6d61]">{expense.evidenceName}</span> : null}
+                  {expense.evidenceName ? <span className="text-sm text-[#5b6d61] dark:text-[#c7d2e0]">{expense.evidenceName}</span> : null}
                 </div>
               </div>
             </div>
@@ -364,18 +364,18 @@ export default function ExpenseModal({
                   />
                 </label>
 
-                <div className="rounded-lg border border-[#e4ece2] bg-white p-4">
-                  <p className="text-sm font-semibold text-[#183325]">Que vas a registrar en este paso</p>
-                  <p className="mt-2 text-sm leading-6 text-[#5b6d61]">
+                <div className="rounded-lg border border-[#e4ece2] bg-white p-4 dark:border-[#23314d] dark:bg-[#111827]">
+                  <p className="text-sm font-semibold text-[#183325] dark:text-[#f8fafc]">Que vas a registrar en este paso</p>
+                  <p className="mt-2 text-sm leading-6 text-[#5b6d61] dark:text-[#c7d2e0]">
                     Ingresa el valor total final del egreso tal como se descontara de la cartera. No hace falta desglosar este monto aqui.
                   </p>
                 </div>
               </div>
 
-              <div className="rounded-lg border border-[#e4ece2] bg-[#f8faf6] p-4">
-                <span className="block text-sm text-[#5b6d61]">Total a descontar</span>
-                <strong className="mt-1 block text-3xl font-black tracking-tight text-[#20130A]">{money(totalAmount)}</strong>
-                <p className="mt-3 text-sm text-[#5b6d61]">Este sera el valor completo que se restara de la cartera.</p>
+              <div className="rounded-lg border border-[#e4ece2] bg-[#f8faf6] p-4 dark:border-[#23314d] dark:bg-[#182235]">
+                <span className="block text-sm text-[#5b6d61] dark:text-[#c7d2e0]">Total a descontar</span>
+                <strong className="mt-1 block text-3xl font-black tracking-tight text-[#20130A] dark:text-[#f8fafc]">{money(totalAmount)}</strong>
+                <p className="mt-3 text-sm text-[#5b6d61] dark:text-[#c7d2e0]">Este sera el valor completo que se restara de la cartera.</p>
               </div>
             </div>
           </div>
@@ -384,65 +384,65 @@ export default function ExpenseModal({
         {step === summaryStep ? (
           <div className={stepPanelClassName}>
             <div className="grid gap-4 lg:grid-cols-[minmax(0,1.2fr)_320px]">
-              <div className="rounded-lg border border-[#e4ece2] bg-white p-4">
-                <h3 className="text-base font-semibold text-[#183325]">Detalle del egreso</h3>
-                <div className="mt-4 space-y-3 text-sm text-[#5b6d61]">
+              <div className="rounded-lg border border-[#e4ece2] bg-white p-4 dark:border-[#23314d] dark:bg-[#111827]">
+                <h3 className="text-base font-semibold text-[#183325] dark:text-[#f8fafc]">Detalle del egreso</h3>
+                <div className="mt-4 space-y-3 text-sm text-[#5b6d61] dark:text-[#c7d2e0]">
                   <div className="flex items-center justify-between gap-3">
                     <span>Categoria</span>
-                    <strong className="text-[#183325]">{categoryName}</strong>
+                    <strong className="text-[#183325] dark:text-[#f8fafc]">{categoryName}</strong>
                   </div>
                   {requiresDistributor ? (
                     <div className="flex items-center justify-between gap-3">
                       <span>Distribuidor</span>
-                      <strong className="text-[#183325]">{distributorName}</strong>
+                      <strong className="text-[#183325] dark:text-[#f8fafc]">{distributorName}</strong>
                     </div>
                   ) : null}
                   <div className="flex items-center justify-between gap-3">
                     <span>Descripcion</span>
-                    <strong className="text-right text-[#183325]">{expense.descripcion}</strong>
+                    <strong className="text-right text-[#183325] dark:text-[#f8fafc]">{expense.descripcion}</strong>
                   </div>
-                  <div className="rounded-md border border-[#dbe6d8] bg-[#f8faf6] px-3 py-3">
-                    <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[#6a7b70]">Detalle registrado</p>
-                    <p className="mt-2 leading-6 text-[#5b6d61]">{expense.detalleOferta}</p>
+                  <div className="rounded-md border border-[#dbe6d8] bg-[#f8faf6] px-3 py-3 dark:border-[#314056] dark:bg-[#182235]">
+                    <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[#6a7b70] dark:text-[#94a3b8]">Detalle registrado</p>
+                    <p className="mt-2 leading-6 text-[#5b6d61] dark:text-[#c7d2e0]">{expense.detalleOferta}</p>
                   </div>
-                  {expense.evidenceName ? <div className="rounded-md border border-[#dbe6d8] bg-[#f8faf6] px-3 py-2 text-xs text-[#5b6d61]">Evidencia: {expense.evidenceName}</div> : null}
+                  {expense.evidenceName ? <div className="rounded-md border border-[#dbe6d8] bg-[#f8faf6] px-3 py-2 text-xs text-[#5b6d61] dark:border-[#314056] dark:bg-[#182235] dark:text-[#c7d2e0]">Evidencia: {expense.evidenceName}</div> : null}
                 </div>
               </div>
 
-              <div className="rounded-lg border border-[#e4ece2] bg-[#f8faf6] p-4">
-                <h3 className="text-base font-semibold text-[#183325]">Resumen de cartera</h3>
-                <div className="mt-4 space-y-3 text-sm text-[#5b6d61]">
+              <div className="rounded-lg border border-[#e4ece2] bg-[#f8faf6] p-4 dark:border-[#23314d] dark:bg-[#182235]">
+                <h3 className="text-base font-semibold text-[#183325] dark:text-[#f8fafc]">Resumen de cartera</h3>
+                <div className="mt-4 space-y-3 text-sm text-[#5b6d61] dark:text-[#c7d2e0]">
                   <div className="flex items-center justify-between gap-3">
                     <span>Egreso total</span>
-                    <strong className="text-[#183325]">{money(totalAmount)}</strong>
+                    <strong className="text-[#183325] dark:text-[#f8fafc]">{money(totalAmount)}</strong>
                   </div>
                   <div className="flex items-center justify-between gap-3">
                     <span>Cartera actual</span>
-                    <strong className="text-[#183325]">{money(wallet?.saldoActual || 0)}</strong>
+                    <strong className="text-[#183325] dark:text-[#f8fafc]">{money(wallet?.saldoActual || 0)}</strong>
                   </div>
                   <div className="flex items-center justify-between gap-3">
                     <span>Cartera luego del egreso</span>
-                    <strong className="text-[#b42318]">{money(nextWalletTotal)}</strong>
+                    <strong className="text-[#b42318] dark:text-[#fca5a5]">{money(nextWalletTotal)}</strong>
                   </div>
                 </div>
 
                 {expense.evidenceUrl ? (
-                  <div className="mt-4 rounded-lg border border-[#dbe6d8] bg-white p-3">
-                    <p className="mb-3 text-xs font-semibold uppercase tracking-[0.18em] text-[#6a7b70]">Vista previa de evidencia</p>
-                    <div className="overflow-hidden rounded-lg border border-[#edf1ea] bg-[#f8faf6]">
+                  <div className="mt-4 rounded-lg border border-[#dbe6d8] bg-white p-3 dark:border-[#314056] dark:bg-[#111827]">
+                    <p className="mb-3 text-xs font-semibold uppercase tracking-[0.18em] text-[#6a7b70] dark:text-[#94a3b8]">Vista previa de evidencia</p>
+                    <div className="overflow-hidden rounded-lg border border-[#edf1ea] bg-[#f8faf6] dark:border-[#23314d] dark:bg-[#0f172a]">
                       <img alt="Vista previa del egreso" className="h-36 w-full object-contain" src={expense.evidencePreviewUrl || expense.evidenceUrl} />
                     </div>
                   </div>
                 ) : null}
 
-                <label className="mt-4 flex items-start gap-3 rounded-lg border border-[#dbe6d8] bg-white px-4 py-3">
+                <label className="mt-4 flex items-start gap-3 rounded-lg border border-[#dbe6d8] bg-white px-4 py-3 dark:border-[#314056] dark:bg-[#111827]">
                   <input
                     checked={Boolean(expense.confirmationAccepted)}
-                    className="mt-1 h-4 w-4 rounded border-[#d0dcd0] text-[#1f7a3a] focus:ring-[#1f7a3a]"
+                    className="mt-1 h-4 w-4 rounded border-[#d0dcd0] text-[#1f7a3a] focus:ring-[#1f7a3a] dark:border-[#314056] dark:bg-[#0f172a] dark:text-[#60a5fa] dark:focus:ring-[#60a5fa]"
                     onChange={(e) => updateExpense({ confirmationAccepted: e.target.checked })}
                     type="checkbox"
                   />
-                  <span className="text-sm leading-6 text-[#5b6d61]">
+                  <span className="text-sm leading-6 text-[#5b6d61] dark:text-[#c7d2e0]">
                     Confirmo que estoy de acuerdo en registrar este egreso y entiendo que reducira la cartera actual.
                   </span>
                 </label>
