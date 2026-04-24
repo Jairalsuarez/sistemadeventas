@@ -72,6 +72,7 @@ function FilterOption({ active, children, onClick }) {
 
 function ProductCarouselCard({ money, onView, onWhatsApp, product }) {
   const description = product.descripcion?.trim() || "Sin descripcion";
+  const optimizedImage = getOptimizedImageUrl(product.imagen_url, { width: 440, height: 360 });
 
   return (
     <article className="group flex min-w-[230px] max-w-[230px] flex-col overflow-hidden rounded-[22px] border border-[#e3e9e4] bg-white shadow-[0_14px_28px_rgba(15,23,42,0.06)] transition hover:-translate-y-1 hover:shadow-[0_22px_36px_rgba(15,23,42,0.1)] sm:min-w-[220px] sm:max-w-[220px]">
@@ -88,8 +89,8 @@ function ProductCarouselCard({ money, onView, onWhatsApp, product }) {
             alt={product.nombre}
             className="h-full w-full object-cover transition duration-500 group-hover:scale-105"
             decoding="async"
-            loading="lazy"
-            src={getOptimizedImageUrl(product.imagen_url, { width: 440, height: 360 })}
+            fetchPriority="high"
+            src={optimizedImage}
           />
         </button>
       </div>
@@ -176,6 +177,24 @@ export default function PublicCatalogPage({ app, money, onOpenLoginPage, onView,
     }, 5500);
 
     return () => window.clearTimeout(timeout);
+  }, [heroIndex, heroProducts]);
+
+  useEffect(() => {
+    if (typeof window === "undefined" || !heroProducts.length) return;
+
+    const preloadIndexes = [
+      heroIndex,
+      (heroIndex + 1) % heroProducts.length,
+      (heroIndex + 2) % heroProducts.length,
+      (heroIndex - 1 + heroProducts.length) % heroProducts.length,
+    ];
+
+    preloadIndexes.forEach((index) => {
+      const imageUrl = getOptimizedImageUrl(heroProducts[index]?.imagen_url, { width: 440, height: 360 });
+      if (!imageUrl) return;
+      const image = new window.Image();
+      image.src = imageUrl;
+    });
   }, [heroIndex, heroProducts]);
 
   useEffect(() => {
