@@ -11,6 +11,8 @@ const subtleButtonClassName =
 const primaryButtonClassName =
   "rounded-md bg-[#1f7a3a] px-4 py-3 text-sm font-medium text-white transition hover:bg-[#17612d] disabled:cursor-not-allowed disabled:opacity-60 dark:bg-[linear-gradient(135deg,#2563eb,#1d4ed8)] dark:hover:brightness-110";
 
+const selectClassName = `${fieldClassName} w-full appearance-none pr-11`;
+
 function parseMoneyInput(value) {
   const normalized = String(value || "")
     .replace(",", ".")
@@ -51,6 +53,56 @@ function OptionCard({ active, description, icon, onClick, title }) {
   );
 }
 
+function getCategoryMeta(name = "") {
+  const value = String(name || "").trim().toLowerCase();
+
+  if (value === "mercaderia") {
+    return {
+      icon: "inventory_2",
+      accent: "border-[#f59e0b]/30 bg-[#fff7ed] text-[#9a3412] dark:border-[#7c4a03] dark:bg-[#2b2111] dark:text-[#fdba74]",
+      hint: "Pide distribuidor",
+    };
+  }
+
+  if (value === "servicios") {
+    return {
+      icon: "handyman",
+      accent: "border-[#cde4d3] bg-[#f3fbf5] text-[#166534] dark:border-[#224c34] dark:bg-[#14281d] dark:text-[#86efac]",
+      hint: "Pagos operativos",
+    };
+  }
+
+  if (value === "pagos") {
+    return {
+      icon: "payments",
+      accent: "border-[#d8def8] bg-[#f1f5ff] text-[#1d4ed8] dark:border-[#2b4378] dark:bg-[#16233d] dark:text-[#93c5fd]",
+      hint: "Compromisos del negocio",
+    };
+  }
+
+  if (value === "inversion") {
+    return {
+      icon: "trending_up",
+      accent: "border-[#e5dbfb] bg-[#f7f2ff] text-[#7c3aed] dark:border-[#4a3379] dark:bg-[#211633] dark:text-[#c4b5fd]",
+      hint: "Mejoras o crecimiento",
+    };
+  }
+
+  if (value === "transporte") {
+    return {
+      icon: "local_shipping",
+      accent: "border-[#d7ecf5] bg-[#f1fbff] text-[#0f766e] dark:border-[#285a63] dark:bg-[#13282d] dark:text-[#99f6e4]",
+      hint: "Traslados y envios",
+    };
+  }
+
+  return {
+    icon: "category",
+    accent: "border-[#e4ece2] bg-white text-[#183325] dark:border-[#314056] dark:bg-[#111827] dark:text-[#f8fafc]",
+    hint: "Categoria general",
+  };
+}
+
 export default function ExpenseModal({
   createExpense,
   distributors,
@@ -66,7 +118,7 @@ export default function ExpenseModal({
   wallet,
 }) {
   const [step, setStep] = useState(1);
-  const stepPanelClassName = "min-h-[26rem] max-h-[26rem] overflow-y-auto pr-1";
+  const stepPanelClassName = "max-h-[min(58vh,26rem)] overflow-y-auto pr-1 sm:min-h-[26rem] sm:max-h-[26rem]";
 
   useEffect(() => {
     if (open) setStep(1);
@@ -131,7 +183,7 @@ export default function ExpenseModal({
   return (
     <Modal open={open} onClose={onClose} text="Registra el egreso en pasos claros antes de descontarlo de la cartera." title="Registrar egreso" wide>
       <div className="grid gap-5">
-        <div className={`grid gap-3 ${steps.length === 5 ? "md:grid-cols-5" : "md:grid-cols-4"}`}>
+        <div className={`grid gap-3 ${steps.length === 5 ? "sm:grid-cols-2 xl:grid-cols-5" : "sm:grid-cols-2 xl:grid-cols-4"}`}>
           {steps.map((item) => {
             const active = step === item.id;
             const completed = step > item.id;
@@ -185,34 +237,90 @@ export default function ExpenseModal({
               </div>
 
               {!expense.isNewCategory ? (
-                <label className="grid gap-2 text-sm font-semibold text-ink-900 dark:text-white">
-                  Categoria
-                  <select
-                    className={fieldClassName}
-                    onChange={(e) => {
-                      const selected = sortedCategories.find((item) => item.id === e.target.value);
-                      const nextCategoryName = selected?.nombre || "";
-                      const needsDistributor = nextCategoryName.toLowerCase() === "mercaderia";
-                      updateExpense({
-                        categoryId: e.target.value,
-                        categoryName: nextCategoryName,
-                        categoria: nextCategoryName,
-                        distributorId: needsDistributor ? expense.distributorId : "",
-                        distributorName: needsDistributor ? expense.distributorName : "",
-                        isNewDistributor: needsDistributor ? expense.isNewDistributor : false,
-                        newDistributorName: needsDistributor ? expense.newDistributorName : "",
-                      });
-                    }}
-                    value={expense.categoryId}
-                  >
-                    <option value="">Selecciona una categoria</option>
-                    {sortedCategories.map((item) => (
-                      <option key={item.id} value={item.id}>
-                        {item.nombre}
-                      </option>
-                    ))}
-                  </select>
-                </label>
+                <div className="grid gap-3">
+                  <div className="flex items-center justify-between gap-3">
+                    <p className="text-sm font-semibold text-[#183325] dark:text-[#f8fafc]">Categorias disponibles</p>
+                    <span className="text-xs font-medium text-[#6a7b70] dark:text-[#94a3b8]">{sortedCategories.length} opcion(es)</span>
+                  </div>
+
+                  <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+                    {sortedCategories.map((item) => {
+                      const isSelected = expense.categoryId === item.id;
+                      const meta = getCategoryMeta(item.nombre);
+
+                      return (
+                        <button
+                          key={item.id}
+                          className={`rounded-xl border p-4 text-left transition ${
+                            isSelected
+                              ? "border-[#f59e0b]/45 bg-[#fff7ed] shadow-[0_14px_30px_rgba(245,158,11,0.14)] dark:border-[#415a86] dark:bg-[#182235]"
+                              : "border-[#e4ece2] bg-white hover:-translate-y-0.5 hover:border-[#d6e2d8] hover:shadow-[0_10px_24px_rgba(24,51,37,0.08)] dark:border-[#23314d] dark:bg-[#111827] dark:hover:bg-[#182235]"
+                          }`}
+                          onClick={() => {
+                            const nextCategoryName = item.nombre || "";
+                            const needsDistributor = nextCategoryName.toLowerCase() === "mercaderia";
+                            updateExpense({
+                              categoryId: item.id,
+                              categoryName: nextCategoryName,
+                              categoria: nextCategoryName,
+                              distributorId: needsDistributor ? expense.distributorId : "",
+                              distributorName: needsDistributor ? expense.distributorName : "",
+                              isNewDistributor: needsDistributor ? expense.isNewDistributor : false,
+                              newDistributorName: needsDistributor ? expense.newDistributorName : "",
+                            });
+                          }}
+                          type="button"
+                        >
+                          <div className="flex items-start justify-between gap-3">
+                            <span className={`inline-flex h-11 w-11 items-center justify-center rounded-2xl border ${meta.accent}`}>
+                              <Icon name={meta.icon} />
+                            </span>
+                            <span
+                              className={`inline-flex rounded-full px-2.5 py-1 text-[11px] font-semibold ${
+                                isSelected
+                                  ? "bg-[#f59e0b] text-white"
+                                  : "bg-[#edf1ea] text-[#5b6d61] dark:bg-[#0f172a] dark:text-[#94a3b8]"
+                              }`}
+                            >
+                              {isSelected ? "Seleccionada" : "Elegir"}
+                            </span>
+                          </div>
+
+                          <strong className="mt-4 block text-sm font-semibold text-[#183325] dark:text-[#f8fafc]">{item.nombre}</strong>
+                          <span className="mt-1 block text-sm leading-6 text-[#5b6d61] dark:text-[#c7d2e0]">{meta.hint}</span>
+                        </button>
+                      );
+                    })}
+                  </div>
+
+                  <div className="relative">
+                    <select
+                      className={`${selectClassName} sr-only`}
+                      onChange={(e) => {
+                        const selected = sortedCategories.find((item) => item.id === e.target.value);
+                        const nextCategoryName = selected?.nombre || "";
+                        const needsDistributor = nextCategoryName.toLowerCase() === "mercaderia";
+                        updateExpense({
+                          categoryId: e.target.value,
+                          categoryName: nextCategoryName,
+                          categoria: nextCategoryName,
+                          distributorId: needsDistributor ? expense.distributorId : "",
+                          distributorName: needsDistributor ? expense.distributorName : "",
+                          isNewDistributor: needsDistributor ? expense.isNewDistributor : false,
+                          newDistributorName: needsDistributor ? expense.newDistributorName : "",
+                        });
+                      }}
+                      value={expense.categoryId}
+                    >
+                      <option value="">Selecciona una categoria</option>
+                      {sortedCategories.map((item) => (
+                        <option key={item.id} value={item.id}>
+                          {item.nombre}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
               ) : (
                 <label className="grid gap-2 text-sm font-semibold text-ink-900 dark:text-white">
                   Nombre de la nueva categoria
@@ -256,24 +364,29 @@ export default function ExpenseModal({
               {!expense.isNewDistributor ? (
                 <label className="grid gap-2 text-sm font-semibold text-ink-900 dark:text-white">
                   Distribuidor
-                  <select
-                    className={fieldClassName}
-                    onChange={(e) => {
-                      const selected = sortedDistributors.find((item) => item.id === e.target.value);
-                      updateExpense({
-                        distributorId: e.target.value,
-                        distributorName: selected?.nombre || "",
-                      });
-                    }}
-                    value={expense.distributorId}
-                  >
-                    <option value="">Selecciona un distribuidor</option>
-                    {sortedDistributors.map((item) => (
-                      <option key={item.id} value={item.id}>
-                        {item.nombre}
-                      </option>
-                    ))}
-                  </select>
+                  <div className="relative">
+                    <select
+                      className={selectClassName}
+                      onChange={(e) => {
+                        const selected = sortedDistributors.find((item) => item.id === e.target.value);
+                        updateExpense({
+                          distributorId: e.target.value,
+                          distributorName: selected?.nombre || "",
+                        });
+                      }}
+                      value={expense.distributorId}
+                    >
+                      <option value="">Selecciona un distribuidor</option>
+                      {sortedDistributors.map((item) => (
+                        <option key={item.id} value={item.id}>
+                          {item.nombre}
+                        </option>
+                      ))}
+                    </select>
+                    <span className="pointer-events-none absolute inset-y-0 right-3 grid place-items-center text-[#6a7b70] dark:text-[#94a3b8]">
+                      <Icon name="expand_more" />
+                    </span>
+                  </div>
                 </label>
               ) : (
                 <label className="grid gap-2 text-sm font-semibold text-ink-900 dark:text-white">
@@ -451,14 +564,14 @@ export default function ExpenseModal({
           </div>
         ) : null}
 
-        <div className="flex flex-wrap items-center justify-between gap-3 border-t border-[#edf1ea] pt-4">
-          <button className={subtleButtonClassName} onClick={step === 1 ? onClose : prevStep} type="button">
+        <div className="flex flex-col-reverse gap-3 border-t border-[#edf1ea] pt-4 sm:flex-row sm:items-center sm:justify-between">
+          <button className={`${subtleButtonClassName} w-full sm:w-auto`} onClick={step === 1 ? onClose : prevStep} type="button">
             {step === 1 ? "Cancelar" : "Volver"}
           </button>
 
           {step < steps.length ? (
             <button
-              className={primaryButtonClassName}
+              className={`${primaryButtonClassName} w-full sm:w-auto`}
               disabled={
                 (step === 1 && !canContinueCategory) ||
                 (requiresDistributor && step === 2 && !canContinueOrigin) ||
@@ -472,7 +585,7 @@ export default function ExpenseModal({
               Continuar
             </button>
           ) : (
-            <button className={primaryButtonClassName} disabled={expenseSubmitting || !canSubmit} onClick={createExpense} type="button">
+            <button className={`${primaryButtonClassName} w-full sm:w-auto`} disabled={expenseSubmitting || !canSubmit} onClick={createExpense} type="button">
               {expenseSubmitting ? "Procesando..." : "Confirmar egreso"}
             </button>
           )}

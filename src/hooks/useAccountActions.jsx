@@ -1,7 +1,6 @@
 export default function useAccountActions({
   session,
   user,
-  users,
   commit,
   setSession,
   notify,
@@ -50,18 +49,7 @@ export default function useAccountActions({
     inform("Perfil actualizado.", "success");
   };
 
-  const saveManagedUser = async () => {
-    inform("Los usuarios se gestionan directamente en Supabase.", "warning");
-    return { ok: false };
-  };
-
-  const deleteManagedUser = () => {
-    inform("Para eliminar una cuenta, usa la configuracion interna de Supabase.", "warning");
-  };
-
   return {
     saveProfile,
-    saveManagedUser,
-    deleteManagedUser,
   };
 }

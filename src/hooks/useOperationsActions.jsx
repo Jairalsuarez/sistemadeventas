@@ -140,6 +140,8 @@ export default function useOperationsActions({
     return Number.isFinite(parsed) ? parsed : 0;
   };
 
+  const cleanName = (value) => String(value || "").trim();
+
   const startShift = async () => {
     if (user?.role !== "vendedor") return inform("Los turnos solo aplican para vendedores.", "warning");
     if (activeShift) return inform("Ya tienes un turno abierto.", "warning");
@@ -440,134 +442,143 @@ export default function useOperationsActions({
   const createExpense = async () => {
     if (expenseSubmitting) return;
     const amount = parseMoneyInput(expense.montoInput || expense.monto);
-    const categoryName = expense.isNewCategory ? expense.newCategoryName.trim() : expense.categoryName.trim();
+    const categoryName = expense.isNewCategory ? cleanName(expense.newCategoryName) : cleanName(expense.categoryName);
     const needsDistributor = categoryName.toLowerCase() === "mercaderia";
-    const distributorName = expense.isNewDistributor ? expense.newDistributorName.trim() : expense.distributorName.trim();
+    const distributorName = expense.isNewDistributor ? cleanName(expense.newDistributorName) : cleanName(expense.distributorName);
+    const currentCategories = expenseCategories || [];
+    const currentDistributors = distributors || [];
     if (!user || !categoryName || (needsDistributor && !distributorName) || !expense.descripcion.trim() || !expense.detalleOferta.trim() || !expense.evidenceUrl || amount <= 0 || !expense.confirmationAccepted) {
       return inform("Completa el egreso correctamente.", "warning");
     }
 
     setExpenseSubmitting(true);
-
-    let nextCategory =
-      expenseCategories.find((item) =>
-        expense.isNewCategory
-          ? item.nombre.trim().toLowerCase() === categoryName.toLowerCase()
-          : item.id === expense.categoryId
-      ) || null;
-
-    if (!nextCategory && expense.isNewCategory) {
-      if (session?.mode === "supabase") {
-        const remoteCategory = await createRemoteExpenseCategory({
-          nombre: categoryName,
-          createdBy: session.userId,
-        });
-
-        if (!remoteCategory.ok) {
-          setExpenseSubmitting(false);
-          return inform(`No se pudo crear la categoria en Supabase. ${remoteCategory.error || "Revisa la tabla y sus politicas."}`, "error");
-        }
-
-        nextCategory = remoteCategory.category;
-      } else {
-        nextCategory = {
-          id: crypto.randomUUID(),
-          nombre: categoryName,
-          createdAt: new Date().toISOString(),
-        };
-      }
-    }
-
-    let nextDistributor =
-      needsDistributor
-        ? distributors.find((item) =>
-            expense.isNewDistributor
-              ? item.nombre.trim().toLowerCase() === distributorName.toLowerCase()
-              : item.id === expense.distributorId
-          ) || null
-        : null;
-
-    if (needsDistributor && !nextDistributor && expense.isNewDistributor) {
-      if (session?.mode === "supabase") {
-        const remoteDistributor = await createRemoteDistributor({
-          nombre: distributorName,
-          telefono: "",
-          notas: "",
-          createdBy: session.userId,
-        });
-
-        if (!remoteDistributor.ok) {
-          setExpenseSubmitting(false);
-          return inform(`No se pudo crear el distribuidor en Supabase. ${remoteDistributor.error || "Revisa la tabla y sus politicas."}`, "error");
-        }
-
-        nextDistributor = remoteDistributor.distributor;
-      } else {
-        nextDistributor = {
-          id: crypto.randomUUID(),
-          nombre: distributorName,
-          telefono: "",
-          notas: "",
-          createdAt: new Date().toISOString(),
-        };
-      }
-    }
-
-    const draftExpense = {
-      ...expense,
-      id: crypto.randomUUID(),
-      categoria: nextCategory?.nombre || categoryName,
-      categoryId: nextCategory?.id || expense.categoryId || null,
-      categoryName,
-      descripcion: expense.descripcion.trim(),
-      detalleOferta: expense.detalleOferta.trim(),
-      distributorId: needsDistributor ? nextDistributor?.id || expense.distributorId || null : null,
-      distributorName: needsDistributor ? distributorName : "",
-      monto: amount,
-      cantidad: amount > 0 ? 1 : 0,
-      unitCost: amount,
-      userId: user.id,
-      userName: personName(user),
-      createdAt: new Date().toISOString(),
-    };
-
-    const nextWallet = { saldoActual: app.wallet.saldoActual - amount, updatedAt: new Date().toISOString() };
-
-    commit((current) => ({
-      ...current,
-      expenseCategories: nextCategory && !current.expenseCategories.some((item) => item.id === nextCategory.id) ? [nextCategory, ...(current.expenseCategories || [])] : current.expenseCategories,
-      distributors: nextDistributor && !current.distributors.some((item) => item.id === nextDistributor.id) ? [nextDistributor, ...(current.distributors || [])] : current.distributors,
-      expenses: [draftExpense, ...current.expenses],
-      wallet: nextWallet,
-    }));
-
-    notify(`${personName(user)} registro un egreso de ${money(amount)}.`, personName(user), "warning");
-    const defaultCategory = expenseCategories.find((item) => item.nombre === "Mercaderia") || expenseCategories[0] || null;
-    setExpense({
-      categoria: defaultCategory?.nombre || "Mercaderia",
-      categoryId: "",
-      categoryName: defaultCategory?.nombre || "Mercaderia",
-      isNewCategory: false,
-      newCategoryName: "",
-      descripcion: "",
-      detalleOferta: "",
-      distributorId: "",
-      distributorName: "",
-      isNewDistributor: false,
-      newDistributorName: "",
-      evidenceUrl: "",
-      evidencePreviewUrl: "",
-      evidenceName: "",
-      cantidad: 1,
-      unitCost: 0,
-      monto: 0,
-      montoInput: "",
-      confirmationAccepted: false,
-    });
-    setExpenseModal(false);
-    inform("Egreso registrado con exito.", "success");
-
     try {
+      let nextCategory =
+        currentCategories.find((item) =>
+          expense.isNewCategory
+            ? cleanName(item?.nombre).toLowerCase() === categoryName.toLowerCase()
+            : item.id === expense.categoryId
+        ) || null;
+
+      if (!nextCategory && expense.isNewCategory) {
+        if (session?.mode === "supabase") {
+          const remoteCategory = await createRemoteExpenseCategory({
+            nombre: categoryName,
+            createdBy: session.userId,
+          });
+
+          if (!remoteCategory.ok) {
+            inform(`No se pudo crear la categoria en Supabase. ${remoteCategory.error || "Revisa la tabla y sus politicas."}`, "error");
+            return;
+          }
+
+          nextCategory = remoteCategory.category;
+        } else {
+          nextCategory = {
+            id: crypto.randomUUID(),
+            nombre: categoryName,
+            createdAt: new Date().toISOString(),
+          };
+        }
+      }
+
+      let nextDistributor =
+        needsDistributor
+          ? currentDistributors.find((item) =>
+              expense.isNewDistributor
+                ? cleanName(item?.nombre).toLowerCase() === distributorName.toLowerCase()
+                : item.id === expense.distributorId
+            ) || null
+          : null;
+
+      if (needsDistributor && !nextDistributor && expense.isNewDistributor) {
+        if (session?.mode === "supabase") {
+          const remoteDistributor = await createRemoteDistributor({
+            nombre: distributorName,
+            telefono: "",
+            notas: "",
+            createdBy: session.userId,
+          });
+
+          if (!remoteDistributor.ok) {
+            inform(`No se pudo crear el distribuidor en Supabase. ${remoteDistributor.error || "Revisa la tabla y sus politicas."}`, "error");
+            return;
+          }
+
+          nextDistributor = remoteDistributor.distributor;
+        } else {
+          nextDistributor = {
+            id: crypto.randomUUID(),
+            nombre: distributorName,
+            telefono: "",
+            notas: "",
+            createdAt: new Date().toISOString(),
+          };
+        }
+      }
+
+      const draftExpense = {
+        ...expense,
+        id: crypto.randomUUID(),
+        categoria: nextCategory?.nombre || categoryName,
+        categoryId: nextCategory?.id || expense.categoryId || null,
+        categoryName,
+        descripcion: expense.descripcion.trim(),
+        detalleOferta: expense.detalleOferta.trim(),
+        distributorId: needsDistributor ? nextDistributor?.id || expense.distributorId || null : null,
+        distributorName: needsDistributor ? distributorName : "",
+        monto: amount,
+        cantidad: amount > 0 ? 1 : 0,
+        unitCost: amount,
+        userId: user.id,
+        userName: personName(user),
+        createdAt: new Date().toISOString(),
+      };
+
+      const nextWallet = { saldoActual: app.wallet.saldoActual - amount, updatedAt: new Date().toISOString() };
+
+      commit((current) => ({
+        ...current,
+        expenseCategories:
+          nextCategory && !(current.expenseCategories || []).some((item) => item.id === nextCategory.id)
+            ? [nextCategory, ...(current.expenseCategories || [])]
+            : current.expenseCategories || [],
+        distributors:
+          nextDistributor && !(current.distributors || []).some((item) => item.id === nextDistributor.id)
+            ? [nextDistributor, ...(current.distributors || [])]
+            : current.distributors || [],
+        expenses: [draftExpense, ...current.expenses],
+        wallet: nextWallet,
+      }));
+
+      notify(`${personName(user)} registro un egreso de ${money(amount)}.`, personName(user), "warning");
+      const nextCategoriesSnapshot =
+        nextCategory && !currentCategories.some((item) => item.id === nextCategory.id) ? [nextCategory, ...currentCategories] : currentCategories;
+      const defaultCategory = nextCategoriesSnapshot.find((item) => item.nombre === "Mercaderia") || nextCategoriesSnapshot[0] || null;
+      setExpense({
+        categoria: defaultCategory?.nombre || "Mercaderia",
+        categoryId: "",
+        categoryName: defaultCategory?.nombre || "Mercaderia",
+        isNewCategory: false,
+        newCategoryName: "",
+        descripcion: "",
+        detalleOferta: "",
+        distributorId: "",
+        distributorName: "",
+        isNewDistributor: false,
+        newDistributorName: "",
+        evidenceUrl: "",
+        evidencePreviewUrl: "",
+        evidenceName: "",
+        cantidad: 1,
+        unitCost: 0,
+        monto: 0,
+        montoInput: "",
+        confirmationAccepted: false,
+      });
+      setExpenseModal(false);
+      inform("Egreso registrado con exito.", "success");
+
       const expenseRemote = await createRemoteExpense(draftExpense);
       if (session?.mode === "supabase" && !expenseRemote.ok && !isMissingRelationError(expenseRemote.error)) {
         inform("No se pudo guardar el egreso. Intenta de nuevo.", "error");
@@ -592,6 +603,8 @@ export default function useOperationsActions({
         expenses: current.expenses.map((item) => (item.id === draftExpense.id ? expenseRecord : item)),
         wallet: finalWallet,
       }));
+    } catch (error) {
+      inform(`No se pudo completar el egreso. ${error?.message || "Intenta de nuevo."}`, "error");
     } finally {
       setExpenseSubmitting(false);
     }

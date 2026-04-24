@@ -183,7 +183,7 @@ function App() {
                     onEdit={openEditProduct}
                     onNewProduct={openCreateProduct}
                     onView={setSelected}
-                    products={visibleProducts}
+                    products={user?.role === "admin" ? app.products : visibleProducts}
                   />
                 }
               />

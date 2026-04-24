@@ -44,7 +44,7 @@ function ProductsInventoryView({ canCreate, canEdit, money, onEdit, onNewProduct
       />
 
       <SectionBlock description="Filtros para encontrar productos por nombre, categoria, disponibilidad y orden." title="Control del inventario">
-        <div className="grid gap-4 lg:grid-cols-[minmax(0,1.3fr)_repeat(3,minmax(0,0.7fr))]">
+        <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-[minmax(0,1.3fr)_repeat(3,minmax(0,0.7fr))]">
           <label className="grid gap-2 text-sm">
             Buscar
             <input

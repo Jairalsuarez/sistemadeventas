@@ -59,7 +59,7 @@ export default function InformalSaleModal({
   wallet,
 }) {
   const [step, setStep] = useState(1);
-  const stepPanelClassName = "min-h-[24rem] max-h-[24rem] overflow-y-auto pr-1";
+  const stepPanelClassName = "max-h-[min(58vh,24rem)] overflow-y-auto pr-1 sm:min-h-[24rem] sm:max-h-[24rem]";
 
   useEffect(() => {
     if (open) setStep(1);
@@ -132,7 +132,7 @@ export default function InformalSaleModal({
       <div className="grid gap-5">
         {requiresShift && !activeShift ? <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm font-semibold text-red-700 dark:border-[#4b5563] dark:bg-[#172033] dark:text-[#fca5a5]">Debes iniciar un turno antes de vender.</div> : null}
 
-        <div className="grid gap-3 md:grid-cols-3">
+        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
           {steps.map((item) => {
             const active = step === item.id;
             const completed = step > item.id;
@@ -277,15 +277,15 @@ export default function InformalSaleModal({
           </div>
         ) : null}
 
-        <div className="flex flex-wrap items-center justify-between gap-3 border-t border-[#edf1ea] pt-4">
-          <button className={subtleButtonClassName} onClick={step === 1 ? onClose : prevStep} type="button">
+        <div className="flex flex-col-reverse gap-3 border-t border-[#edf1ea] pt-4 sm:flex-row sm:items-center sm:justify-between">
+          <button className={`${subtleButtonClassName} w-full sm:w-auto`} onClick={step === 1 ? onClose : prevStep} type="button">
             {step === 1 ? "Cancelar" : "Volver"}
           </button>
 
-          <div className="flex flex-wrap gap-3">
+          <div className="flex w-full flex-wrap gap-3 sm:w-auto sm:justify-end">
             {step < 3 ? (
               <button
-                className={primaryButtonClassName}
+                className={`${primaryButtonClassName} w-full sm:w-auto`}
                 disabled={(step === 1 && !canContinueDetail) || (step === 2 && !canContinuePayment) || uploading}
                 onClick={nextStep}
                 type="button"
@@ -293,7 +293,7 @@ export default function InformalSaleModal({
                 Continuar
               </button>
             ) : (
-              <button className={primaryButtonClassName} disabled={informalSaleSubmitting || !canContinueDetail || !canContinuePayment} onClick={createInformalSale} type="button">
+              <button className={`${primaryButtonClassName} w-full sm:w-auto`} disabled={informalSaleSubmitting || !canContinueDetail || !canContinuePayment} onClick={createInformalSale} type="button">
                 {informalSaleSubmitting ? "Procesando..." : "Finalizar venta informal"}
               </button>
             )}

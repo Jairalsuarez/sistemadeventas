@@ -21,9 +21,10 @@ function UserAvatar({ user }) {
   return <div className="grid h-9 w-9 place-items-center rounded-full border border-[#e1ece3] bg-white text-sm font-semibold text-[#183325] dark:border-[#314056] dark:bg-[#182235] dark:text-[#f8fafc]">{initials(user)}</div>;
 }
 
-function NavItem({ link }) {
-  const className =
-    "inline-flex items-center rounded-md px-3 py-2 text-sm font-medium text-[#56685d] transition hover:bg-[#f4f7f2] hover:text-[#183325] dark:text-[#c7d2e0] dark:hover:bg-[#182235] dark:hover:text-white";
+function NavItem({ link, landingMobile = false }) {
+  const className = landingMobile
+    ? "inline-flex w-full items-center justify-center rounded-xl border border-[#dce7dd] bg-[#f7faf6] px-4 py-3 text-sm font-semibold text-[#183325] transition hover:border-[#c6d8ca] hover:bg-white dark:border-[#314056] dark:bg-[#182235] dark:text-[#f8fafc] dark:hover:bg-[#22304a]"
+    : "inline-flex items-center rounded-md px-3 py-2 text-sm font-medium text-[#56685d] transition hover:bg-[#f4f7f2] hover:text-[#183325] dark:text-[#c7d2e0] dark:hover:bg-[#182235] dark:hover:text-white";
 
   if (link.to) {
     return (
@@ -66,12 +67,12 @@ export default function TopNav({
         <div
           className={
             isLanding
-              ? "mx-auto flex w-full max-w-[1320px] flex-wrap items-center justify-between gap-3 rounded-[24px] border border-[#e7ede3] bg-white px-4 py-3 shadow-[0_12px_34px_rgba(24,51,37,0.08)] sm:px-5"
+              ? "mx-auto flex w-full max-w-[1320px] flex-col gap-3 rounded-[24px] border border-[#e7ede3] bg-white px-3 py-3 shadow-[0_12px_34px_rgba(24,51,37,0.08)] sm:px-5 lg:flex-row lg:flex-wrap lg:items-center lg:justify-between"
               : `flex w-full flex-wrap items-center justify-between gap-3 ${isPublic ? "py-4" : "px-1 py-4"}`
           }
         >
-          <NavLink className={`flex min-w-0 items-center gap-3 ${isLanding ? "w-full sm:flex-1" : "flex-1 sm:flex-none"}`} to={session ? "/panel" : "/"}>
-            <img alt="Sabores Tropicales" className="h-12 w-12 shrink-0 object-contain" src="/images/IcoSinFondo.png" />
+          <NavLink className={`flex min-w-0 items-center gap-3 ${isLanding ? "w-full justify-center text-center sm:justify-start sm:text-left lg:flex-1" : "flex-1 sm:flex-none"}`} to={session ? "/panel" : "/"}>
+            <img alt="Sabores Tropicales" className={`shrink-0 object-contain ${isLanding ? "h-11 w-11 sm:h-12 sm:w-12" : "h-12 w-12"}`} src="/images/IcoSinFondo.png" />
             <div className="min-w-0">
               <strong className="block truncate text-base font-semibold text-[#183325] dark:text-[#f8fafc] sm:text-[17px]">{businessName}</strong>
             </div>
@@ -105,15 +106,17 @@ export default function TopNav({
                 onClick={onToggleTheme}
                 type="button"
               >
-                <span className="absolute left-3 text-[#f59e0b]">
-                  <Icon name="light_mode" />
-                </span>
-                <span className="absolute right-3 text-[#cbd5e1]">
-                  <Icon name="dark_mode" />
+                <span className="pointer-events-none absolute inset-0 grid grid-cols-2">
+                  <span className="grid place-items-center text-[#f59e0b]">
+                    <Icon name="light_mode" />
+                  </span>
+                  <span className="grid place-items-center text-[#cbd5e1]">
+                    <Icon name="dark_mode" />
+                  </span>
                 </span>
                 <span
                   className={`absolute top-1 grid h-9 w-9 place-items-center rounded-full bg-white text-[#183325] shadow-[0_8px_18px_rgba(15,23,42,0.16)] transition ${
-                    darkMode ? "translate-x-[30px] bg-[#1e293b] text-[#f8fafc]" : "translate-x-[2px]"
+                    darkMode ? "translate-x-[29px] bg-[#1e293b] text-[#f8fafc]" : "translate-x-[2px]"
                   }`}
                 >
                   <Icon name={darkMode ? "dark_mode" : "light_mode"} />
@@ -143,20 +146,20 @@ export default function TopNav({
               </>
             ) : (
               <button
-                className={`inline-flex items-center justify-center gap-2 rounded-md bg-[linear-gradient(135deg,#1f7a3a,#2b8e46)] px-3 py-2.5 text-sm font-semibold text-white shadow-[0_12px_24px_rgba(31,122,58,0.18)] transition hover:-translate-y-0.5 hover:shadow-lg dark:bg-[linear-gradient(135deg,#2563eb,#1d4ed8)] dark:shadow-[0_12px_24px_rgba(37,99,235,0.2)] ${isLanding ? "min-w-[48px]" : ""} sm:px-4`}
+                className={`inline-flex items-center justify-center gap-2 rounded-md bg-[linear-gradient(135deg,#1f7a3a,#2b8e46)] px-3 py-2.5 text-sm font-semibold text-white shadow-[0_12px_24px_rgba(31,122,58,0.18)] transition hover:-translate-y-0.5 hover:shadow-lg dark:bg-[linear-gradient(135deg,#2563eb,#1d4ed8)] dark:shadow-[0_12px_24px_rgba(37,99,235,0.2)] ${isLanding ? "flex-1 sm:flex-none" : ""} sm:px-4`}
                 onClick={onOpenLoginPage}
                 type="button"
               >
                 <Icon name="login" />
-                <span className={`${isLanding ? "hidden sm:inline" : "hidden md:inline"}`}>Iniciar sesion</span>
+                <span className={`${isLanding ? "inline" : "hidden md:inline"}`}>Iniciar sesion</span>
               </button>
             )}
           </div>
 
           {!session && publicLinks.length ? (
-            <nav className={`order-4 flex w-full overflow-x-auto pb-1 lg:hidden ${isLanding ? "justify-between gap-1" : "gap-2"}`}>
+            <nav className={`order-4 w-full lg:hidden ${isLanding ? "grid grid-cols-2 gap-2" : "flex overflow-x-auto gap-2 pb-1"}`}>
               {publicLinks.map((link) => (
-                <NavItem key={link.label} link={link} />
+                <NavItem key={link.label} landingMobile={isLanding} link={link} />
               ))}
             </nav>
           ) : null}

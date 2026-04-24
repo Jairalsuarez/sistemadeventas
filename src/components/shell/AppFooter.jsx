@@ -32,7 +32,7 @@ export default function AppFooter() {
         <div>
           <p className="text-lg font-semibold text-white">Desarrollador web</p>
           <div className="mt-4 rounded-2xl border border-white/10 bg-white/5 p-4">
-            <p className="text-sm text-[#c7c0b8]">Creado por Aura.dev</p>
+              <p className="text-sm text-[#c7c0b8]">Creado por Jair Suarez</p>
             <a
               className="mt-4 inline-flex items-center gap-3 rounded-xl bg-white px-4 py-2.5 text-sm font-medium text-[#1f2b23] transition hover:bg-[#f3eee8]"
               href="https://github.com/Jairalsuarez"
@@ -47,7 +47,7 @@ export default function AppFooter() {
       </div>
 
       <div className="mx-auto mt-10 max-w-[1440px] border-t border-white/10 pt-5 text-center text-xs text-[#b7afa6] lg:px-6">
-        Sabores Tropicales y Algo Mas · Aura.dev · Todos los derechos reservados.
+              Sabores Tropicales y Algo Mas · Jair Suarez · Todos los derechos reservados.
       </div>
     </footer>
   );

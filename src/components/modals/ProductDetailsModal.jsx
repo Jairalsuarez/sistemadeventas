@@ -16,21 +16,21 @@ export default function ProductDetailsModal({ money, onClose, open, product, var
   return (
     <Modal closeOnBackdrop open={open} onClose={onClose} text={product?.categoria || ""} title={product?.nombre || "Producto"} variant={variant} wide>
       <div className="grid gap-5 lg:grid-cols-[minmax(320px,1fr)_380px] lg:items-stretch">
-        <div className={`overflow-hidden p-4 dark:bg-[#0d1710] ${isPublic ? "rounded-[24px] bg-white" : "rounded-xl bg-white"}`}>
-          <div className={`flex h-[520px] items-center justify-center overflow-hidden dark:bg-[#122117] ${isPublic ? "rounded-[20px] bg-white" : "rounded-lg bg-white"}`}>
+        <div className={`overflow-hidden p-3 sm:p-4 dark:bg-[#0d1710] ${isPublic ? "rounded-[24px] bg-white" : "rounded-xl bg-white"}`}>
+          <div className={`flex h-[280px] items-center justify-center overflow-hidden sm:h-[420px] lg:h-[520px] dark:bg-[#122117] ${isPublic ? "rounded-[20px] bg-white" : "rounded-lg bg-white"}`}>
             <img className="h-full w-full object-contain" src={product?.imagen_url} alt={product?.nombre} />
           </div>
         </div>
-        <div className={`flex h-[520px] flex-col border p-5 dark:border-white/10 dark:bg-[#122117] ${isPublic ? "rounded-[24px] border-[#dceadf] bg-white" : "rounded-xl border-[#e4ece2] bg-white"}`}>
+        <div className={`flex min-h-0 flex-col border p-4 sm:p-5 dark:border-white/10 dark:bg-[#122117] lg:h-[520px] ${isPublic ? "rounded-[24px] border-[#dceadf] bg-white" : "rounded-xl border-[#e4ece2] bg-white"}`}>
           <div className="space-y-5">
             <div className="space-y-2">
               <span className="inline-flex rounded-full bg-[#f4f8ef] px-3 py-1 text-xs font-semibold text-[#56705d] dark:bg-[#1d3425] dark:text-white/70">{product?.categoria}</span>
-              <h3 className="text-3xl font-semibold text-[#183325] dark:text-white">{product?.nombre}</h3>
+              <h3 className="text-2xl font-semibold text-[#183325] dark:text-white sm:text-3xl">{product?.nombre}</h3>
               <p className="text-sm leading-7 text-[#5b6d61] dark:text-white/68">{description}</p>
             </div>
 
-            <div className="flex items-center justify-between gap-3">
-              <strong className="text-4xl font-semibold text-[#183325] dark:text-white">{money(product?.precio)}</strong>
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <strong className="text-3xl font-semibold text-[#183325] dark:text-white sm:text-4xl">{money(product?.precio)}</strong>
               <span className={`rounded-full px-3 py-1 text-xs font-semibold ${stockTone}`}>{Number(product?.stock) > 0 ? `${product?.stock} disponibles` : "Agotado"}</span>
             </div>
 

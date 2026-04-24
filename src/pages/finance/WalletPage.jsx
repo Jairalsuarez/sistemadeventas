@@ -45,7 +45,7 @@ export default function WalletPage({ expenses, isAdmin, money, onOpenExpense, on
               Registrar egreso
             </button>
             {isAdmin ? (
-              <button className="rounded-md bg-[#1f7a3a] px-4 py-2 text-sm font-medium text-white" onClick={onOpenWallet} type="button">
+              <button className="rounded-md bg-[#1f7a3a] dark:bg-[linear-gradient(135deg,#2563eb,#1d4ed8)] px-4 py-2 text-sm font-medium text-white" onClick={onOpenWallet} type="button">
                 Ajustar cartera
               </button>
             ) : null}

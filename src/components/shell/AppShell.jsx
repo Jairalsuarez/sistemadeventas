@@ -11,7 +11,21 @@ import useClickOutside from "../../hooks/useClickOutside.jsx";
 export default function AppShell() {
   const navigate = useNavigate();
   const location = useLocation();
-  const { activeShift, app, logout, markAllNotificationsRead, markNotificationRead, notifications, session, theme, unreadNotifications, user, setTheme } =
+  const {
+    activeShift,
+    app,
+    logout,
+    markAllNotificationsRead,
+    markNotificationRead,
+    notificationPermission,
+    notifications,
+    requestBrowserNotificationPermission,
+    session,
+    theme,
+    unreadNotifications,
+    user,
+    setTheme,
+  } =
     useAppContext();
   const [openNotifications, setOpenNotifications] = useState(false);
   const [logoutModalOpen, setLogoutModalOpen] = useState(false);
@@ -32,7 +46,12 @@ export default function AppShell() {
     <div ref={notificationRef} className="relative">
       <button
         className="relative inline-flex items-center gap-2 rounded-md border border-[#dfe7db] bg-white px-3 py-2.5 text-sm font-medium text-[#183325] dark:border-[#314056] dark:bg-[#111827] dark:text-[#f8fafc] sm:px-4"
-        onClick={() => setOpenNotifications((current) => !current)}
+        onClick={async () => {
+          if (notificationPermission === "default") {
+            await requestBrowserNotificationPermission();
+          }
+          setOpenNotifications((current) => !current);
+        }}
         type="button"
       >
         <Icon name="notifications" />

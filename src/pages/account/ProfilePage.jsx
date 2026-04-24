@@ -71,9 +71,9 @@ export default function ProfilePage({ onSave, onUploadAvatar, user }) {
 
       <SectionBlock description="Tu foto, tu nombre y el rol con el que trabajas cada dia." title="Datos personales">
         <form className="grid gap-5 md:grid-cols-[180px_minmax(0,1fr)]" onSubmit={save}>
-          <div className="space-y-3">
+          <div className="space-y-3 md:sticky md:top-24">
             <button
-              className="group relative grid h-40 w-40 place-items-center overflow-hidden rounded-lg border border-[#dfe7db] bg-[#f8faf6] text-left dark:border-[#314056] dark:bg-[#0f172a]"
+              className="group relative grid h-32 w-32 place-items-center overflow-hidden rounded-lg border border-[#dfe7db] bg-[#f8faf6] text-left dark:border-[#314056] dark:bg-[#0f172a] sm:h-40 sm:w-40"
               onClick={() => setAvatarModalOpen(true)}
               type="button"
             >
@@ -125,7 +125,7 @@ export default function ProfilePage({ onSave, onUploadAvatar, user }) {
 
       <Modal open={avatarModalOpen} onClose={() => !avatarBusy && setAvatarModalOpen(false)} text="Actualiza o elimina la foto visible en tu perfil." title="Foto de perfil">
         <div className="space-y-4">
-          <div className="flex items-center gap-4">
+          <div className="flex flex-col items-start gap-4 sm:flex-row sm:items-center">
             <div className="grid h-20 w-20 place-items-center overflow-hidden rounded-lg border border-[#dfe7db] bg-[#f8faf6] dark:border-[#314056] dark:bg-[#0f172a]">
               {form.avatarUrl ? (
                 <img alt={fullName} className="h-full w-full object-cover" src={form.avatarUrl} />

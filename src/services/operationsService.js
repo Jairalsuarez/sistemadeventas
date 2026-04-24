@@ -13,6 +13,25 @@ import {
   safeNumber,
 } from "./normalizers.js";
 
+const SUPABASE_OPERATION_TIMEOUT_MS = 15000;
+
+async function withSupabaseTimeout(promise, actionLabel) {
+  let timeoutId;
+
+  try {
+    return await Promise.race([
+      promise,
+      new Promise((_, reject) => {
+        timeoutId = window.setTimeout(() => {
+          reject(new Error(`Tiempo de espera agotado al ${actionLabel}.`));
+        }, SUPABASE_OPERATION_TIMEOUT_MS);
+      }),
+    ]);
+  } finally {
+    if (timeoutId) window.clearTimeout(timeoutId);
+  }
+}
+
 export async function fetchRemoteCommunityFeedback() {
   if (!supabaseReady || !supabase) return { ok: false, error: "Supabase no configurado." };
   const { data, error } = await supabase
@@ -244,11 +263,21 @@ export async function createRemoteExpenseCategory(category) {
     created_by: category.createdBy || null,
   };
 
-  const { data, error } = await supabase
-    .from("expense_categories")
-    .insert(payload)
-    .select("id,nombre,created_by,created_at")
-    .single();
+  let result;
+  try {
+    result = await withSupabaseTimeout(
+      supabase
+        .from("expense_categories")
+        .insert(payload)
+        .select("id,nombre,created_by,created_at")
+        .single(),
+      "crear la categoria"
+    );
+  } catch (error) {
+    return { ok: false, error: error.message };
+  }
+
+  const { data, error } = result;
 
   if (error) return { ok: false, error: error.message };
   return { ok: true, category: normalizeExpenseCategory(data) };
@@ -272,11 +301,21 @@ export async function createRemoteExpense(expense) {
     created_at: expense.createdAt,
   };
 
-  const { data, error } = await supabase
-    .from("expenses")
-    .insert(payload)
-    .select("id,categoria,descripcion,detalle_oferta,distributor_id,distributor_name,evidence_url,evidence_name,cantidad,unit_cost,confirmation_accepted,monto,user_id,created_at,profiles(nombre,apellido)")
-    .single();
+  let result;
+  try {
+    result = await withSupabaseTimeout(
+      supabase
+        .from("expenses")
+        .insert(payload)
+        .select("id,categoria,descripcion,detalle_oferta,distributor_id,distributor_name,evidence_url,evidence_name,cantidad,unit_cost,confirmation_accepted,monto,user_id,created_at,profiles(nombre,apellido)")
+        .single(),
+      "guardar el egreso"
+    );
+  } catch (error) {
+    return { ok: false, error: error.message };
+  }
+
+  const { data, error } = result;
 
   if (error) return { ok: false, error: error.message };
   return { ok: true, expense: normalizeExpense(data) };
@@ -302,11 +341,21 @@ export async function createRemoteDistributor(distributor) {
     created_by: distributor.createdBy || null,
   };
 
-  const { data, error } = await supabase
-    .from("distributors")
-    .insert(payload)
-    .select("id,nombre,telefono,notas,created_by,created_at")
-    .single();
+  let result;
+  try {
+    result = await withSupabaseTimeout(
+      supabase
+        .from("distributors")
+        .insert(payload)
+        .select("id,nombre,telefono,notas,created_by,created_at")
+        .single(),
+      "crear el distribuidor"
+    );
+  } catch (error) {
+    return { ok: false, error: error.message };
+  }
+
+  const { data, error } = result;
 
   if (error) return { ok: false, error: error.message };
   return { ok: true, distributor: normalizeDistributor(data) };
@@ -322,7 +371,17 @@ export async function upsertRemoteWalletState(wallet, userId) {
     updated_by: userId || null,
   };
 
-  const { data, error } = await supabase.from("wallet_state").upsert(payload).select("id,saldo_actual,updated_at").single();
+  let result;
+  try {
+    result = await withSupabaseTimeout(
+      supabase.from("wallet_state").upsert(payload).select("id,saldo_actual,updated_at").single(),
+      "actualizar la cartera"
+    );
+  } catch (error) {
+    return { ok: false, error: error.message };
+  }
+
+  const { data, error } = result;
   if (error) return { ok: false, error: error.message };
   return { ok: true, wallet: normalizeWalletState(data) };
 }
@@ -337,11 +396,21 @@ export async function createRemoteWalletMovement(movement) {
     created_by: movement.createdBy || null,
   };
 
-  const { data, error } = await supabase
-    .from("wallet_movements")
-    .insert(payload)
-    .select("id,tipo,monto,descripcion,created_by,created_at")
-    .single();
+  let result;
+  try {
+    result = await withSupabaseTimeout(
+      supabase
+        .from("wallet_movements")
+        .insert(payload)
+        .select("id,tipo,monto,descripcion,created_by,created_at")
+        .single(),
+      "registrar el movimiento de cartera"
+    );
+  } catch (error) {
+    return { ok: false, error: error.message };
+  }
+
+  const { data, error } = result;
 
   if (error) return { ok: false, error: error.message };
   return { ok: true, movement: normalizeWalletMovement(data) };

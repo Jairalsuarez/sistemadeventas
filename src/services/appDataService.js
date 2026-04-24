@@ -5,7 +5,7 @@ const APP_KEY = "ventas-app-v2";
 const BUSINESS_CONTACT = {
   telefono: "+593981305654",
   whatsapp: "593981305654",
-  horario: "Lunes a Sabado - 09:00 - 22:00",
+  horario: "Lunes a Domingo - 09:00 - 22:00",
 };
 
 function seed() {

@@ -12,6 +12,12 @@ export default function useCatalogActions({
   upsertRemoteProduct,
   deleteRemoteProduct,
 }) {
+  const requiresRemoteWrite = session?.mode === "supabase";
+  const isConstraintError = (message = "") => {
+    const text = String(message || "").toLowerCase();
+    return text.includes("foreign key") || text.includes("violates") || text.includes("constraint");
+  };
+
   const saveProduct = async () => {
     if (!productForm.nombre || !productForm.imagen_url) return inform("Completa nombre e imagen.", "warning");
 
@@ -24,6 +30,11 @@ export default function useCatalogActions({
     };
 
     const remote = await upsertRemoteProduct(draft, session?.mode === "supabase" ? session.userId : null);
+    if (requiresRemoteWrite && !remote.ok) {
+      inform(remote.error || "No se pudo guardar el producto.", "error");
+      return;
+    }
+
     const record = remote.ok ? remote.product : draft;
 
     commit((current) => ({
@@ -40,7 +51,34 @@ export default function useCatalogActions({
     const product = app.products.find((item) => item.id === id);
     if (!product) return;
 
-    await deleteRemoteProduct(id);
+    const remote = await deleteRemoteProduct(id);
+    if (requiresRemoteWrite && !remote.ok) {
+      if (isConstraintError(remote.error)) {
+        const archivedDraft = {
+          ...product,
+          activo: false,
+          updatedAt: new Date().toISOString(),
+        };
+        const archivedRemote = await upsertRemoteProduct(archivedDraft, session?.userId || null);
+        if (!archivedRemote.ok) {
+          inform(archivedRemote.error || "No se pudo desactivar el producto.", "error");
+          return;
+        }
+
+        commit((current) => ({
+          ...current,
+          products: current.products.map((item) => (item.id === id ? archivedRemote.product : item)),
+        }));
+        notify(`${personName(user)} desactivo el producto ${product.nombre}.`, personName(user), "warning");
+        resetProductFlow();
+        inform("Este producto ya tiene ventas registradas, por eso no se puede eliminar. Lo desactive del catalogo.", "warning");
+        return;
+      }
+
+      inform(remote.error || "No se pudo eliminar el producto.", "error");
+      return;
+    }
+
     commit((current) => ({ ...current, products: current.products.filter((item) => item.id !== id) }));
     notify(`${personName(user)} elimino el producto ${product.nombre}.`, personName(user), "warning");
     resetProductFlow();

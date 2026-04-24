@@ -1,5 +1,5 @@
 /* eslint-disable react-refresh/only-export-components */
-import { createContext, useContext, useEffect, useMemo, useState } from "react";
+import { createContext, useContext, useEffect, useMemo, useRef, useState } from "react";
 import useAccountActions from "../hooks/useAccountActions.jsx";
 import useAuthSession from "../hooks/useAuthSession.jsx";
 import useCatalogActions from "../hooks/useCatalogActions.jsx";
@@ -37,6 +37,7 @@ import { storageReady, uploadImage } from "../services/storageService.js";
 const AppContext = createContext(null);
 
 const LOW_STOCK_LIMIT = 5;
+const DEVICE_NOTIFICATION_ICON = "/images/IcoSinFondo.png";
 const EXPENSE_CATEGORIES = ["Servicios", "Mercaderia", "Pagos", "Inversion", "Transporte", "Otros"];
 const EMPTY_PRODUCT = {
   nombre: "",
@@ -78,6 +79,10 @@ const money = (n) => new Intl.NumberFormat("es-EC", { style: "currency", currenc
 const shortTime = (value) => new Intl.DateTimeFormat("es-EC", { timeStyle: "short" }).format(new Date(value));
 const formatDate = (value, config = { dateStyle: "medium" }) => new Intl.DateTimeFormat("es-EC", config).format(new Date(value));
 const personName = (person = {}) => [person.nombre, person.apellido].filter(Boolean).join(" ").trim() || person.nombre || "Usuario";
+const getBrowserNotificationPermission = () => {
+  if (typeof window === "undefined" || !("Notification" in window)) return "unsupported";
+  return window.Notification.permission;
+};
 
 const isMissingRelationError = (error = "") => {
   const text = String(error || "").toLowerCase();
@@ -108,7 +113,10 @@ export function AppProvider({ children }) {
   const [informalSaleSubmitting, setInformalSaleSubmitting] = useState(false);
   const [expenseSubmitting, setExpenseSubmitting] = useState(false);
   const [feedbackSubmitting, setFeedbackSubmitting] = useState(false);
+  const [notificationPermission, setNotificationPermission] = useState(getBrowserNotificationPermission);
   const { toasts, pushToast, dismissToast } = useToastQueue();
+  const browserNotificationReadyRef = useRef(false);
+  const shownBrowserNotificationIdsRef = useRef(new Set());
   const { editing, productForm, productModal, setProductForm, setProductModal, resetProductFlow, openCreateProduct, openEditProduct } =
     useProductEditor(EMPTY_PRODUCT);
 
@@ -119,7 +127,7 @@ export function AppProvider({ children }) {
     pushToast(message, type);
     if (shouldStore) notify(message, personName(user) || "Sabores Tropicales", type);
   };
-  const { loginModal, setLoginModal, loginLoading, authChecking, setAuthChecking, loginError, loginForm, setLoginForm, handleLogin, logout } = useAuthSession({
+  const { loginLoading, authChecking, setAuthChecking, loginError, loginForm, setLoginForm, handleLogin, logout } = useAuthSession({
     inform,
     personName,
     setSession,
@@ -129,6 +137,10 @@ export function AppProvider({ children }) {
   useEffect(() => {
     document.documentElement.dataset.theme = theme;
   }, [theme]);
+
+  useEffect(() => {
+    setNotificationPermission(getBrowserNotificationPermission());
+  }, [session]);
 
   useEffect(() => saveAppData(app), [app]);
   useEffect(() => setWalletForm((current) => ({ ...current, saldo: app.wallet.saldoActual })), [app.wallet.saldoActual]);
@@ -197,6 +209,32 @@ export function AppProvider({ children }) {
       source: session.mode,
     };
   }, [app.users, session]);
+
+  const requestBrowserNotificationPermission = async () => {
+    if (typeof window === "undefined" || !("Notification" in window)) {
+      pushToast("Este navegador no soporta notificaciones del dispositivo.", "warning");
+      return { ok: false, permission: "unsupported" };
+    }
+
+    try {
+      const permission = await window.Notification.requestPermission();
+      setNotificationPermission(permission);
+
+      if (permission === "granted") {
+        pushToast("Notificaciones del dispositivo activadas.", "success");
+        return { ok: true, permission };
+      }
+
+      if (permission === "denied") {
+        pushToast("Bloqueaste las notificaciones del dispositivo para esta app.", "warning");
+      }
+
+      return { ok: false, permission };
+    } catch (error) {
+      pushToast(error?.message || "No se pudo solicitar el permiso de notificaciones.", "error");
+      return { ok: false, permission: getBrowserNotificationPermission() };
+    }
+  };
 
   useEffect(() => {
     const legacyAdminShifts = (app.turnos || []).filter((turno) => {
@@ -305,6 +343,43 @@ export function AppProvider({ children }) {
       notifications: [...stockNotifications, ...(current.notifications || [])].slice(0, 60),
     }));
   }, [app.notifications, lowStock, user?.role]);
+
+  useEffect(() => {
+    const visibleNotifications =
+      user?.role === "admin"
+        ? app.notifications || []
+        : (app.notifications || []).filter((notification) => notification.actorId === user?.id || notification.actorName === user?.displayName);
+
+    if (!browserNotificationReadyRef.current) {
+      shownBrowserNotificationIdsRef.current = new Set(visibleNotifications.map((notification) => notification.id));
+      browserNotificationReadyRef.current = true;
+      return;
+    }
+
+    const freshNotifications = visibleNotifications.filter((notification) => !shownBrowserNotificationIdsRef.current.has(notification.id));
+    freshNotifications.forEach((notification) => {
+      shownBrowserNotificationIdsRef.current.add(notification.id);
+    });
+
+    if (!session || notificationPermission !== "granted" || typeof window === "undefined" || !("Notification" in window)) return;
+
+    freshNotifications.forEach((notification) => {
+      try {
+        const deviceNotification = new window.Notification(notification.actorName || "Sabores Tropicales", {
+          body: notification.message || "Tienes una nueva notificacion.",
+          icon: DEVICE_NOTIFICATION_ICON,
+          tag: notification.id,
+        });
+
+        deviceNotification.onclick = () => {
+          window.focus();
+          deviceNotification.close();
+        };
+      } catch {
+        // Ignore browser notification errors to avoid breaking app flows.
+      }
+    });
+  }, [app.notifications, notificationPermission, session, user?.displayName, user?.id, user?.role]);
 
   const openSaleFlow = () => {
     if (user?.role === "vendedor" && !activeShift) {
@@ -505,10 +580,9 @@ export function AppProvider({ children }) {
     inform("Comentario eliminado.", "success");
     return { ok: true };
   };
-  const { saveProfile, saveManagedUser, deleteManagedUser } = useAccountActions({
+  const { saveProfile } = useAccountActions({
     session,
     user,
-    users: app.users || [],
     commit,
     setSession,
     notify,
@@ -536,8 +610,6 @@ export function AppProvider({ children }) {
     setExpenseModal,
     walletModal,
     setWalletModal,
-    loginModal,
-    setLoginModal,
     editing,
     syncing,
     uploading,
@@ -587,6 +659,7 @@ export function AppProvider({ children }) {
     distributors: app.distributors || [],
     expenseCategories: app.expenseCategories || [],
     unreadNotifications,
+    notificationPermission,
     money,
     formatDate,
     storageReady,
@@ -616,10 +689,9 @@ export function AppProvider({ children }) {
     uploadProfileAvatar,
     submitCommunityFeedback,
     deleteCommunityFeedback,
-    saveManagedUser,
-    deleteManagedUser,
     markNotificationRead,
     markAllNotificationsRead,
+    requestBrowserNotificationPermission,
     inform,
     logout,
   };

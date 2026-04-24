@@ -22,6 +22,11 @@ function sumAmount(items, key) {
   return items.reduce((acc, item) => acc + Number(item?.[key] || 0), 0);
 }
 
+function capitalizeLabel(value = "") {
+  if (!value) return value;
+  return value.charAt(0).toUpperCase() + value.slice(1);
+}
+
 function formatPaymentMethod(value = "") {
   const map = {
     efectivo: "Efectivo",
@@ -48,7 +53,7 @@ function buildMonthlySeries({ expenses, sales, today }) {
     return {
       id: `${date.getFullYear()}-${date.getMonth()}`,
       label: new Intl.DateTimeFormat("es-EC", { month: "short" }).format(date),
-      fullLabel: new Intl.DateTimeFormat("es-EC", { month: "long", year: "numeric" }).format(date),
+      fullLabel: capitalizeLabel(new Intl.DateTimeFormat("es-EC", { month: "long", year: "numeric" }).format(date)),
       income: sumAmount(monthSales, "total"),
       expense: sumAmount(monthExpenses, "monto"),
       salesCount: monthSales.length,
@@ -153,7 +158,7 @@ export default function SalesAnalyticsPage({ expenses, money, sales }) {
       <PageHeader
         eyebrow="Admin"
         title="Ventas"
-        description="Revision clara de ingresos, egresos y ventas recientes para saber quien vendio, cuando y cuanto se movio."
+        description="Revisión clara de ingresos, egresos y ventas recientes para saber quién vendió, cuándo y cuánto se movió."
       />
 
       <div className="grid gap-4 xl:grid-cols-3">
@@ -164,7 +169,7 @@ export default function SalesAnalyticsPage({ expenses, money, sales }) {
 
       <SectionBlock
         title="Ingresos y egresos"
-        description="Comparacion mensual de los ultimos seis meses para leer rapido como se viene moviendo el negocio."
+        description="Comparación mensual de los últimos seis meses para leer rápido cómo se viene moviendo el negocio."
       >
         {monthlySeries.length ? (
           <div className="space-y-5">
@@ -179,7 +184,7 @@ export default function SalesAnalyticsPage({ expenses, money, sales }) {
               </span>
             </div>
 
-            <div className="grid gap-4 md:grid-cols-6">
+            <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-6">
               {monthlySeries.map((item) => (
                 <article key={item.id} className="rounded-xl border border-[#e4ece2] bg-white p-4 dark:border-[#23314d] dark:bg-[#182235]">
                   <div className="flex h-44 items-end justify-center gap-3">
@@ -219,45 +224,76 @@ export default function SalesAnalyticsPage({ expenses, money, sales }) {
           description="Vista directa para revisar quien hizo cada venta, cuando la hizo y el monto registrado."
         >
           {recentSales.length ? (
-            <div className="overflow-x-auto">
-              <table className="min-w-full text-left text-sm">
-                <thead className="text-[#6a7b70] dark:text-[#94a3b8]">
-                  <tr>
-                    <th className="pb-3">Fecha</th>
-                    <th className="pb-3">Vendedor</th>
-                    <th className="pb-3">Tipo</th>
-                    <th className="pb-3">Pago</th>
-                    <th className="pb-3 text-right">Total</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {recentSales.map((sale) => (
-                    <tr key={sale.id} className="border-t border-[#edf1ea] dark:border-[#23314d]">
-                      <td className="py-3 text-[#183325] dark:text-[#f8fafc]">{formatDateTime(sale.createdAt)}</td>
-                      <td className="py-3">
+            <>
+              <div className="space-y-3 md:hidden">
+                {recentSales.map((sale) => (
+                  <article key={sale.id} className="rounded-xl border border-[#edf1ea] p-4 dark:border-[#23314d] dark:bg-[#182235]">
+                    <div className="space-y-3">
+                      <div className="flex flex-wrap items-start justify-between gap-3">
                         <div>
                           <strong className="block text-sm font-semibold text-[#183325] dark:text-[#f8fafc]">{sale.userName || "Sin nombre"}</strong>
-                          {sale.description ? <span className="mt-1 block text-xs text-[#5b6d61] dark:text-[#c7d2e0]">{sale.description}</span> : null}
+                          <span className="mt-1 block text-xs text-[#5b6d61] dark:text-[#c7d2e0]">{formatDateTime(sale.createdAt)}</span>
                         </div>
-                      </td>
-                      <td className="py-3">
                         <span
                           className={`inline-flex rounded-full px-3 py-1 text-xs font-semibold ${
                             sale.informal
                               ? "bg-[#fff7ed] text-[#c2410c] dark:bg-[#3b1d12] dark:text-[#fdba74]"
-                              : "bg-[#f0fdf4] text-[#166534] dark:bg-[#0f172a] dark:text-[#93c5fd]"
+                              : "bg-[#eff6ff] text-[#1d4ed8] dark:bg-[#172554] dark:text-[#93c5fd]"
                           }`}
                         >
-                          {sale.informal ? "Informal" : "Con productos"}
+                          {sale.informal ? "Informal" : "Formal"}
                         </span>
-                      </td>
-                      <td className="py-3 text-[#5b6d61] dark:text-[#c7d2e0]">{formatPaymentMethod(sale.paymentMethod)}</td>
-                      <td className="py-3 text-right font-semibold text-[#183325] dark:text-[#f8fafc]">{money(sale.total)}</td>
+                      </div>
+                      {sale.description ? <p className="text-sm text-[#5b6d61] dark:text-[#c7d2e0]">{sale.description}</p> : null}
+                      <div className="flex flex-wrap items-center justify-between gap-3 text-sm">
+                        <span className="text-[#5b6d61] dark:text-[#c7d2e0]">{formatPaymentMethod(sale.paymentMethod)}</span>
+                        <strong className="text-[#183325] dark:text-[#f8fafc]">{money(sale.total)}</strong>
+                      </div>
+                    </div>
+                  </article>
+                ))}
+              </div>
+
+              <div className="hidden overflow-x-auto md:block">
+                <table className="min-w-full text-left text-sm">
+                  <thead className="text-[#6a7b70] dark:text-[#94a3b8]">
+                    <tr>
+                      <th className="pb-3">Fecha</th>
+                      <th className="pb-3">Vendedor</th>
+                      <th className="pb-3 pr-6">Tipo</th>
+                      <th className="pb-3 pl-4">Pago</th>
+                      <th className="pb-3 text-right">Total</th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+                  </thead>
+                  <tbody>
+                    {recentSales.map((sale) => (
+                      <tr key={sale.id} className="border-t border-[#edf1ea] dark:border-[#23314d]">
+                        <td className="py-3 text-[#183325] dark:text-[#f8fafc]">{formatDateTime(sale.createdAt)}</td>
+                        <td className="py-3">
+                          <div>
+                            <strong className="block text-sm font-semibold text-[#183325] dark:text-[#f8fafc]">{sale.userName || "Sin nombre"}</strong>
+                            {sale.description ? <span className="mt-1 block text-xs text-[#5b6d61] dark:text-[#c7d2e0]">{sale.description}</span> : null}
+                          </div>
+                        </td>
+                        <td className="py-3 pr-6">
+                          <span
+                            className={`inline-flex rounded-full px-3 py-1 text-xs font-semibold ${
+                              sale.informal
+                                ? "bg-[#fff7ed] text-[#c2410c] dark:bg-[#3b1d12] dark:text-[#fdba74]"
+                                : "bg-[#eff6ff] text-[#1d4ed8] dark:bg-[#172554] dark:text-[#93c5fd]"
+                            }`}
+                          >
+                            {sale.informal ? "Informal" : "Formal"}
+                          </span>
+                        </td>
+                        <td className="py-3 pl-4 text-[#5b6d61] dark:text-[#c7d2e0]">{formatPaymentMethod(sale.paymentMethod)}</td>
+                        <td className="py-3 text-right font-semibold text-[#183325] dark:text-[#f8fafc]">{money(sale.total)}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </>
           ) : (
             <EmptyState title="Sin ventas recientes" description="Cuando registres ventas, aqui aparecera el historial mas reciente." />
           )}

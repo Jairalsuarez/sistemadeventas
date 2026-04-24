@@ -21,7 +21,45 @@ export default function ProductListTable({ canEdit = false, emptyMessage, money,
   }
 
   return (
-    <div className="overflow-x-auto">
+    <>
+      <div className="space-y-3 md:hidden">
+        {products.map((product) => (
+          <article key={product.id} className="rounded-xl border border-[#edf1ea] p-4 dark:border-[#23314d] dark:bg-[#182235]">
+            <div className="flex gap-3">
+              <button className="h-20 w-20 shrink-0 overflow-hidden rounded-lg border border-[#e4ece2] bg-[#f7faf6] dark:border-[#314056] dark:bg-[#0f172a]" onClick={() => onView(product)} type="button">
+                <img alt={product.nombre} className="h-full w-full object-cover" src={product.imagen_url} />
+              </button>
+              <div className="min-w-0 flex-1">
+                <strong className="block font-semibold text-[#183325] dark:text-[#f8fafc]">{product.nombre}</strong>
+                <p className="mt-1 line-clamp-2 text-xs leading-5 text-[#5b6d61] dark:text-[#c7d2e0]">{product.descripcion}</p>
+                <div className="mt-3 flex flex-wrap items-center gap-2 text-xs text-[#5b6d61] dark:text-[#c7d2e0]">
+                  <span className="rounded-full bg-[#f4f8ef] px-3 py-1 dark:bg-[#0f172a]">{product.categoria}</span>
+                  <span className="font-medium text-[#183325] dark:text-[#f8fafc]">{money(product.precio)}</span>
+                  <span>Stock: {product.stock}</span>
+                </div>
+              </div>
+            </div>
+
+            <div className="mt-4 flex flex-wrap items-center justify-between gap-3">
+              <StockBadge stock={product.stock} />
+              <div className="flex w-full flex-wrap gap-2 sm:w-auto sm:justify-end">
+                <button className="inline-flex flex-1 items-center justify-center gap-2 rounded-md border border-[#dfe7db] px-3 py-2 dark:border-[#314056] dark:bg-[#0f172a] dark:text-[#f8fafc] sm:flex-none" onClick={() => onView(product)} type="button">
+                  <Icon name="visibility" />
+                  Ver
+                </button>
+                {canEdit ? (
+                  <button className="inline-flex flex-1 items-center justify-center gap-2 rounded-md bg-[#1f7a3a] px-3 py-2 text-white dark:bg-[linear-gradient(135deg,#2563eb,#1d4ed8)] sm:flex-none" onClick={() => onEdit(product)} type="button">
+                    <Icon name="edit" />
+                    Editar
+                  </button>
+                ) : null}
+              </div>
+            </div>
+          </article>
+        ))}
+      </div>
+
+      <div className="hidden overflow-x-auto md:block">
       <table className="min-w-full text-left text-sm">
         <thead className="text-[#6a7b70] dark:text-[#94a3b8]">
           <tr>
@@ -71,6 +109,7 @@ export default function ProductListTable({ canEdit = false, emptyMessage, money,
           ))}
         </tbody>
       </table>
-    </div>
+      </div>
+    </>
   );
 }

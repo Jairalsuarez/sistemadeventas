@@ -2,7 +2,6 @@ import { useState } from "react";
 import { clearSession, loginUser, logoutSupabaseSession } from "../services/authService.js";
 
 export default function useAuthSession({ inform, personName, setSession, setSkipNextSessionRestore }) {
-  const [loginModal, setLoginModal] = useState(false);
   const [loginLoading, setLoginLoading] = useState(false);
   const [loginError, setLoginError] = useState("");
   const [authChecking, setAuthChecking] = useState(true);
@@ -21,7 +20,6 @@ export default function useAuthSession({ inform, personName, setSession, setSkip
 
     setAuthChecking(true);
     setSession(result.session);
-    setLoginModal(false);
     setLoginForm({ email: "", password: "" });
     inform(`Bienvenida, ${result.session.displayName || personName(result.session)}.`, "success");
     return true;
@@ -36,8 +34,6 @@ export default function useAuthSession({ inform, personName, setSession, setSkip
   };
 
   return {
-    loginModal,
-    setLoginModal,
     loginLoading,
     authChecking,
     setAuthChecking,

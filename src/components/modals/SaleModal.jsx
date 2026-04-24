@@ -56,7 +56,7 @@ export default function SaleModal({
   const [activeLineIndex, setActiveLineIndex] = useState(0);
   const [activeSearchIndex, setActiveSearchIndex] = useState(null);
   const [productSearch, setProductSearch] = useState("");
-  const stepPanelClassName = "min-h-[26rem] max-h-[26rem] overflow-y-auto pr-1";
+  const stepPanelClassName = "max-h-[min(58vh,26rem)] overflow-y-auto pr-1 sm:min-h-[26rem] sm:max-h-[26rem]";
 
   useEffect(() => {
     if (open) {
@@ -326,11 +326,11 @@ export default function SaleModal({
                     </p>
                   </div>
                   {saleLines.length > 1 ? (
-                    <button className={subtleButtonClassName} onClick={() => removeLine(index)} type="button">
-                      Quitar
-                    </button>
-                  ) : null}
-                </div>
+                  <button className={`${subtleButtonClassName} px-3 py-2`} onClick={() => removeLine(index)} type="button">
+                    Quitar
+                  </button>
+                ) : null}
+              </div>
 
                 <div className="grid gap-3 md:grid-cols-[minmax(0,1fr)_56px_150px]">
                   <button
@@ -559,15 +559,15 @@ export default function SaleModal({
           </div>
         ) : null}
 
-        <div className="flex flex-wrap items-center justify-between gap-3 border-t border-[#edf1ea] pt-4">
-          <button className={subtleButtonClassName} onClick={step === 1 ? onClose : prevStep} type="button">
+        <div className="flex flex-col-reverse gap-3 border-t border-[#edf1ea] pt-4 sm:flex-row sm:items-center sm:justify-between">
+          <button className={`${subtleButtonClassName} w-full sm:w-auto`} onClick={step === 1 ? onClose : prevStep} type="button">
             {step === 1 ? "Cancelar" : "Volver"}
           </button>
 
-          <div className="flex flex-wrap gap-3">
+          <div className="flex w-full flex-wrap gap-3 sm:w-auto sm:justify-end">
             {step < 3 ? (
               <button
-                className={primaryButtonClassName}
+                className={`${primaryButtonClassName} w-full sm:w-auto`}
                 disabled={(step === 1 && !canContinueProducts) || (step === 2 && !canContinuePayment) || uploading}
                 onClick={nextStep}
                 type="button"
@@ -575,7 +575,7 @@ export default function SaleModal({
                 Continuar
               </button>
             ) : (
-              <button className={primaryButtonClassName} disabled={saleSubmitting || !canContinuePayment || !canContinueProducts} onClick={createSale} type="button">
+              <button className={`${primaryButtonClassName} w-full sm:w-auto`} disabled={saleSubmitting || !canContinuePayment || !canContinueProducts} onClick={createSale} type="button">
                 {saleSubmitting ? "Procesando..." : "Finalizar venta"}
               </button>
             )}
