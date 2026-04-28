@@ -113,6 +113,7 @@ export default function ExpenseModal({
   onClose,
   open,
   setExpense,
+  uploadError,
   uploadExpenseEvidence,
   uploading,
   wallet,
@@ -434,12 +435,14 @@ export default function ExpenseModal({
                 <p className="text-sm font-semibold text-[#183325] dark:text-[#f8fafc]">Consejo</p>
                 <p className="mt-1 text-sm text-[#5b6d61] dark:text-[#c7d2e0]">En la evidencia debe ir la factura y el producto, o una prueba clara del gasto realizado.</p>
                 <div className="mt-4 flex flex-wrap items-center gap-3">
-                  <label className={subtleButtonClassName}>
-                    <span>{uploading ? "Subiendo..." : expense.evidenceUrl ? "Cambiar evidencia" : "Agregar evidencia"}</span>
+                  <label className={`${subtleButtonClassName} inline-flex items-center gap-2`}>
+                    {uploading ? <span className="h-4 w-4 animate-spin rounded-full border-2 border-[#f59e0b]/30 border-t-[#f59e0b]" /> : null}
+                    <span>{uploading ? "Subiendo..." : expense.evidenceUrl ? "Cambiar evidencia" : "Tomar o subir evidencia"}</span>
                     <input
                       accept="image/*"
                       capture="environment"
                       className="hidden"
+                      disabled={uploading}
                       onChange={(e) => {
                         const file = e.target.files?.[0];
                         if (file) uploadExpenseEvidence(file);
@@ -449,6 +452,8 @@ export default function ExpenseModal({
                   </label>
                   {expense.evidenceName ? <span className="text-sm text-[#5b6d61] dark:text-[#c7d2e0]">{expense.evidenceName}</span> : null}
                 </div>
+                {uploading ? <p className="mt-3 text-sm font-medium text-[#f59e0b]">Subiendo evidencia. Mantén esta pantalla abierta.</p> : null}
+                {uploadError ? <p className="mt-3 rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm font-semibold text-red-700 dark:border-red-500/30 dark:bg-red-500/10 dark:text-red-200">{uploadError}</p> : null}
               </div>
             </div>
           </div>

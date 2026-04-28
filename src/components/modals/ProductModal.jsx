@@ -8,7 +8,9 @@ export default function ProductModal({
   removeProduct,
   saveProduct,
   setProductForm,
+  uploadError,
   uploadProductImage,
+  uploading,
 }) {
   const hasChanges = editing
     ? productForm.nombre !== editing.nombre ||
@@ -23,8 +25,6 @@ export default function ProductModal({
   const fieldClassName =
     "w-full rounded-2xl border border-[#d8dee4] bg-white px-4 py-3 text-[#1f2937] transition placeholder:text-[#9aa4b2] focus:border-[#f97316] focus:outline-none focus:ring-4 focus:ring-[#f97316]/10 dark:border-white/10 dark:bg-[#111827] dark:text-white";
   const sectionClassName = "rounded-[24px] border border-[#e5e7eb] bg-white p-5 dark:border-white/10 dark:bg-[#0f172a]";
-  const normalizedStock = Number(productForm.stock || 0);
-  const isOutOfStock = normalizedStock <= 0;
   const hasImage = Boolean(productForm.imagen_url?.trim());
   const canSave = hasChanges && hasImage;
 
@@ -126,12 +126,22 @@ export default function ProductModal({
           </label>
 
           <div className="flex flex-wrap items-center gap-3">
-            <label className="inline-flex cursor-pointer items-center justify-center rounded-2xl border border-[#d8dee4] bg-[#f8fafc] px-4 py-3 text-sm font-semibold text-[#1f2937] transition hover:bg-[#eef2f7] dark:border-[#334155] dark:bg-[#172033] dark:text-white dark:hover:bg-[#22304a]">
-              Subir imagen
-              <input className="hidden" accept="image/*" onChange={(e) => e.target.files?.[0] && uploadProductImage(e.target.files[0])} type="file" />
+            <label className="inline-flex cursor-pointer items-center justify-center gap-2 rounded-2xl border border-[#d8dee4] bg-[#f8fafc] px-4 py-3 text-sm font-semibold text-[#1f2937] transition hover:bg-[#eef2f7] dark:border-[#334155] dark:bg-[#172033] dark:text-white dark:hover:bg-[#22304a]">
+              {uploading ? <span className="h-4 w-4 animate-spin rounded-full border-2 border-[#f97316]/30 border-t-[#f97316]" /> : null}
+              {uploading ? "Subiendo..." : "Tomar o subir imagen"}
+              <input
+                className="hidden"
+                accept="image/*"
+                capture="environment"
+                disabled={uploading}
+                onChange={(e) => e.target.files?.[0] && uploadProductImage(e.target.files[0])}
+                type="file"
+              />
             </label>
             <span className="text-sm text-[#6b7280] dark:text-white/55">La foto es obligatoria para guardar el producto.</span>
           </div>
+          {uploading ? <p className="text-sm font-medium text-[#f97316]">Estamos cargando el archivo. Mantén esta pantalla abierta.</p> : null}
+          {uploadError ? <p className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-semibold text-red-700 dark:border-red-500/30 dark:bg-red-500/10 dark:text-red-200">{uploadError}</p> : null}
 
           <label className="flex items-center justify-between gap-4 rounded-2xl border border-[#e5e7eb] bg-[#f8fafc] px-4 py-4 text-sm dark:border-white/10 dark:bg-[#111827]">
             <div>

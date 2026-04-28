@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import Modal from "../Modal";
 import Icon from "../ui/Icon";
 
@@ -53,6 +53,7 @@ export default function InformalSaleModal({
   open,
   setInformalSale,
   setInformalSalePayment,
+  uploadError,
   uploadInformalSaleEvidence,
   uploading,
   userRole,
@@ -98,12 +99,14 @@ export default function InformalSaleModal({
           <p className="text-sm font-semibold text-[#183325]">{selectedPayment.label}</p>
           <p className="mt-1 text-sm text-[#5b6d61]">Adjunta el comprobante antes de continuar con el registro.</p>
           <div className="mt-4 flex flex-wrap items-center gap-3">
-            <label className={subtleButtonClassName}>
-              <span>{uploading ? "Subiendo..." : informalSalePayment.evidenceUrl ? "Cambiar evidencia" : "Agregar evidencia"}</span>
+            <label className={`${subtleButtonClassName} inline-flex items-center gap-2`}>
+              {uploading ? <span className="h-4 w-4 animate-spin rounded-full border-2 border-[#f59e0b]/30 border-t-[#f59e0b]" /> : null}
+              <span>{uploading ? "Subiendo..." : informalSalePayment.evidenceUrl ? "Cambiar evidencia" : "Tomar o subir evidencia"}</span>
               <input
                 accept="image/*"
                 capture="environment"
                 className="hidden"
+                disabled={uploading}
                 onChange={(e) => {
                   const file = e.target.files?.[0];
                   if (file) uploadInformalSaleEvidence(file);
@@ -113,6 +116,8 @@ export default function InformalSaleModal({
             </label>
             {informalSalePayment.evidenceName ? <span className="text-sm text-[#5b6d61]">{informalSalePayment.evidenceName}</span> : null}
           </div>
+          {uploading ? <p className="mt-3 text-sm font-medium text-[#f59e0b]">Subiendo evidencia. Mantén esta pantalla abierta.</p> : null}
+          {uploadError ? <p className="mt-3 rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm font-semibold text-red-700">{uploadError}</p> : null}
         </div>
 
         {informalSalePayment.evidenceUrl ? (

@@ -1,5 +1,5 @@
 /* eslint-disable react-refresh/only-export-components */
-import { createContext, useContext, useEffect, useMemo, useRef, useState } from "react";
+import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
 import useAccountActions from "../hooks/useAccountActions.jsx";
 import useAuthSession from "../hooks/useAuthSession.jsx";
 import useCatalogActions from "../hooks/useCatalogActions.jsx";
@@ -38,7 +38,6 @@ const AppContext = createContext(null);
 
 const LOW_STOCK_LIMIT = 5;
 const DEVICE_NOTIFICATION_ICON = "/images/IcoSinFondo.png";
-const EXPENSE_CATEGORIES = ["Servicios", "Mercaderia", "Pagos", "Inversion", "Transporte", "Otros"];
 const EMPTY_PRODUCT = {
   nombre: "",
   categoria: "Bebidas",
@@ -100,6 +99,7 @@ export function AppProvider({ children }) {
   const [walletModal, setWalletModal] = useState(false);
   const [syncing, setSyncing] = useState(false);
   const [uploading, setUploading] = useState(false);
+  const [uploadError, setUploadError] = useState("");
   const [skipNextSessionRestore, setSkipNextSessionRestore] = useState(false);
   const [expense, setExpense] = useState(EMPTY_EXPENSE);
   const [walletForm, setWalletForm] = useState(() => ({ ...EMPTY_WALLET_FORM, saldo: getAppData().wallet.saldoActual }));
@@ -236,6 +236,35 @@ export function AppProvider({ children }) {
     }
   };
 
+  const showDeviceNotification = useCallback(async (notification) => {
+    if (!session || notificationPermission !== "granted" || typeof window === "undefined" || !("Notification" in window)) return;
+
+    const options = {
+      body: notification.message || "Tienes una nueva notificacion.",
+      icon: DEVICE_NOTIFICATION_ICON,
+      badge: DEVICE_NOTIFICATION_ICON,
+      tag: notification.id,
+    };
+
+    try {
+      if ("serviceWorker" in navigator) {
+        const registration = await navigator.serviceWorker.getRegistration();
+        if (registration?.showNotification) {
+          await registration.showNotification(notification.actorName || "Sabores Tropicales", options);
+          return;
+        }
+      }
+
+      const deviceNotification = new window.Notification(notification.actorName || "Sabores Tropicales", options);
+      deviceNotification.onclick = () => {
+        window.focus();
+        deviceNotification.close();
+      };
+    } catch {
+      // Device notifications are best-effort; in-app toasts still cover the event.
+    }
+  }, [notificationPermission, session]);
+
   useEffect(() => {
     const legacyAdminShifts = (app.turnos || []).filter((turno) => {
       if (turno.estado !== "abierto") return false;
@@ -345,41 +374,51 @@ export function AppProvider({ children }) {
   }, [app.notifications, lowStock, user?.role]);
 
   useEffect(() => {
+    if (typeof window === "undefined" || !("serviceWorker" in navigator)) return;
+    navigator.serviceWorker.register("/notification-sw.js").catch(() => undefined);
+  }, []);
+
+  useEffect(() => {
     const visibleNotifications =
       user?.role === "admin"
         ? app.notifications || []
         : (app.notifications || []).filter((notification) => notification.actorId === user?.id || notification.actorName === user?.displayName);
 
+    const seenStorageKey = user?.id ? `sabores-device-notifications-seen:${user.id}` : "sabores-device-notifications-seen:anon";
+    const storedSeenIds = (() => {
+      try {
+        return new Set(JSON.parse(window.localStorage.getItem(seenStorageKey) || "[]"));
+      } catch {
+        return new Set();
+      }
+    })();
+
     if (!browserNotificationReadyRef.current) {
-      shownBrowserNotificationIdsRef.current = new Set(visibleNotifications.map((notification) => notification.id));
+      shownBrowserNotificationIdsRef.current = storedSeenIds;
       browserNotificationReadyRef.current = true;
-      return;
     }
 
-    const freshNotifications = visibleNotifications.filter((notification) => !shownBrowserNotificationIdsRef.current.has(notification.id));
+    const now = Date.now();
+    const freshNotifications = visibleNotifications.filter((notification) => {
+      if (shownBrowserNotificationIdsRef.current.has(notification.id)) return false;
+      if (notification.read) return false;
+      const age = now - new Date(notification.createdAt || now).getTime();
+      return age <= 24 * 60 * 60 * 1000;
+    });
+
     freshNotifications.forEach((notification) => {
       shownBrowserNotificationIdsRef.current.add(notification.id);
+      pushToast(notification.message || "Tienes una nueva notificacion.", notification.type || "info");
     });
 
-    if (!session || notificationPermission !== "granted" || typeof window === "undefined" || !("Notification" in window)) return;
+    try {
+      window.localStorage.setItem(seenStorageKey, JSON.stringify([...shownBrowserNotificationIdsRef.current].slice(-120)));
+    } catch {
+      // Ignore storage errors; notifications still work in the current session.
+    }
 
-    freshNotifications.forEach((notification) => {
-      try {
-        const deviceNotification = new window.Notification(notification.actorName || "Sabores Tropicales", {
-          body: notification.message || "Tienes una nueva notificacion.",
-          icon: DEVICE_NOTIFICATION_ICON,
-          tag: notification.id,
-        });
-
-        deviceNotification.onclick = () => {
-          window.focus();
-          deviceNotification.close();
-        };
-      } catch {
-        // Ignore browser notification errors to avoid breaking app flows.
-      }
-    });
-  }, [app.notifications, notificationPermission, session, user?.displayName, user?.id, user?.role]);
+    freshNotifications.forEach((notification) => showDeviceNotification(notification));
+  }, [app.notifications, notificationPermission, pushToast, session, showDeviceNotification, user?.displayName, user?.id, user?.role]);
 
   const openSaleFlow = () => {
     if (user?.role === "vendedor" && !activeShift) {
@@ -402,10 +441,13 @@ export function AppProvider({ children }) {
   const uploadAsset = async (file, folder = "products") => {
     try {
       setUploading(true);
+      setUploadError("");
       const url = await uploadImage(file, folder);
       return url;
     } catch (error) {
-      inform(error.message, "error");
+      const message = error?.message || "No se pudo subir el archivo. Revisa la conexion e intenta de nuevo.";
+      setUploadError(message);
+      inform(message, "error");
       return "";
     } finally {
       setUploading(false);
@@ -500,7 +542,6 @@ export function AppProvider({ children }) {
       isMissingRelationError,
       emptyWalletForm: EMPTY_WALLET_FORM,
       emptyScheduleForm: EMPTY_SCHEDULE_FORM,
-      expenseCategories: EXPENSE_CATEGORIES,
       createRemoteShift,
       updateRemoteShift,
       createRemoteSale,
@@ -613,6 +654,7 @@ export function AppProvider({ children }) {
     editing,
     syncing,
     uploading,
+    uploadError,
     saleSubmitting,
     informalSaleSubmitting,
     expenseSubmitting,

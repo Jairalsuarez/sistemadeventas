@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import ActivityFeed from "../../components/dashboard/ActivityFeed";
 import CloseShiftModal from "../../components/modals/CloseShiftModal";
+import ShiftSummaryModal from "../../components/modals/ShiftSummaryModal";
 import Icon from "../../components/ui/Icon";
 import PageHeader from "../../components/ui/PageHeader";
 import SectionBlock from "../../components/ui/SectionBlock";
@@ -16,10 +17,12 @@ export default function AdminDashboardPage({
   upcomingSchedules,
   recentActivity,
   sellerShiftRows,
+  money,
 }) {
   const [showRecentActivity, setShowRecentActivity] = useState(false);
   const [publicAnalytics, setPublicAnalytics] = useState(() => getPublicAnalytics());
   const [shiftToClose, setShiftToClose] = useState(null);
+  const [summaryToView, setSummaryToView] = useState(null);
   const scheduleRows = upcomingSchedules || [];
   const sellers = sellerShiftRows || [];
   const nextSchedule = scheduleRows[0] || null;
@@ -116,13 +119,22 @@ export default function AdminDashboardPage({
                   </span>
                 </div>
                 {seller.activeShift ? (
-                  <button
-                    className="mt-4 rounded-md border border-[#f0c7ba] bg-[#fff7f4] px-4 py-2 text-sm font-medium text-[#b42318] transition hover:bg-[#ffefe8] dark:border-[#4b5563] dark:bg-[#111827] dark:text-[#fca5a5] dark:hover:bg-[#172033]"
-                    onClick={() => setShiftToClose(seller.activeShift)}
-                    type="button"
-                  >
-                    Terminar turno
-                  </button>
+                  <div className="mt-4 flex flex-wrap gap-2">
+                    <button
+                      className="rounded-md border border-[#dfe7db] bg-white px-4 py-2 text-sm font-medium text-[#183325] transition hover:bg-[#f8fafc] dark:border-[#314056] dark:bg-[#172033] dark:text-[#f8fafc] dark:hover:bg-[#22304a]"
+                      onClick={() => setSummaryToView(seller.shiftSummary)}
+                      type="button"
+                    >
+                      Ver resumen del turno
+                    </button>
+                    <button
+                      className="rounded-md border border-[#f0c7ba] bg-[#fff7f4] px-4 py-2 text-sm font-medium text-[#b42318] transition hover:bg-[#ffefe8] dark:border-[#4b5563] dark:bg-[#111827] dark:text-[#fca5a5] dark:hover:bg-[#172033]"
+                      onClick={() => setShiftToClose(seller.activeShift)}
+                      type="button"
+                    >
+                      Terminar turno
+                    </button>
+                  </div>
                 ) : null}
               </article>
             ))}
@@ -171,6 +183,7 @@ export default function AdminDashboardPage({
         text={shiftToClose ? `Desea cerrar manualmente el turno de ${shiftToClose.userName || "este vendedor"}?` : "Desea cerrar manualmente este turno?"}
         title="Cerrar turno del vendedor"
       />
+      <ShiftSummaryModal money={money} onClose={() => setSummaryToView(null)} open={Boolean(summaryToView)} summary={summaryToView} />
     </div>
   );
 }

@@ -22,7 +22,6 @@ export default function AppShell() {
     requestBrowserNotificationPermission,
     session,
     theme,
-    unreadNotifications,
     user,
     setTheme,
   } =
@@ -45,7 +44,7 @@ export default function AppShell() {
   const notificationButton = (
     <div ref={notificationRef} className="relative">
       <button
-        className="relative inline-flex items-center gap-2 rounded-md border border-[#dfe7db] bg-white px-3 py-2.5 text-sm font-medium text-[#183325] dark:border-[#314056] dark:bg-[#111827] dark:text-[#f8fafc] sm:px-4"
+        className="relative inline-flex min-w-0 items-center gap-2 rounded-md border border-[#dfe7db] bg-white px-3 py-2.5 text-sm font-medium text-[#183325] dark:border-[#314056] dark:bg-[#111827] dark:text-[#f8fafc] sm:px-4"
         onClick={async () => {
           if (notificationPermission === "default") {
             await requestBrowserNotificationPermission();
@@ -57,7 +56,7 @@ export default function AppShell() {
         <Icon name="notifications" />
         <span className="hidden sm:inline">Notificaciones</span>
         {visibleUnreadNotifications ? (
-          <span className="ml-2 rounded-full bg-[#f97316] px-2 py-0.5 text-[11px] font-semibold text-white">{visibleUnreadNotifications}</span>
+          <span className="rounded-full bg-[#f97316] px-2 py-0.5 text-[11px] font-semibold text-white sm:ml-2">{visibleUnreadNotifications}</span>
         ) : null}
       </button>
       {openNotifications ? (
@@ -103,7 +102,7 @@ export default function AppShell() {
       <div className="mx-auto flex max-w-[1440px] flex-col lg:flex-row">
         <SideNav isAdmin={isAdmin} />
         <div className="min-w-0 flex-1">
-          <main className="px-4 py-6 lg:px-6">
+          <main className="overflow-hidden px-3 py-5 sm:px-4 sm:py-6 lg:px-6">
             <Outlet />
           </main>
         </div>

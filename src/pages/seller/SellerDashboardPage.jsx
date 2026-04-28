@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import ActivityFeed from "../../components/dashboard/ActivityFeed";
 import CloseShiftModal from "../../components/modals/CloseShiftModal";
+import ShiftSummaryModal from "../../components/modals/ShiftSummaryModal";
 import StartShiftModal from "../../components/modals/StartShiftModal";
 import Icon from "../../components/ui/Icon";
 import PageHeader from "../../components/ui/PageHeader";
@@ -30,9 +31,12 @@ export default function SellerDashboardPage({
   recentActivity,
   sellerSchedules,
   sellerStats,
+  shiftSummary,
+  money,
 }) {
   const [startShiftModalOpen, setStartShiftModalOpen] = useState(false);
   const [closeShiftModalOpen, setCloseShiftModalOpen] = useState(false);
+  const [shiftSummaryOpen, setShiftSummaryOpen] = useState(false);
   const [showRecentActivity, setShowRecentActivity] = useState(false);
   const [now, setNow] = useState(() => Date.now());
   const canRegisterSale = Boolean(activeShift);
@@ -105,6 +109,15 @@ export default function SellerDashboardPage({
             >
               {activeShift ? "Cerrar turno" : "Iniciar turno"}
             </button>
+            {shiftSummary ? (
+              <button
+                className="rounded-xl border border-[#dfe7db] px-4 py-3 text-sm font-semibold dark:border-[#314056] dark:bg-[#182235] dark:text-[#f8fafc] sm:px-6 sm:py-4 sm:text-base"
+                onClick={() => setShiftSummaryOpen(true)}
+                type="button"
+              >
+                Ver resumen del turno
+              </button>
+            ) : null}
           </div>
         }
       />
@@ -203,6 +216,7 @@ export default function SellerDashboardPage({
         }}
         open={closeShiftModalOpen}
       />
+      <ShiftSummaryModal money={money} onClose={() => setShiftSummaryOpen(false)} open={shiftSummaryOpen} summary={shiftSummary} />
     </div>
   );
 }

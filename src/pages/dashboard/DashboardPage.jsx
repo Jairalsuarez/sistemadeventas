@@ -2,6 +2,7 @@ import { useMemo } from "react";
 import { useAppContext } from "../../context/AppContext";
 import AdminDashboardPage from "../admin/AdminDashboardPage";
 import SellerDashboardPage from "../seller/SellerDashboardPage";
+import { buildShiftSummary } from "../../services/shiftSummaryService.js";
 
 export default function DashboardPage({ onNewProduct, onNewSale, onNewInformalSale, onOpenExpense, onOpenWallet }) {
   const { activeShift, adminStats, app, lowStock, recentActivity, sellerStats, upcomingSchedules, user, visibleProducts, startShift, closeShift, money, formatDate } = useAppContext();
@@ -30,11 +31,19 @@ export default function DashboardPage({ onNewProduct, onNewSale, onNewInformalSa
           id: seller.id,
           name: [seller.nombre, seller.apellido].filter(Boolean).join(" ").trim() || seller.nombre || "Vendedor",
           activeShift: activeSellerShift,
+          shiftSummary: activeSellerShift
+            ? buildShiftSummary({
+                shift: activeSellerShift,
+                sales: app.sales || [],
+                schedules: app.schedules || [],
+                money,
+              })
+            : null,
           statusLabel: activeSellerShift ? "Tiene un turno abierto en este momento." : "No tiene turnos activos.",
         };
       })
       .sort((a, b) => Number(Boolean(b.activeShift)) - Number(Boolean(a.activeShift)) || a.name.localeCompare(b.name));
-  }, [app.turnos, app.users, user?.role]);
+  }, [app.schedules, app.sales, app.turnos, app.users, money, user?.role]);
 
   const sellerRecentActivity = useMemo(() => {
     if (user?.role !== "vendedor") return recentActivity;
@@ -64,6 +73,19 @@ export default function DashboardPage({ onNewProduct, onNewSale, onNewInformalSa
     return Date.now() >= new Date(activeShift.startedAt).getTime() + 5 * 60 * 60 * 1000;
   }, [activeShift?.startedAt, user?.role]);
 
+  const sellerShiftSummary = useMemo(
+    () =>
+      activeShift
+        ? buildShiftSummary({
+            shift: activeShift,
+            sales: app.sales || [],
+            schedules: app.schedules || [],
+            money,
+          })
+        : null,
+    [activeShift, app.schedules, app.sales, money]
+  );
+
   if (user?.role === "admin") {
     return (
       <AdminDashboardPage
@@ -77,6 +99,7 @@ export default function DashboardPage({ onNewProduct, onNewSale, onNewInformalSa
         recentActivity={recentActivity}
         sellerShiftRows={sellerShiftRows}
         visibleProducts={visibleProducts}
+        money={money}
       />
     );
   }
@@ -93,7 +116,9 @@ export default function DashboardPage({ onNewProduct, onNewSale, onNewInformalSa
       recentActivity={sellerRecentActivity}
       sellerStats={sellerStats}
       sellerSchedules={sellerSchedules}
+      shiftSummary={sellerShiftSummary}
       visibleProducts={visibleProducts}
+      money={money}
     />
   );
 }

@@ -68,7 +68,7 @@ export default function HomePage({ app, onOpenLoginPage }) {
           />
         </div>
 
-        <section className="relative flex min-h-screen items-center justify-center px-4 pb-8 pt-40 sm:pt-32 lg:px-6 lg:pt-32">
+        <section className="relative flex min-h-screen items-center justify-center px-4 pb-8 pt-24 sm:pt-32 lg:px-6 lg:pt-32">
           <div className="absolute inset-0">
             {activeSlide?.type === "video" ? (
               <video autoPlay className="h-full w-full object-cover" key={activeSlide.src} muted onEnded={goNext} playsInline src={activeSlide.src} />
@@ -101,7 +101,7 @@ export default function HomePage({ app, onOpenLoginPage }) {
             </button>
           </div>
 
-          <div className="relative z-10 mx-auto w-full max-w-[620px] translate-y-2 sm:translate-y-4 lg:translate-y-14">
+          <div className="relative z-10 mx-auto w-full max-w-[620px] translate-y-8 sm:translate-y-4 lg:translate-y-14">
             <div className="rounded-[22px] border border-white bg-white p-4 text-center shadow-[0_22px_70px_rgba(12,24,16,0.2)] sm:p-5">
               <div>
                 <p className="text-sm font-semibold uppercase tracking-[0.18em] text-[#f97316]">Bienvenido a</p>
@@ -112,7 +112,7 @@ export default function HomePage({ app, onOpenLoginPage }) {
                 <div className="mt-4 flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:justify-center">
                   <Link className="inline-flex w-full items-center justify-center gap-2 rounded-xl bg-[#1f7a3a] px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-[#17612d] sm:w-auto" state={{ fromHome: true }} to="/productos">
                     <Icon name="storefront" />
-                    Ver catalogo
+                    Ver productos
                   </Link>
                   <Link className="inline-flex w-full items-center justify-center gap-2 rounded-xl border border-[#d7dfd2] bg-white px-4 py-2.5 text-sm font-semibold text-[#183325] transition hover:bg-white sm:w-auto" to="/como-llegar">
                     <Icon name="map" />

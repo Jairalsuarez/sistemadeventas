@@ -1,4 +1,5 @@
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
+import SaleDetailsModal from "../../components/modals/SaleDetailsModal";
 import EmptyState from "../../components/ui/EmptyState";
 import PageHeader from "../../components/ui/PageHeader";
 import SectionBlock from "../../components/ui/SectionBlock";
@@ -62,7 +63,8 @@ function buildMonthlySeries({ expenses, sales, today }) {
 }
 
 export default function SalesAnalyticsPage({ expenses, money, sales }) {
-  const today = new Date();
+  const [selectedSaleId, setSelectedSaleId] = useState(null);
+  const today = useMemo(() => new Date(), []);
   const todayStart = startOfDay(today);
   const currentMonthStart = startOfMonth(today);
   const currentMonthEnd = endOfMonth(today);
@@ -130,6 +132,8 @@ export default function SalesAnalyticsPage({ expenses, money, sales }) {
         .slice(0, 12),
     [sales]
   );
+  const getSaleDetails = (saleId) => sales.find((sale) => sale.id === saleId) || null;
+  const selectedSale = selectedSaleId ? getSaleDetails(selectedSaleId) : null;
 
   const sellerRows = useMemo(() => {
     const map = new Map();
@@ -227,7 +231,7 @@ export default function SalesAnalyticsPage({ expenses, money, sales }) {
             <>
               <div className="space-y-3 md:hidden">
                 {recentSales.map((sale) => (
-                  <article key={sale.id} className="rounded-xl border border-[#edf1ea] p-4 dark:border-[#23314d] dark:bg-[#182235]">
+                  <button key={sale.id} className="block w-full rounded-xl border border-[#edf1ea] p-4 text-left transition hover:border-[#1f7a3a] hover:bg-[#fafcf9] dark:border-[#23314d] dark:bg-[#182235] dark:hover:border-[#60a5fa]" onClick={() => setSelectedSaleId(sale.id)} type="button">
                     <div className="space-y-3">
                       <div className="flex flex-wrap items-start justify-between gap-3">
                         <div>
@@ -250,7 +254,7 @@ export default function SalesAnalyticsPage({ expenses, money, sales }) {
                         <strong className="text-[#183325] dark:text-[#f8fafc]">{money(sale.total)}</strong>
                       </div>
                     </div>
-                  </article>
+                  </button>
                 ))}
               </div>
 
@@ -267,7 +271,7 @@ export default function SalesAnalyticsPage({ expenses, money, sales }) {
                   </thead>
                   <tbody>
                     {recentSales.map((sale) => (
-                      <tr key={sale.id} className="border-t border-[#edf1ea] dark:border-[#23314d]">
+                      <tr key={sale.id} className="cursor-pointer border-t border-[#edf1ea] transition hover:bg-[#f8faf6] dark:border-[#23314d] dark:hover:bg-[#111827]" onClick={() => setSelectedSaleId(sale.id)}>
                         <td className="py-3 text-[#183325] dark:text-[#f8fafc]">{formatDateTime(sale.createdAt)}</td>
                         <td className="py-3">
                           <div>
@@ -325,6 +329,13 @@ export default function SalesAnalyticsPage({ expenses, money, sales }) {
           )}
         </SectionBlock>
       </div>
+      <SaleDetailsModal
+        formatDateTime={formatDateTime}
+        money={money}
+        onClose={() => setSelectedSaleId(null)}
+        open={Boolean(selectedSale)}
+        sale={selectedSale}
+      />
     </div>
   );
 }

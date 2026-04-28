@@ -26,8 +26,8 @@ export function getOptimizedImageUrl(url, options = {}) {
   }
 
   const transformations = [
-    "f_auto",
-    "q_auto",
+    `f_${format}`,
+    `q_${quality}`,
     width ? `w_${width}` : "",
     height ? `h_${height}` : "",
     width || height ? `c_${crop}` : "",
@@ -49,12 +49,24 @@ async function uploadToCloudinary(file) {
   form.append("upload_preset", import.meta.env.VITE_CLOUDINARY_UPLOAD_PRESET);
   form.append("folder", import.meta.env.VITE_CLOUDINARY_FOLDER || "productos");
 
-  const res = await fetch(`https://api.cloudinary.com/v1_1/${import.meta.env.VITE_CLOUDINARY_CLOUD_NAME}/image/upload`, {
-    method: "POST",
-    body: form,
-  });
+  const controller = new AbortController();
+  const timeout = window.setTimeout(() => controller.abort(), 30000);
 
-  if (!res.ok) throw new Error("Fallo la subida de la imagen.");
+  let res;
+  try {
+    res = await fetch(`https://api.cloudinary.com/v1_1/${import.meta.env.VITE_CLOUDINARY_CLOUD_NAME}/image/upload`, {
+      method: "POST",
+      body: form,
+      signal: controller.signal,
+    });
+  } catch (error) {
+    if (error?.name === "AbortError") throw new Error("La subida tardo demasiado. Revisa la conexion e intenta otra vez.");
+    throw new Error("No se pudo conectar para subir el archivo. Revisa tu internet e intenta de nuevo.");
+  } finally {
+    window.clearTimeout(timeout);
+  }
+
+  if (!res.ok) throw new Error("Fallo la subida del archivo. Intenta otra vez en unos segundos.");
   const data = await res.json();
   return data.secure_url;
 }

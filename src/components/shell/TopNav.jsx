@@ -63,25 +63,25 @@ export default function TopNav({
   const isLanding = isPublic && publicVariant === "landing";
 
   return (
-    <header className={isLanding ? "sticky top-0 z-40 px-4 pt-3 lg:px-6 lg:pt-5" : "sticky top-0 z-40 border-b border-[#e7ede3] bg-white dark:border-[#23314d] dark:bg-[#0f172a]"}>
+    <header className={isLanding ? "sticky top-0 z-40 px-3 pt-2 lg:px-6 lg:pt-5" : "sticky top-0 z-40 border-b border-[#e7ede3] bg-white dark:border-[#23314d] dark:bg-[#0f172a]"}>
       <div className={isLanding ? "mx-auto max-w-[1440px]" : "mx-auto max-w-[1440px] px-4 lg:px-6"}>
         <div
           className={
             isLanding
-              ? "mx-auto flex w-full max-w-[1320px] flex-col gap-3 rounded-[24px] border border-[#e7ede3] bg-white px-3 py-3 shadow-[0_12px_34px_rgba(24,51,37,0.08)] sm:px-5 lg:flex-row lg:flex-wrap lg:items-center lg:justify-between"
+              ? "mx-auto flex w-full max-w-[1320px] flex-row items-center justify-between gap-2 rounded-2xl border border-white/70 bg-white/88 px-3 py-2 shadow-[0_8px_24px_rgba(24,51,37,0.08)] backdrop-blur-md sm:px-5 sm:py-3 lg:flex-wrap"
               : `flex w-full flex-wrap items-center justify-between gap-3 ${isPublic ? "py-4" : "px-1 py-4"}`
           }
         >
-          <NavLink className={`flex min-w-0 items-center gap-3 ${isLanding ? "w-full justify-center text-center sm:justify-start sm:text-left lg:flex-1" : "flex-1 sm:flex-none"}`} to={session ? "/panel" : "/"}>
-            <img alt="Sabores Tropicales" className={`shrink-0 object-contain ${isLanding ? "h-11 w-11 sm:h-12 sm:w-12" : "h-12 w-12"}`} src="/images/IcoSinFondo.png" />
+          <NavLink className={`flex min-w-0 items-center gap-3 ${isLanding ? "flex-1 text-left lg:flex-1" : "flex-1 sm:flex-none"}`} to={session ? "/panel" : "/"}>
+            <img alt="Sabores Tropicales" className={`shrink-0 object-contain ${isLanding ? "h-9 w-9 sm:h-12 sm:w-12" : "h-12 w-12"}`} src="/images/IcoSinFondo.png" />
             <div className="min-w-0">
-              <strong className="block truncate text-base font-semibold text-[#183325] dark:text-[#f8fafc] sm:text-[17px]">{businessName}</strong>
+              <strong className="block truncate text-sm font-semibold text-[#183325] dark:text-[#f8fafc] sm:text-[17px]">{businessName}</strong>
             </div>
           </NavLink>
 
           {!session && publicSearch ? <div className="order-3 w-full lg:order-none lg:flex-1 lg:px-4 xl:flex xl:min-w-[360px] xl:justify-center">{publicSearch}</div> : null}
 
-          <div className={`flex items-center gap-2 sm:flex-wrap sm:gap-3 ${isLanding ? "w-full justify-between sm:w-auto sm:justify-end" : "w-full justify-end sm:w-auto"}`}>
+          <div className={`flex min-w-0 items-center gap-2 sm:flex-wrap sm:gap-3 ${isLanding ? "shrink-0 justify-end" : "w-full justify-end sm:w-auto"}`}>
             {!session && publicLinks.length ? <nav className="hidden items-center gap-1 lg:flex">{publicLinks.map((link) => <NavItem key={link.label} link={link} />)}</nav> : null}
 
             {showActiveShiftBadge ? (
@@ -127,7 +127,7 @@ export default function TopNav({
 
             {session ? (
               <>
-                {notificationButton}
+                <div className="min-w-0">{notificationButton}</div>
                 <NavLink className="hidden rounded-md px-2 py-2 text-sm font-medium text-[#5b6d61] dark:text-[#f8fafc] lg:block" to="/panel/perfil">
                   {fullName(user)}
                 </NavLink>
@@ -157,7 +157,7 @@ export default function TopNav({
             )}
           </div>
 
-          {!session && publicLinks.length ? (
+          {!session && publicLinks.length && !isLanding ? (
             <nav className={`order-4 w-full lg:hidden ${isLanding ? "grid grid-cols-2 gap-2" : "flex overflow-x-auto gap-2 pb-1"}`}>
               {publicLinks.map((link) => (
                 <NavItem key={link.label} landingMobile={isLanding} link={link} />

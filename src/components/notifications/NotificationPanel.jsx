@@ -2,13 +2,13 @@ import Icon from "../ui/Icon";
 
 export default function NotificationPanel({ notifications, onClose, onMarkAllRead, onRead }) {
   return (
-    <div className="absolute right-0 top-[calc(100%+0.75rem)] z-50 w-[min(360px,calc(100vw-2rem))] rounded-lg border border-[#dfe7db] bg-white p-4 shadow-[0_24px_50px_rgba(24,51,37,0.14)] dark:border-[#23314d] dark:bg-[#111827]">
+    <div className="fixed inset-x-2 top-[5.25rem] z-50 max-h-[calc(100dvh-6rem)] overflow-hidden rounded-lg border border-[#dfe7db] bg-white p-3 shadow-[0_24px_50px_rgba(24,51,37,0.14)] dark:border-[#23314d] dark:bg-[#111827] sm:absolute sm:inset-x-auto sm:right-0 sm:top-[calc(100%+0.75rem)] sm:w-[min(360px,calc(100vw-2rem))] sm:p-4">
       <div className="flex items-center justify-between gap-3">
         <div className="flex items-start gap-2">
           <Icon className="mt-0.5 text-[#f97316]" name="notifications_active" />
           <div>
-          <h3 className="text-sm font-semibold text-[#183325] dark:text-white">Novedades</h3>
-          <p className="text-xs text-[#5b6d61] dark:text-[#94a3b8]">Aqui ves los movimientos recientes del negocio.</p>
+            <h3 className="text-sm font-semibold text-[#183325] dark:text-white">Novedades</h3>
+            <p className="text-xs text-[#5b6d61] dark:text-[#94a3b8]">Aqui ves los movimientos recientes del negocio.</p>
           </div>
         </div>
         <button className="text-xs font-semibold text-[#f97316]" onClick={onMarkAllRead} type="button">
@@ -16,7 +16,7 @@ export default function NotificationPanel({ notifications, onClose, onMarkAllRea
         </button>
       </div>
 
-      <div className="mt-4 max-h-[420px] space-y-3 overflow-auto">
+      <div className="mt-4 max-h-[calc(100dvh-14rem)] space-y-3 overflow-auto sm:max-h-[420px]">
         {notifications.length ? (
           notifications.map((notification) => (
             <button

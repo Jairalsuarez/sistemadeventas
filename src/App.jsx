@@ -86,6 +86,7 @@ function App() {
     toasts,
     upcomingSchedules,
     uploading,
+    uploadError,
     updateScheduleStatus,
     uploadProductImage,
     uploadExpenseEvidence,
@@ -229,6 +230,7 @@ function App() {
         saleTotal={saleTotal}
         setSaleLines={setSaleLines}
         setSalePayment={setSalePayment}
+        uploadError={uploadError}
         uploadSaleEvidence={uploadSaleEvidence}
         uploading={uploading}
         userRole={user?.role}
@@ -246,6 +248,7 @@ function App() {
         open={informalSaleModal}
         setInformalSale={setInformalSale}
         setInformalSalePayment={setInformalSalePayment}
+        uploadError={uploadError}
         uploadInformalSaleEvidence={uploadInformalSaleEvidence}
         uploading={uploading}
         userRole={user?.role}
@@ -261,7 +264,9 @@ function App() {
         saveProduct={saveProduct}
         setProductForm={setProductForm}
         storageReady={storageReady}
+        uploadError={uploadError}
         uploadProductImage={uploadProductImage}
+        uploading={uploading}
       />
 
       <ExpenseModal
@@ -274,6 +279,7 @@ function App() {
         onClose={() => setExpenseModal(false)}
         open={expenseModal}
         setExpense={setExpense}
+        uploadError={uploadError}
         uploadExpenseEvidence={uploadExpenseEvidence}
         uploading={uploading}
         wallet={app.wallet}
