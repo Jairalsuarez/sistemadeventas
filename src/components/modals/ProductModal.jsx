@@ -132,7 +132,6 @@ export default function ProductModal({
               <input
                 className="hidden"
                 accept="image/*"
-                capture="environment"
                 disabled={uploading}
                 onChange={(e) => e.target.files?.[0] && uploadProductImage(e.target.files[0])}
                 type="file"

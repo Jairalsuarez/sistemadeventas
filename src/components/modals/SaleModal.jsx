@@ -237,7 +237,6 @@ export default function SaleModal({
               <span>{uploading ? "Subiendo..." : salePayment.evidenceUrl ? "Cambiar evidencia" : "Tomar o subir evidencia"}</span>
               <input
                 accept="image/*"
-                capture="environment"
                 className="hidden"
                 disabled={uploading}
                 onChange={(e) => {

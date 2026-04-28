@@ -104,7 +104,6 @@ export default function InformalSaleModal({
               <span>{uploading ? "Subiendo..." : informalSalePayment.evidenceUrl ? "Cambiar evidencia" : "Tomar o subir evidencia"}</span>
               <input
                 accept="image/*"
-                capture="environment"
                 className="hidden"
                 disabled={uploading}
                 onChange={(e) => {
