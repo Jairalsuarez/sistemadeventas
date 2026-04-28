@@ -379,6 +379,8 @@ export function AppProvider({ children }) {
   }, []);
 
   useEffect(() => {
+    if (!session || !user?.id) return;
+
     const visibleNotifications =
       user?.role === "admin"
         ? app.notifications || []
@@ -408,7 +410,7 @@ export function AppProvider({ children }) {
 
     freshNotifications.forEach((notification) => {
       shownBrowserNotificationIdsRef.current.add(notification.id);
-      pushToast(notification.message || "Tienes una nueva notificacion.", notification.type || "info");
+      pushToast(notification.message || "Tienes una nueva notificacion.", notification.type || "info", `notification:${notification.id}`);
     });
 
     try {

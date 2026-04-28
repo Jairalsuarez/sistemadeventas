@@ -1,9 +1,39 @@
 import { useEffect, useState } from "react";
 
+const SHOWN_TOASTS_KEY = "sabores-shown-toasts";
+const SHOWN_TOAST_TTL_MS = 24 * 60 * 60 * 1000;
+
+function getShownToastMap() {
+  try {
+    const raw = window.localStorage.getItem(SHOWN_TOASTS_KEY);
+    const parsed = raw ? JSON.parse(raw) : {};
+    const now = Date.now();
+    return Object.fromEntries(Object.entries(parsed).filter(([, shownAt]) => now - Number(shownAt || 0) < SHOWN_TOAST_TTL_MS));
+  } catch {
+    return {};
+  }
+}
+
+function rememberShownToast(key) {
+  if (!key) return;
+  try {
+    const current = getShownToastMap();
+    window.localStorage.setItem(SHOWN_TOASTS_KEY, JSON.stringify({ ...current, [key]: Date.now() }));
+  } catch {
+    // Ignore private-mode/localStorage failures.
+  }
+}
+
 export default function useToastQueue(limit = 4, duration = 3500) {
   const [toasts, setToasts] = useState([]);
 
-  const pushToast = (message, type = "info") => {
+  const pushToast = (message, type = "info", dedupeKey = "") => {
+    if (dedupeKey) {
+      const shown = getShownToastMap();
+      if (shown[dedupeKey]) return;
+      rememberShownToast(dedupeKey);
+    }
+
     setToasts((current) => [...current, { id: crypto.randomUUID(), message, type }].slice(-limit));
   };
 
