@@ -1,6 +1,7 @@
 import { NavLink } from "react-router-dom";
 import Icon from "../ui/Icon";
 import { getOptimizedImageUrl } from "../../services/storageService.js";
+import { isNativeApp } from "../../utils/platform.js";
 
 function fullName(user = {}) {
   return [user.nombre, user.apellido].filter(Boolean).join(" ").trim() || user.nombre || "Usuario";
@@ -61,21 +62,22 @@ export default function TopNav({
   const isPublic = !session;
   const showActiveShiftBadge = session && user?.role === "vendedor" && activeShift;
   const isLanding = isPublic && publicVariant === "landing";
+  const nativeApp = isNativeApp();
 
   return (
-    <header className={isLanding ? "sticky top-0 z-40 px-3 pt-2 lg:px-6 lg:pt-5" : "sticky top-0 z-40 border-b border-[#e7ede3] bg-white dark:border-[#23314d] dark:bg-[#0f172a]"}>
-      <div className={isLanding ? "mx-auto max-w-[1440px]" : "mx-auto max-w-[1440px] px-4 lg:px-6"}>
+    <header className={isLanding ? "sticky top-0 z-40 px-3 pt-2 lg:px-6 lg:pt-5" : `sticky top-0 z-40 border-b border-[#e7ede3] bg-white dark:border-[#23314d] dark:bg-[#0f172a] ${nativeApp ? "pt-[env(safe-area-inset-top)]" : ""}`}>
+      <div className={isLanding ? "mx-auto max-w-[1440px]" : `mx-auto max-w-[1440px] ${nativeApp ? "px-3" : "px-4 lg:px-6"}`}>
         <div
           className={
             isLanding
               ? "mx-auto flex w-full max-w-[1320px] flex-row items-center justify-between gap-2 rounded-2xl border border-white/70 bg-white/88 px-3 py-2 shadow-[0_8px_24px_rgba(24,51,37,0.08)] backdrop-blur-md sm:px-5 sm:py-3 lg:flex-wrap"
-              : `flex w-full flex-wrap items-center justify-between gap-3 ${isPublic ? "py-4" : "px-1 py-4"}`
+              : `flex w-full flex-wrap items-center justify-between gap-3 ${nativeApp ? "px-0 py-3" : isPublic ? "py-4" : "px-1 py-4"}`
           }
         >
           <NavLink className={`flex min-w-0 items-center gap-3 ${isLanding ? "flex-1 text-left lg:flex-1" : "flex-1 sm:flex-none"}`} to={session ? "/panel" : "/"}>
-            <img alt="Sabores Tropicales" className={`shrink-0 object-contain ${isLanding ? "h-9 w-9 sm:h-12 sm:w-12" : "h-12 w-12"}`} src="/images/IcoSinFondo.png" />
+            <img alt="Sabores Tropicales" className={`shrink-0 object-contain ${isLanding ? "h-9 w-9 sm:h-12 sm:w-12" : nativeApp ? "h-11 w-11" : "h-12 w-12"}`} src="/images/IcoSinFondo.png" />
             <div className="min-w-0">
-              <strong className="block truncate text-sm font-semibold text-[#183325] dark:text-[#f8fafc] sm:text-[17px]">{businessName}</strong>
+              <strong className={`block truncate font-semibold text-[#183325] dark:text-[#f8fafc] ${nativeApp ? "text-[15px] leading-tight" : "text-sm sm:text-[17px]"}`}>{businessName}</strong>
             </div>
           </NavLink>
 
@@ -116,8 +118,8 @@ export default function TopNav({
                   </span>
                 </span>
                 <span
-                  className={`absolute top-1 grid h-9 w-9 place-items-center rounded-full bg-white text-[#183325] shadow-[0_8px_18px_rgba(15,23,42,0.16)] transition ${
-                    darkMode ? "translate-x-[29px] bg-[#1e293b] text-[#f8fafc]" : "translate-x-[2px]"
+                  className={`absolute top-1 grid h-9 w-9 place-items-center rounded-full shadow-[0_8px_18px_rgba(15,23,42,0.16)] transition ${
+                    darkMode ? "translate-x-[29px] bg-[#f8fafc] text-[#0f172a]" : "translate-x-[2px] bg-white text-[#183325]"
                   }`}
                 >
                   <Icon name={darkMode ? "dark_mode" : "light_mode"} />

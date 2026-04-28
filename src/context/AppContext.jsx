@@ -33,6 +33,7 @@ import {
 import { mergeUsers, updateRemoteProfile } from "../services/profileService.js";
 import { deleteRemoteProduct, upsertRemoteProduct } from "../services/productService.js";
 import { storageReady, uploadImage } from "../services/storageService.js";
+import { isNativeApp } from "../utils/platform.js";
 
 const AppContext = createContext(null);
 
@@ -211,6 +212,21 @@ export function AppProvider({ children }) {
   }, [app.users, session]);
 
   const requestBrowserNotificationPermission = async () => {
+    if (isNativeApp()) {
+      try {
+        const { LocalNotifications } = await import("@capacitor/local-notifications");
+        const current = await LocalNotifications.checkPermissions();
+        const permission = current.display === "granted" ? current : await LocalNotifications.requestPermissions();
+        const granted = permission.display === "granted";
+        setNotificationPermission(granted ? "granted" : "denied");
+        pushToast(granted ? "Notificaciones del dispositivo activadas." : "No se concedio permiso para notificaciones.", granted ? "success" : "warning");
+        return { ok: granted, permission: granted ? "granted" : "denied" };
+      } catch (error) {
+        pushToast(error?.message || "No se pudo activar notificaciones nativas.", "error");
+        return { ok: false, permission: "unsupported" };
+      }
+    }
+
     if (typeof window === "undefined" || !("Notification" in window)) {
       pushToast("Este navegador no soporta notificaciones del dispositivo.", "warning");
       return { ok: false, permission: "unsupported" };
@@ -237,7 +253,7 @@ export function AppProvider({ children }) {
   };
 
   const showDeviceNotification = useCallback(async (notification) => {
-    if (!session || notificationPermission !== "granted" || typeof window === "undefined" || !("Notification" in window)) return;
+    if (!session || notificationPermission !== "granted") return;
 
     const options = {
       body: notification.message || "Tienes una nueva notificacion.",
@@ -247,6 +263,23 @@ export function AppProvider({ children }) {
     };
 
     try {
+      if (isNativeApp()) {
+        const { LocalNotifications } = await import("@capacitor/local-notifications");
+        await LocalNotifications.schedule({
+          notifications: [
+            {
+              id: Math.abs(String(notification.id || "").split("").reduce((acc, char) => acc + char.charCodeAt(0), 0)) || Date.now() % 2147483647,
+              title: notification.actorName || "Sabores Tropicales",
+              body: notification.message || "Tienes una nueva notificacion.",
+              schedule: { at: new Date(Date.now() + 250) },
+            },
+          ],
+        });
+        return;
+      }
+
+      if (typeof window === "undefined" || !("Notification" in window)) return;
+
       if ("serviceWorker" in navigator) {
         const registration = await navigator.serviceWorker.getRegistration();
         if (registration?.showNotification) {

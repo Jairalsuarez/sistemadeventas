@@ -46,7 +46,7 @@ export default function AppShell() {
   const notificationButton = (
     <div ref={notificationRef} className="relative">
       <button
-        className="relative inline-flex min-w-0 items-center gap-2 rounded-md border border-[#dfe7db] bg-white px-3 py-2.5 text-sm font-medium text-[#183325] dark:border-[#314056] dark:bg-[#111827] dark:text-[#f8fafc] sm:px-4"
+        className={`relative inline-flex min-w-0 items-center gap-2 border border-[#dfe7db] bg-white text-sm font-medium text-[#183325] dark:border-[#314056] dark:bg-[#111827] dark:text-[#f8fafc] ${nativeApp ? "h-11 rounded-xl px-3" : "rounded-md px-3 py-2.5 sm:px-4"}`}
         onClick={async () => {
           if (notificationPermission === "default") {
             await requestBrowserNotificationPermission();
@@ -104,7 +104,7 @@ export default function AppShell() {
       <div className="mx-auto flex max-w-[1440px] flex-col lg:flex-row">
         <SideNav isAdmin={isAdmin} />
         <div className="min-w-0 flex-1">
-          <main className={`overflow-hidden px-3 py-5 sm:px-4 sm:py-6 lg:px-6 ${nativeApp ? "pb-24 lg:pb-6" : ""}`}>
+          <main className={`overflow-hidden px-3 py-5 sm:px-4 sm:py-6 lg:px-6 ${nativeApp ? "pb-[6.75rem] lg:pb-6" : ""}`}>
             <Outlet />
           </main>
         </div>
