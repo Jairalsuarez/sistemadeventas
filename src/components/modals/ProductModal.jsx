@@ -128,7 +128,18 @@ export default function ProductModal({
           <div className="flex flex-wrap items-center gap-3">
             <label className="inline-flex cursor-pointer items-center justify-center gap-2 rounded-2xl border border-[#d8dee4] bg-[#f8fafc] px-4 py-3 text-sm font-semibold text-[#1f2937] transition hover:bg-[#eef2f7] dark:border-[#334155] dark:bg-[#172033] dark:text-white dark:hover:bg-[#22304a]">
               {uploading ? <span className="h-4 w-4 animate-spin rounded-full border-2 border-[#f97316]/30 border-t-[#f97316]" /> : null}
-              {uploading ? "Subiendo..." : "Tomar o subir imagen"}
+              {uploading ? "Subiendo..." : "Tomar foto"}
+              <input
+                className="hidden"
+                accept="image/*"
+                capture="environment"
+                disabled={uploading}
+                onChange={(e) => e.target.files?.[0] && uploadProductImage(e.target.files[0])}
+                type="file"
+              />
+            </label>
+            <label className="inline-flex cursor-pointer items-center justify-center rounded-2xl border border-[#d8dee4] bg-white px-4 py-3 text-sm font-semibold text-[#1f2937] transition hover:bg-[#f8fafc] dark:border-[#334155] dark:bg-[#111827] dark:text-white dark:hover:bg-[#172033]">
+              Elegir foto
               <input
                 className="hidden"
                 accept="image/*"

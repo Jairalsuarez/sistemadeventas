@@ -101,7 +101,21 @@ export default function InformalSaleModal({
           <div className="mt-4 flex flex-wrap items-center gap-3">
             <label className={`${subtleButtonClassName} inline-flex items-center gap-2`}>
               {uploading ? <span className="h-4 w-4 animate-spin rounded-full border-2 border-[#f59e0b]/30 border-t-[#f59e0b]" /> : null}
-              <span>{uploading ? "Subiendo..." : informalSalePayment.evidenceUrl ? "Cambiar evidencia" : "Tomar o subir evidencia"}</span>
+              <span>{uploading ? "Subiendo..." : informalSalePayment.evidenceUrl ? "Tomar otra foto" : "Tomar foto"}</span>
+              <input
+                accept="image/*"
+                capture="environment"
+                className="hidden"
+                disabled={uploading}
+                onChange={(e) => {
+                  const file = e.target.files?.[0];
+                  if (file) uploadInformalSaleEvidence(file);
+                }}
+                type="file"
+              />
+            </label>
+            <label className={subtleButtonClassName}>
+              <span>{informalSalePayment.evidenceUrl ? "Elegir otra foto" : "Elegir foto"}</span>
               <input
                 accept="image/*"
                 className="hidden"
