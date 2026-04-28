@@ -1,5 +1,5 @@
 import { Suspense, lazy, useEffect } from "react";
-import { Navigate, Route, Routes, useLocation, useNavigate } from "react-router-dom";
+import { Navigate, Route, Routes, useLocation } from "react-router-dom";
 import ProductDetailsModal from "./components/modals/ProductDetailsModal";
 import ExpenseModal from "./components/modals/ExpenseModal";
 import InformalSaleModal from "./components/modals/InformalSaleModal";
@@ -12,15 +12,11 @@ import PageSkeleton from "./components/ui/PageSkeleton.jsx";
 import { useAppContext } from "./context/AppContext";
 import PanelLayout from "./layouts/PanelLayout.jsx";
 import ProtectedRoute from "./routes/ProtectedRoute";
+import { isNativeApp } from "./utils/platform.js";
 
 const ProfilePage = lazy(() => import("./pages/account/ProfilePage.jsx"));
 const LoginPage = lazy(() => import("./pages/auth/LoginPage.jsx"));
 const ProductsPage = lazy(() => import("./pages/catalog/ProductsPage.jsx"));
-const PublicCatalogPage = lazy(() => import("./pages/catalog/PublicCatalogPage.jsx"));
-const PublicSearchResultsPage = lazy(() => import("./pages/catalog/PublicSearchResultsPage.jsx"));
-const AboutPage = lazy(() => import("./pages/public/AboutPage.jsx"));
-const DirectionsPage = lazy(() => import("./pages/public/DirectionsPage.jsx"));
-const HomePage = lazy(() => import("./pages/public/HomePage.jsx"));
 const DashboardPage = lazy(() => import("./pages/dashboard/DashboardPage.jsx"));
 const WalletPage = lazy(() => import("./pages/finance/WalletPage.jsx"));
 const SchedulePage = lazy(() => import("./pages/admin/SchedulePage.jsx"));
@@ -28,8 +24,8 @@ const UsersPage = lazy(() => import("./pages/admin/UsersPage.jsx"));
 const SalesAnalyticsPage = lazy(() => import("./pages/admin/SalesAnalyticsPage.jsx"));
 
 function App() {
-  const navigate = useNavigate();
   const location = useLocation();
+  const nativeApp = isNativeApp();
   const {
     activeShift,
     app,
@@ -109,41 +105,12 @@ function App() {
 
   return (
     <>
-      <CookieBanner />
+      {!nativeApp ? <CookieBanner /> : null}
       <ToastViewport onDismiss={dismissToast} suspended={authChecking || syncing} toasts={toasts} />
       <Suspense fallback={<PageSkeleton />}>
         <Routes>
-          <Route
-            path="/"
-            element={<HomePage app={app} onOpenLoginPage={() => navigate("/login")} />}
-          />
-          <Route
-            path="/productos"
-            element={
-              <PublicCatalogPage
-                app={app}
-                money={money}
-                onOpenLoginPage={() => navigate("/login")}
-                onView={setSelected}
-                products={visibleProducts}
-              />
-            }
-          />
-          <Route
-            path="/productos/resultados"
-            element={
-              <PublicSearchResultsPage
-                app={app}
-                money={money}
-                onOpenLoginPage={() => navigate("/login")}
-                onView={setSelected}
-                products={visibleProducts}
-              />
-            }
-          />
+          <Route path="/" element={<Navigate replace to={session ? "/panel" : "/login"} />} />
           <Route path="/login" element={<LoginPage />} />
-          <Route path="/about-us" element={<AboutPage app={app} />} />
-          <Route path="/como-llegar" element={<DirectionsPage app={app} />} />
 
           <Route element={<ProtectedRoute />}>
             <Route element={<PanelLayout />}>
@@ -213,7 +180,7 @@ function App() {
             </Route>
           </Route>
 
-          <Route path="*" element={<Navigate replace to={session ? "/panel" : "/"} />} />
+          <Route path="*" element={<Navigate replace to={session ? "/panel" : nativeApp ? "/login" : "/"} />} />
         </Routes>
       </Suspense>
 
@@ -285,7 +252,7 @@ function App() {
         wallet={app.wallet}
       />
       <WalletModal adjustWallet={adjustWallet} onClose={() => setWalletModal(false)} open={walletModal} setWalletForm={setWalletForm} walletForm={walletForm} />
-      <ProductDetailsModal money={money} onClose={() => setSelected(null)} open={Boolean(selected)} product={selected} variant={session ? "default" : "public"} whatsappNumber={app.business.whatsapp} />
+      <ProductDetailsModal money={money} onClose={() => setSelected(null)} open={Boolean(selected)} product={selected} variant={session || nativeApp ? "default" : "public"} whatsappNumber={app.business.whatsapp} />
     </>
   );
 }

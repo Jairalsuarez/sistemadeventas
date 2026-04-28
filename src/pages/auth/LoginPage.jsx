@@ -1,17 +1,8 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useState } from "react";
 import { Navigate, useNavigate } from "react-router-dom";
 import Icon from "../../components/ui/Icon";
 import { useAppContext } from "../../context/AppContext";
-
-const LOGIN_SLIDES = [
-  { src: "/carrusel/IMG_20260421_143641_455.jpg", type: "image" },
-  { src: "/carrusel/IMG_20260421_143712_458.jpg", type: "image" },
-  { src: "/carrusel/IMG_20260421_143742_848.jpg", type: "image" },
-  { src: "/carrusel/IMG_20260421_143755_378.jpg", type: "image" },
-  { src: "/carrusel/IMG_20260421_143818_910.jpg", type: "image" },
-  { src: "/carrusel/VID_20260421_143905.mp4", type: "video" },
-  { src: "/carrusel/IMG_20260421_143840_153.jpg", type: "image" },
-];
+import { isNativeApp } from "../../utils/platform.js";
 
 const LOGO_URL = "/images/IcoSinFondo.png";
 
@@ -19,25 +10,7 @@ export default function LoginPage() {
   const navigate = useNavigate();
   const { handleLogin, loginError, loginForm, loginLoading, session, setLoginForm } = useAppContext();
   const [showPassword, setShowPassword] = useState(false);
-  const [activeIndex, setActiveIndex] = useState(0);
-  const timeoutRef = useRef(null);
-  const activeSlide = useMemo(() => LOGIN_SLIDES[activeIndex] || LOGIN_SLIDES[0], [activeIndex]);
-
-  useEffect(() => {
-    if (!activeSlide || activeSlide.type !== "image") return undefined;
-    timeoutRef.current = window.setTimeout(() => {
-      setActiveIndex((current) => (current + 1) % LOGIN_SLIDES.length);
-    }, 30000);
-
-    return () => {
-      if (timeoutRef.current) window.clearTimeout(timeoutRef.current);
-    };
-  }, [activeSlide]);
-
-  const nextSlide = () => {
-    if (timeoutRef.current) window.clearTimeout(timeoutRef.current);
-    setActiveIndex((current) => (current + 1) % LOGIN_SLIDES.length);
-  };
+  const nativeApp = isNativeApp();
 
   if (session) {
     return <Navigate replace to="/panel" />;
@@ -50,60 +23,36 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="min-h-screen bg-white px-4 py-8 text-[#183325]">
+    <div className={`min-h-screen bg-white text-[#183325] ${nativeApp ? "px-3 py-4 sm:px-5 sm:py-6" : "px-4 py-8"}`}>
       <div className="mx-auto max-w-6xl">
-        <div className="relative overflow-hidden rounded-[32px] border border-[#dfe7db] bg-white shadow-[0_32px_90px_rgba(24,51,37,0.16)]">
-          <div className="relative grid min-h-[720px] lg:grid-cols-[1.04fr_0.96fr]">
-          <section className="relative hidden lg:block">
-            {activeSlide?.type === "video" ? (
-              <video
-                autoPlay
-                className="h-full w-full object-cover"
-                key={activeSlide.src}
-                muted
-                onEnded={nextSlide}
-                playsInline
-                src={activeSlide.src}
-              />
-            ) : (
-              <img alt="Sabores Tropicales" className="h-full w-full object-cover" src={activeSlide?.src} />
-            )}
-            <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(13,24,16,0.08),rgba(13,24,16,0.38))]" />
-            <div className="absolute inset-x-8 bottom-8 rounded-[22px] border border-white/16 bg-[rgba(20,24,18,0.30)] px-5 py-4 text-white backdrop-blur-sm">
-              <p className="text-xs font-semibold uppercase tracking-[0.28em] text-white/74">Sabores Tropicales</p>
-              <p className="mt-2 text-[1.7rem] font-semibold leading-tight tracking-[-0.02em]">Acceso unicamente para administradores</p>
-              <p className="mt-1.5 text-sm leading-6 text-white/74">
-                Ingresa con tu cuenta autorizada para continuar.
-              </p>
-            </div>
-          </section>
-
-          <section className="relative flex items-center bg-white px-6 py-8 sm:px-10 lg:px-12">
+        <div className={`relative overflow-hidden border border-[#dfe7db] bg-white shadow-[0_32px_90px_rgba(24,51,37,0.16)] ${nativeApp ? "min-h-[calc(100dvh-2rem)] rounded-[24px]" : "rounded-[32px]"}`}>
+          <div className="relative grid min-h-[calc(100dvh-2rem)]">
+          <section className="relative flex items-center bg-white px-5 py-6 sm:px-10 lg:px-12">
             <div className="relative mx-auto w-full max-w-md">
-              <button
+              {!nativeApp ? <button
                 className="inline-flex items-center gap-2 rounded-md border border-[#d6ddd1] bg-white px-4 py-2 text-sm font-medium text-[#183325] transition duration-200 hover:border-[#c8d3c2] hover:bg-white"
                 onClick={() => navigate("/")}
                 type="button"
               >
                 <Icon name="arrow_back" />
                 Volver
-              </button>
+              </button> : null}
 
-              <div className="mt-8 flex items-center gap-4">
-                <img alt="Sabores Tropicales" className="h-16 w-16 shrink-0 object-contain" src={LOGO_URL} />
+              <div className={`${nativeApp ? "mt-2" : "mt-8"} flex items-center gap-4`}>
+                <img alt="Sabores Tropicales" className="h-14 w-14 shrink-0 object-contain sm:h-16 sm:w-16" src={LOGO_URL} />
                 <div>
-                  <p className="text-xl font-semibold text-[#183325]">Sabores Tropicales y Algo Mas</p>
+                  <p className="text-lg font-semibold leading-tight text-[#183325] sm:text-xl">Sabores Tropicales y Algo Mas</p>
                   <p className="mt-1 text-sm text-[#5f7064]">Acceso administrativo</p>
                 </div>
               </div>
 
-              <div className="mt-10">
+              <div className={`${nativeApp ? "mt-8" : "mt-10"}`}>
                 <p className="text-sm font-semibold uppercase tracking-[0.18em] text-[#f97316]">Acceso interno</p>
-                <h1 className="mt-4 text-4xl font-semibold leading-tight text-[#183325]">Iniciar sesion</h1>
-                <p className="mt-3 text-sm leading-7 text-[#5f7064]">Solo para administradores.</p>
+                <h1 className="mt-4 text-3xl font-semibold leading-tight text-[#183325] sm:text-4xl">Iniciar sesion</h1>
+                <p className="mt-3 text-sm leading-7 text-[#5f7064]">Solo para administradores y vendedores autorizados.</p>
               </div>
 
-              <div className="mt-8 rounded-[28px] border border-[#dfe7db] bg-white p-6 shadow-[0_20px_50px_rgba(24,51,37,0.1)]">
+              <div className="mt-6 rounded-[24px] border border-[#dfe7db] bg-white p-4 shadow-[0_20px_50px_rgba(24,51,37,0.1)] sm:mt-8 sm:p-6">
                 <form className="grid gap-4" onSubmit={submit}>
                   <label className="grid gap-2 text-sm">
                     Correo
@@ -118,6 +67,19 @@ export default function LoginPage() {
                         value={loginForm.email}
                       />
                     </div>
+                  </label>
+
+                  <label className="flex items-start gap-3 rounded-xl border border-[#dfe7db] bg-[#f8faf6] px-4 py-3 text-sm text-[#5f7064]">
+                    <input
+                      checked={Boolean(loginForm.rememberLogin)}
+                      className="mt-1 h-4 w-4 rounded border-[#c8d3c2] text-[#1f7a3a]"
+                      onChange={(event) => setLoginForm((current) => ({ ...current, rememberLogin: event.target.checked }))}
+                      type="checkbox"
+                    />
+                    <span>
+                      <span className="block font-semibold text-[#183325]">Recordar credenciales</span>
+                      <span className="mt-0.5 block text-xs leading-5">Guarda el correo y la contrasena solo en este dispositivo.</span>
+                    </span>
                   </label>
 
                   <label className="grid gap-2 text-sm">

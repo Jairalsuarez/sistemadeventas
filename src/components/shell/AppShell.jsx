@@ -7,10 +7,12 @@ import Icon from "../ui/Icon";
 import SideNav from "./SideNav";
 import TopNav from "./TopNav";
 import useClickOutside from "../../hooks/useClickOutside.jsx";
+import { isNativeApp } from "../../utils/platform.js";
 
 export default function AppShell() {
   const navigate = useNavigate();
   const location = useLocation();
+  const nativeApp = isNativeApp();
   const {
     activeShift,
     app,
@@ -102,7 +104,7 @@ export default function AppShell() {
       <div className="mx-auto flex max-w-[1440px] flex-col lg:flex-row">
         <SideNav isAdmin={isAdmin} />
         <div className="min-w-0 flex-1">
-          <main className="overflow-hidden px-3 py-5 sm:px-4 sm:py-6 lg:px-6">
+          <main className={`overflow-hidden px-3 py-5 sm:px-4 sm:py-6 lg:px-6 ${nativeApp ? "pb-24 lg:pb-6" : ""}`}>
             <Outlet />
           </main>
         </div>
