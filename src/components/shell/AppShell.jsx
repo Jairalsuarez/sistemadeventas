@@ -21,6 +21,7 @@ export default function AppShell() {
     markNotificationRead,
     notificationPermission,
     notifications,
+    refreshAppData,
     requestBrowserNotificationPermission,
     session,
     theme,
@@ -30,12 +31,32 @@ export default function AppShell() {
     useAppContext();
   const [openNotifications, setOpenNotifications] = useState(false);
   const [logoutModalOpen, setLogoutModalOpen] = useState(false);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [pullState, setPullState] = useState({ active: false, armed: false, startY: 0, distance: 0, refreshing: false });
+  const [isOnline, setIsOnline] = useState(() => (typeof navigator === "undefined" ? true : navigator.onLine));
   const notificationRef = useRef(null);
   const isAdmin = user?.role === "admin";
 
   useEffect(() => {
     setOpenNotifications(false);
+    setMobileMenuOpen(false);
   }, [location.pathname]);
+
+  useEffect(() => {
+    if (!nativeApp || !session) return;
+    if (notificationPermission !== "default") return;
+    requestBrowserNotificationPermission();
+  }, [nativeApp, notificationPermission, requestBrowserNotificationPermission, session]);
+
+  useEffect(() => {
+    const updateOnlineState = () => setIsOnline(typeof navigator === "undefined" ? true : navigator.onLine);
+    window.addEventListener("online", updateOnlineState);
+    window.addEventListener("offline", updateOnlineState);
+    return () => {
+      window.removeEventListener("online", updateOnlineState);
+      window.removeEventListener("offline", updateOnlineState);
+    };
+  }, []);
 
   useClickOutside(notificationRef, openNotifications, () => setOpenNotifications(false));
   const visibleNotifications = isAdmin
@@ -47,11 +68,11 @@ export default function AppShell() {
     <div ref={notificationRef} className="relative">
       <button
         className={`relative inline-flex min-w-0 items-center gap-2 border border-[#dfe7db] bg-white text-sm font-medium text-[#183325] dark:border-[#314056] dark:bg-[#111827] dark:text-[#f8fafc] ${nativeApp ? "h-11 rounded-xl px-3" : "rounded-md px-3 py-2.5 sm:px-4"}`}
-        onClick={async () => {
-          if (notificationPermission === "default") {
-            await requestBrowserNotificationPermission();
-          }
+        onClick={() => {
           setOpenNotifications((current) => !current);
+          if (notificationPermission === "default") {
+            requestBrowserNotificationPermission();
+          }
         }}
         type="button"
       >
@@ -97,14 +118,70 @@ export default function AppShell() {
           setOpenNotifications(false);
           setTheme((current) => (current === "dark" ? "light" : "dark"));
         }}
+        mobileMenuButton={
+          nativeApp ? (
+            <button
+              aria-label="Abrir menu"
+              aria-expanded={mobileMenuOpen}
+              className="grid h-10 w-10 shrink-0 place-items-center rounded-xl border border-[#dfe7db] bg-white text-[#183325] transition-colors active:bg-[#f4f7f2] dark:border-[#314056] dark:bg-[#111827] dark:text-[#f8fafc] dark:active:bg-[#182235] lg:hidden"
+              onClick={(event) => {
+                event.preventDefault();
+                setMobileMenuOpen((current) => !current);
+              }}
+              type="button"
+            >
+              <Icon name="menu" />
+            </button>
+          ) : null
+        }
         session={session}
         user={user}
       />
 
       <div className="mx-auto flex max-w-[1440px] flex-col lg:flex-row">
-        <SideNav isAdmin={isAdmin} />
+        <SideNav isAdmin={isAdmin} onClose={() => setMobileMenuOpen(false)} open={mobileMenuOpen} />
         <div className="min-w-0 flex-1">
-          <main className={`overflow-hidden px-3 py-5 sm:px-4 sm:py-6 lg:px-6 ${nativeApp ? "pb-[6.75rem] lg:pb-6" : ""}`}>
+          {!isOnline ? (
+            <div className="mx-3 mt-3 rounded-xl border border-[#f7c28f] bg-[#fff8f2] px-4 py-3 text-sm font-semibold text-[#9a3412] dark:border-[#f97316]/30 dark:bg-[#2b1b10] dark:text-[#fdba74] sm:mx-4 lg:mx-6">
+              Sin conexion. Puedes revisar datos guardados, pero los cambios pueden tardar en sincronizar.
+            </div>
+          ) : null}
+          <main
+            className={`relative overflow-hidden px-3 py-5 sm:px-4 sm:py-6 lg:px-6 ${nativeApp ? "pb-6 lg:pb-6" : ""}`}
+            onTouchEnd={async () => {
+              if (!nativeApp || !pullState.active) return;
+              const shouldRefresh = pullState.armed && pullState.distance > 56;
+              setPullState((current) => ({ ...current, active: false, refreshing: shouldRefresh, distance: shouldRefresh ? 56 : 0 }));
+              if (shouldRefresh) {
+                await refreshAppData?.();
+                setPullState({ active: false, armed: false, startY: 0, distance: 0, refreshing: false });
+              } else {
+                setPullState({ active: false, armed: false, startY: 0, distance: 0, refreshing: false });
+              }
+            }}
+            onTouchMove={(event) => {
+              if (!nativeApp || !pullState.active || window.scrollY > 0) return;
+              const distance = Math.max(0, Math.min(110, (event.touches[0].clientY - pullState.startY) * 0.55));
+              const armed = pullState.armed ? distance > 56 : distance > 84;
+              if (distance > 4) event.preventDefault();
+              setPullState((current) => ({ ...current, armed, distance }));
+            }}
+            onTouchStart={(event) => {
+              if (!nativeApp || window.scrollY > 0 || pullState.refreshing) return;
+              setPullState({ active: true, armed: false, startY: event.touches[0].clientY, distance: 0, refreshing: false });
+            }}
+          >
+            {nativeApp ? (
+              <div
+                className="pointer-events-none absolute inset-x-0 top-0 z-30 flex justify-center transition-transform"
+                style={{ transform: `translateY(${Math.max(-52, pullState.distance - 52)}px)` }}
+              >
+                <div className="mt-2 inline-flex h-11 items-center gap-2 rounded-full border border-[#dfe7db] bg-white px-4 text-sm font-semibold text-[#183325] shadow-[0_12px_28px_rgba(15,23,42,0.12)] dark:border-[#314056] dark:bg-[#111827] dark:text-[#f8fafc]">
+                  <span className={`h-4 w-4 rounded-full border-2 border-[#1f7a3a]/25 border-t-[#1f7a3a] ${pullState.refreshing || pullState.distance > 76 ? "animate-spin" : ""}`} />
+                  {pullState.refreshing ? "Actualizando..." : pullState.armed ? "Suelta para actualizar o sube para cancelar" : "Desliza para actualizar"}
+                </div>
+              </div>
+            ) : null}
             <Outlet />
           </main>
         </div>

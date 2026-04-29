@@ -57,6 +57,7 @@ export default function TopNav({
   publicVariant = "catalog",
   session,
   showThemeToggle = true,
+  mobileMenuButton = null,
   user,
 }) {
   const isPublic = !session;
@@ -83,7 +84,7 @@ export default function TopNav({
 
           {!session && publicSearch ? <div className="order-3 w-full lg:order-none lg:flex-1 lg:px-4 xl:flex xl:min-w-[360px] xl:justify-center">{publicSearch}</div> : null}
 
-          <div className={`flex min-w-0 items-center gap-2 sm:flex-wrap sm:gap-3 ${isLanding ? "shrink-0 justify-end" : "w-full justify-end sm:w-auto"}`}>
+          <div className={`${nativeApp && session ? "hidden" : "flex"} min-w-0 items-center gap-2 sm:flex-wrap sm:gap-3 ${isLanding ? "shrink-0 justify-end" : "w-full justify-end sm:w-auto"}`}>
             {!session && publicLinks.length ? <nav className="hidden items-center gap-1 lg:flex">{publicLinks.map((link) => <NavItem key={link.label} link={link} />)}</nav> : null}
 
             {showActiveShiftBadge ? (
@@ -98,7 +99,7 @@ export default function TopNav({
 
             {!session ? publicActions : null}
 
-            {showThemeToggle ? (
+            {showThemeToggle && !(nativeApp && session) ? (
               <button
                 aria-label={darkMode ? "Cambiar a modo claro" : "Cambiar a modo oscuro"}
                 className={`relative inline-flex h-11 w-[68px] shrink-0 items-center rounded-full border transition ${
@@ -129,13 +130,13 @@ export default function TopNav({
 
             {session ? (
               <>
-                <div className="min-w-0">{notificationButton}</div>
+                {nativeApp ? null : <div className="min-w-0">{notificationButton}</div>}
                 <NavLink className="hidden rounded-md px-2 py-2 text-sm font-medium text-[#5b6d61] dark:text-[#f8fafc] lg:block" to="/panel/perfil">
                   {fullName(user)}
                 </NavLink>
-                <UserAvatar user={user} />
+                {nativeApp ? null : <UserAvatar user={user} />}
                 <button
-                  className={`inline-flex items-center gap-2 bg-[linear-gradient(135deg,#1f7a3a,#2b8e46)] text-sm font-medium text-white transition hover:-translate-y-0.5 hover:shadow-lg dark:bg-[linear-gradient(135deg,#2563eb,#1d4ed8)] ${
+                  className={`items-center gap-2 bg-[linear-gradient(135deg,#1f7a3a,#2b8e46)] text-sm font-medium text-white transition hover:-translate-y-0.5 hover:shadow-lg dark:bg-[linear-gradient(135deg,#2563eb,#1d4ed8)] ${nativeApp ? "hidden lg:inline-flex" : "inline-flex"} ${
                     isLanding
                       ? "rounded-xl px-4 py-2.5 shadow-[0_10px_24px_rgba(31,122,58,0.18)]"
                       : "rounded-md px-3 py-2.5 shadow-[0_8px_20px_rgba(31,122,58,0.14)] sm:px-4"
@@ -158,6 +159,47 @@ export default function TopNav({
               </button>
             )}
           </div>
+
+          {nativeApp && session ? (
+            <div className="order-4 flex w-full items-center justify-between gap-3 border-t border-[#e7ede3] pt-3 dark:border-[#23314d]">
+              {mobileMenuButton}
+              <div className="flex min-w-0 items-center gap-2">
+                {showThemeToggle ? (
+                  <button
+                    aria-label={darkMode ? "Cambiar a modo claro" : "Cambiar a modo oscuro"}
+                    className="relative inline-flex h-10 w-[60px] shrink-0 items-center rounded-full border border-[#dfe7db] bg-[#f8faf6] transition dark:border-[#314056] dark:bg-[#111827]"
+                    onClick={onToggleTheme}
+                    type="button"
+                  >
+                    <span className="pointer-events-none absolute inset-0 grid grid-cols-2">
+                      <span className="grid place-items-center text-[#f59e0b]">
+                        <Icon name="light_mode" />
+                      </span>
+                      <span className="grid place-items-center text-[#94a3b8]">
+                        <Icon name="dark_mode" />
+                      </span>
+                    </span>
+                    <span
+                      className={`absolute top-1 grid h-8 w-8 place-items-center rounded-full shadow-[0_6px_14px_rgba(15,23,42,0.14)] transition ${
+                        darkMode ? "translate-x-[26px] bg-[#f8fafc] text-[#0f172a]" : "translate-x-[2px] bg-white text-[#183325]"
+                      }`}
+                    >
+                      <Icon name={darkMode ? "dark_mode" : "light_mode"} />
+                    </span>
+                  </button>
+                ) : null}
+                <div className="min-w-0">{notificationButton}</div>
+                <UserAvatar user={user} />
+                <button
+                  className="inline-flex h-10 w-12 items-center justify-center rounded-xl bg-[linear-gradient(135deg,#1f7a3a,#2b8e46)] text-white shadow-[0_8px_18px_rgba(31,122,58,0.16)] dark:bg-[linear-gradient(135deg,#2563eb,#1d4ed8)]"
+                  onClick={onLogout}
+                  type="button"
+                >
+                  <Icon name="logout" />
+                </button>
+              </div>
+            </div>
+          ) : null}
 
           {!session && publicLinks.length && !isLanding ? (
             <nav className={`order-4 w-full lg:hidden ${isLanding ? "grid grid-cols-2 gap-2" : "flex overflow-x-auto gap-2 pb-1"}`}>

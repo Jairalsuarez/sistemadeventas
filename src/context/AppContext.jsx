@@ -12,6 +12,7 @@ import useSupabaseSync from "../hooks/useSupabaseSync.jsx";
 import useToastQueue from "../hooks/useToastQueue.jsx";
 import { getAppData, saveAppData } from "../services/appDataService.js";
 import { getSession, restoreSupabaseSession, verifySupabasePassword } from "../services/authService.js";
+import { registerPlugin } from "@capacitor/core";
 import {
   createRemoteDistributor,
   createRemoteExpenseCategory,
@@ -36,6 +37,7 @@ import { storageReady, uploadImage } from "../services/storageService.js";
 import { isNativeApp } from "../utils/platform.js";
 
 const AppContext = createContext(null);
+const NativeNotifier = registerPlugin("NativeNotifier");
 
 const LOW_STOCK_LIMIT = 5;
 const DEVICE_NOTIFICATION_ICON = "/images/IcoSinFondo.png";
@@ -75,13 +77,41 @@ const EMPTY_SALE_PAYMENT = { method: "efectivo", evidenceUrl: "", evidenceName: 
 const EMPTY_INFORMAL_SALE = { total: 0, totalInput: "", description: "" };
 const EMPTY_SCHEDULE_FORM = { fecha: "", inicio: "", fin: "", responsable: "", turno: "Mañana", notas: "" };
 
+let nativeNotificationChannelReady = false;
+
 const money = (n) => new Intl.NumberFormat("es-EC", { style: "currency", currency: "USD" }).format(Number(n || 0));
 const shortTime = (value) => new Intl.DateTimeFormat("es-EC", { timeStyle: "short" }).format(new Date(value));
 const formatDate = (value, config = { dateStyle: "medium" }) => new Intl.DateTimeFormat("es-EC", config).format(new Date(value));
 const personName = (person = {}) => [person.nombre, person.apellido].filter(Boolean).join(" ").trim() || person.nombre || "Usuario";
 const getBrowserNotificationPermission = () => {
+  if (isNativeApp()) return "default";
   if (typeof window === "undefined" || !("Notification" in window)) return "unsupported";
   return window.Notification.permission;
+};
+const notificationId = (value) => {
+  const text = String(value || Date.now());
+  return text.split("").reduce((acc, char) => ((acc * 31 + char.charCodeAt(0)) & 0x7fffffff), 17) || Math.floor(Date.now() % 2147483647);
+};
+const ensureNativeNotificationChannel = async () => {
+  const { LocalNotifications } = await import("@capacitor/local-notifications");
+  if (!nativeNotificationChannelReady) {
+    try {
+      await LocalNotifications.deleteChannel?.({ id: "sabores-general" });
+    } catch {
+      // Android may throw when the channel does not exist yet.
+    }
+  }
+  await LocalNotifications.createChannel?.({
+    id: "sabores-general",
+    name: "Sabores Tropicales",
+    description: "Alertas del panel administrativo",
+    importance: 5,
+    visibility: 1,
+    lights: true,
+    vibration: true,
+  });
+  nativeNotificationChannelReady = true;
+  return LocalNotifications;
 };
 
 const isMissingRelationError = (error = "") => {
@@ -145,7 +175,7 @@ export function AppProvider({ children }) {
 
   useEffect(() => saveAppData(app), [app]);
   useEffect(() => setWalletForm((current) => ({ ...current, saldo: app.wallet.saldoActual })), [app.wallet.saldoActual]);
-  useSupabaseSync(session, setSession, commit, setSyncing);
+  const { syncRemoteData } = useSupabaseSync(session, setSession, commit, setSyncing);
   useEffect(() => {
     if (session && !syncing) {
       setAuthChecking(false);
@@ -214,11 +244,17 @@ export function AppProvider({ children }) {
   const requestBrowserNotificationPermission = async () => {
     if (isNativeApp()) {
       try {
-        const { LocalNotifications } = await import("@capacitor/local-notifications");
-        const current = await LocalNotifications.checkPermissions();
-        const permission = current.display === "granted" ? current : await LocalNotifications.requestPermissions();
-        const granted = permission.display === "granted";
+        await ensureNativeNotificationChannel();
+        const permission = await NativeNotifier.requestPermission();
+        const granted = Boolean(permission?.granted);
         setNotificationPermission(granted ? "granted" : "denied");
+        if (granted) {
+          await NativeNotifier.show({
+            id: notificationId(`enabled-${Date.now()}`),
+            title: "Sabores Tropicales",
+            body: "Notificaciones activadas.",
+          });
+        }
         pushToast(granted ? "Notificaciones del dispositivo activadas." : "No se concedio permiso para notificaciones.", granted ? "success" : "warning");
         return { ok: granted, permission: granted ? "granted" : "denied" };
       } catch (error) {
@@ -264,16 +300,16 @@ export function AppProvider({ children }) {
 
     try {
       if (isNativeApp()) {
-        const { LocalNotifications } = await import("@capacitor/local-notifications");
-        await LocalNotifications.schedule({
-          notifications: [
-            {
-              id: Math.abs(String(notification.id || "").split("").reduce((acc, char) => acc + char.charCodeAt(0), 0)) || Date.now() % 2147483647,
-              title: notification.actorName || "Sabores Tropicales",
-              body: notification.message || "Tienes una nueva notificacion.",
-              schedule: { at: new Date(Date.now() + 250) },
-            },
-          ],
+        await ensureNativeNotificationChannel();
+        const permission = await NativeNotifier.requestPermission();
+        if (!permission?.granted) {
+          setNotificationPermission("denied");
+          return;
+        }
+        await NativeNotifier.show({
+          id: notificationId(notification.id),
+          title: notification.actorName || "Sabores Tropicales",
+          body: notification.message || "Tienes una nueva notificacion.",
         });
         return;
       }
@@ -764,6 +800,7 @@ export function AppProvider({ children }) {
     setFeaturedProduct,
     saveProfile,
     uploadProfileAvatar,
+    refreshAppData: syncRemoteData,
     submitCommunityFeedback,
     deleteCommunityFeedback,
     markNotificationRead,

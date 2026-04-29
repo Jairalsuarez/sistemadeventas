@@ -3,9 +3,11 @@
 
 * {
   box-sizing: border-box;
+  -webkit-tap-highlight-color: transparent;
 }
 
 html {
+  overscroll-behavior-y: contain;
   scroll-behavior: smooth;
 }
 

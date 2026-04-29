@@ -11,7 +11,7 @@ function getRememberedLogin() {
   }
 }
 
-function saveRememberedLogin({ email, password, rememberLogin }) {
+function saveRememberedLogin({ email, rememberLogin }) {
   try {
     if (!rememberLogin) {
       window.localStorage.removeItem(REMEMBER_LOGIN_KEY);
@@ -22,7 +22,6 @@ function saveRememberedLogin({ email, password, rememberLogin }) {
       REMEMBER_LOGIN_KEY,
       JSON.stringify({
         email: email || "",
-        password: password || "",
         rememberLogin: true,
       })
     );
@@ -38,7 +37,7 @@ export default function useAuthSession({ inform, personName, setSession, setSkip
   const [authChecking, setAuthChecking] = useState(true);
   const [loginForm, setLoginForm] = useState({
     email: rememberedLogin?.email || "",
-    password: rememberedLogin?.password || "",
+    password: "",
     rememberLogin: Boolean(rememberedLogin?.rememberLogin),
   });
 
@@ -58,7 +57,7 @@ export default function useAuthSession({ inform, personName, setSession, setSkip
     setSession(result.session);
     setLoginForm((current) => ({
       email: current.rememberLogin ? current.email : "",
-      password: current.rememberLogin ? current.password : "",
+      password: "",
       rememberLogin: current.rememberLogin,
     }));
     inform(`Bienvenida, ${result.session.displayName || personName(result.session)}.`, "success");

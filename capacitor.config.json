@@ -1,5 +1,11 @@
 {
   "appId": "com.saborestropicales.app",
   "appName": "Sabores Tropicales",
-  "webDir": "dist"
+  "webDir": "dist",
+  "plugins": {
+    "LocalNotifications": {
+      "smallIcon": "ic_stat_sabores",
+      "iconColor": "#1f7a3a"
+    }
+  }
 }

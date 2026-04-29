@@ -42,14 +42,11 @@ export default function LoginPage() {
                 <img alt="Sabores Tropicales" className="h-14 w-14 shrink-0 object-contain sm:h-16 sm:w-16" src={LOGO_URL} />
                 <div>
                   <p className="text-lg font-semibold leading-tight text-[#183325] sm:text-xl">Sabores Tropicales y Algo Mas</p>
-                  <p className="mt-1 text-sm text-[#5f7064]">Acceso administrativo</p>
                 </div>
               </div>
 
               <div className={`${nativeApp ? "mt-8" : "mt-10"}`}>
-                <p className="text-sm font-semibold uppercase tracking-[0.18em] text-[#f97316]">Acceso interno</p>
                 <h1 className="mt-4 text-3xl font-semibold leading-tight text-[#183325] sm:text-4xl">Iniciar sesion</h1>
-                <p className="mt-3 text-sm leading-7 text-[#5f7064]">Solo para administradores y vendedores autorizados.</p>
               </div>
 
               <div className="mt-6 rounded-[24px] border border-[#dfe7db] bg-white p-4 shadow-[0_20px_50px_rgba(24,51,37,0.1)] sm:mt-8 sm:p-6">
@@ -67,19 +64,6 @@ export default function LoginPage() {
                         value={loginForm.email}
                       />
                     </div>
-                  </label>
-
-                  <label className="flex items-start gap-3 rounded-xl border border-[#dfe7db] bg-[#f8faf6] px-4 py-3 text-sm text-[#5f7064]">
-                    <input
-                      checked={Boolean(loginForm.rememberLogin)}
-                      className="mt-1 h-4 w-4 rounded border-[#c8d3c2] text-[#1f7a3a]"
-                      onChange={(event) => setLoginForm((current) => ({ ...current, rememberLogin: event.target.checked }))}
-                      type="checkbox"
-                    />
-                    <span>
-                      <span className="block font-semibold text-[#183325]">Recordar credenciales</span>
-                      <span className="mt-0.5 block text-xs leading-5">Guarda el correo y la contrasena solo en este dispositivo.</span>
-                    </span>
                   </label>
 
                   <label className="grid gap-2 text-sm">
@@ -100,6 +84,16 @@ export default function LoginPage() {
                     </div>
                   </label>
 
+                  <label className="-mt-1 inline-flex w-fit items-center gap-2 text-sm font-medium text-[#5f7064]">
+                    <input
+                      checked={Boolean(loginForm.rememberLogin)}
+                      className="h-4 w-4 rounded border-[#c8d3c2] text-[#1f7a3a]"
+                      onChange={(event) => setLoginForm((current) => ({ ...current, rememberLogin: event.target.checked }))}
+                      type="checkbox"
+                    />
+                    Recordar correo
+                  </label>
+
                   {loginError ? (
                     <div className="rounded-md border border-[#7f1d1d] bg-[#3c1116] px-4 py-3 text-sm text-[#fecaca]">{loginError}</div>
                   ) : null}
@@ -115,10 +109,6 @@ export default function LoginPage() {
                     {loginLoading ? "Autenticando..." : "Entrar al panel"}
                   </button>
                 </form>
-
-                <div className="mt-5 border-t border-[#d7ddd1] pt-4 text-xs leading-6 text-[#6f7f73]">
-                  Acceso protegido para personal autorizado.
-                </div>
               </div>
             </div>
           </section>
