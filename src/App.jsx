@@ -175,7 +175,7 @@ function App() {
                   />
                 }
               />
-              <Route path="/panel/analitica" element={<SalesAnalyticsPage expenses={app.expenses || []} money={money} sales={app.sales || []} />} />
+              <Route path="/panel/analitica" element={<SalesAnalyticsPage expenses={app.expenses || []} money={money} sales={app.sales || []} schedules={app.schedules || []} turnos={app.turnos || []} />} />
               <Route path="/panel/usuarios" element={<UsersPage users={app.users || []} />} />
             </Route>
           </Route>

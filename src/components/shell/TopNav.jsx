@@ -134,7 +134,11 @@ export default function TopNav({
                 <NavLink className="hidden rounded-md px-2 py-2 text-sm font-medium text-[#5b6d61] dark:text-[#f8fafc] lg:block" to="/panel/perfil">
                   {fullName(user)}
                 </NavLink>
-                {nativeApp ? null : <UserAvatar user={user} />}
+                {nativeApp ? null : (
+                  <NavLink aria-label="Abrir perfil" to="/panel/perfil">
+                    <UserAvatar user={user} />
+                  </NavLink>
+                )}
                 <button
                   className={`items-center gap-2 bg-[linear-gradient(135deg,#1f7a3a,#2b8e46)] text-sm font-medium text-white transition hover:-translate-y-0.5 hover:shadow-lg dark:bg-[linear-gradient(135deg,#2563eb,#1d4ed8)] ${nativeApp ? "hidden lg:inline-flex" : "inline-flex"} ${
                     isLanding
@@ -189,7 +193,9 @@ export default function TopNav({
                   </button>
                 ) : null}
                 <div className="min-w-0">{notificationButton}</div>
-                <UserAvatar user={user} />
+                <NavLink aria-label="Abrir perfil" to="/panel/perfil">
+                  <UserAvatar user={user} />
+                </NavLink>
                 <button
                   className="inline-flex h-10 w-12 items-center justify-center rounded-xl bg-[linear-gradient(135deg,#1f7a3a,#2b8e46)] text-white shadow-[0_8px_18px_rgba(31,122,58,0.16)] dark:bg-[linear-gradient(135deg,#2563eb,#1d4ed8)]"
                   onClick={onLogout}

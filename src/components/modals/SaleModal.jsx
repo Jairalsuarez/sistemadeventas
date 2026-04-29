@@ -34,6 +34,163 @@ const steps = [
   { id: 3, title: "Resumen" },
 ];
 
+function SelectedProductRow({ line, index, product, money, onAdjust, onChange, onRemove }) {
+  const [drag, setDrag] = useState({ active: false, startX: 0, currentX: 0 });
+  const offsetX = drag.active ? drag.currentX - drag.startX : 0;
+  const dismissing = Math.abs(offsetX) > 72;
+
+  const finishDrag = () => {
+    if (dismissing) onRemove(index);
+    setDrag({ active: false, startX: 0, currentX: 0 });
+  };
+
+  return (
+    <article className="relative overflow-hidden rounded-xl">
+      <div className={`absolute inset-y-0 ${offsetX >= 0 ? "left-0" : "right-0"} flex w-20 items-center ${offsetX >= 0 ? "justify-start pl-4" : "justify-end pr-4"} bg-[#fee2e2] text-[#dc2626] transition-opacity dark:bg-[#3b1115] dark:text-[#fca5a5] ${dismissing ? "opacity-100" : "opacity-0"}`}>
+        <Icon name="delete" />
+      </div>
+      <div
+        className="relative rounded-xl border border-[#edf1ea] bg-[#f8faf6] p-3 transition-[opacity,transform] dark:border-[#314056] dark:bg-[#0f172a]"
+        onPointerCancel={finishDrag}
+        onPointerDown={(event) => {
+          event.currentTarget.setPointerCapture?.(event.pointerId);
+          setDrag({ active: true, startX: event.clientX, currentX: event.clientX });
+        }}
+        onPointerMove={(event) => {
+          if (!drag.active) return;
+          setDrag((current) => ({ ...current, currentX: event.clientX }));
+        }}
+        onPointerUp={finishDrag}
+        style={{ opacity: Math.max(0.45, 1 - Math.min(Math.abs(offsetX), 160) / 230), transform: `translateX(${offsetX}px)` }}
+      >
+        <div className="flex min-w-0 items-center gap-3">
+          <button className="flex min-w-0 flex-1 items-center gap-3 text-left" onClick={() => onChange(index)} type="button">
+            <span className="grid h-11 w-11 shrink-0 place-items-center overflow-hidden rounded-xl bg-[#eef2ff] text-[#2563eb]">
+              {product.imagen_url ? <img alt={product.nombre} className="h-full w-full object-cover" src={product.imagen_url} /> : <Icon name="inventory_2" />}
+            </span>
+            <span className="min-w-0 flex-1">
+              <strong className="block truncate text-sm font-semibold text-[#183325] dark:text-[#f8fafc]">{product.nombre}</strong>
+              <span className="mt-1 block text-xs text-[#5b6d61] dark:text-[#c7d2e0]">{money(product.precio)} - stock {product.stock}</span>
+            </span>
+          </button>
+          <div className="grid shrink-0 grid-cols-[36px_34px_36px] items-center rounded-xl border border-[#dfe7db] bg-white p-1 dark:border-[#314056] dark:bg-[#182235]">
+            <button
+              className="grid h-8 w-8 place-items-center rounded-lg text-[#183325] disabled:opacity-40 dark:text-white"
+              disabled={Number(line.cantidad || 1) <= 1}
+              onClick={() => onAdjust(index, -1)}
+              onPointerDown={(event) => event.stopPropagation()}
+              type="button"
+            >
+              <Icon name="remove" />
+            </button>
+            <span className="text-center text-sm font-semibold text-[#183325] dark:text-[#f8fafc]">{line.cantidad}</span>
+            <button
+              className="grid h-8 w-8 place-items-center rounded-lg text-[#183325] disabled:opacity-40 dark:text-white"
+              disabled={Number(line.cantidad || 1) >= Number(product.stock || 0)}
+              onClick={() => onAdjust(index, 1)}
+              onPointerDown={(event) => event.stopPropagation()}
+              type="button"
+            >
+              <Icon name="add" />
+            </button>
+          </div>
+        </div>
+      </div>
+    </article>
+  );
+}
+
+function ProductPickerModal({ money, onClose, onSelect, open, products, selectedProductId }) {
+  const [search, setSearch] = useState("");
+
+  useEffect(() => {
+    if (open) setSearch("");
+  }, [open]);
+
+  const filteredProducts = useMemo(() => {
+    const query = search.trim().toLowerCase();
+    const source = query
+      ? products.filter((product) =>
+          [product.nombre, product.categoria, product.marca, product.descripcion]
+            .filter(Boolean)
+            .some((value) => String(value).toLowerCase().includes(query))
+        )
+      : products;
+    return source.slice(0, 40);
+  }, [products, search]);
+
+  if (!open) return null;
+
+  return (
+    <div className="fixed inset-0 z-[70] grid place-items-end bg-[#0b1220]/55 p-2 sm:place-items-center sm:p-4" onClick={onClose}>
+      <div className="flex max-h-[min(78dvh,620px)] w-full max-w-[520px] flex-col overflow-hidden rounded-2xl border border-[#dfe7db] bg-white p-4 shadow-[0_24px_60px_rgba(15,23,42,0.22)] dark:border-[#23314d] dark:bg-[#111827]" onClick={(event) => event.stopPropagation()}>
+        <div className="flex items-start justify-between gap-3">
+          <div>
+            <h3 className="text-lg font-semibold text-[#183325] dark:text-[#f8fafc]">Seleccionar producto</h3>
+            <p className="mt-1 text-sm text-[#5b6d61] dark:text-[#c7d2e0]">Busca o toca un producto para agregarlo.</p>
+          </div>
+          <button className="grid h-10 w-10 shrink-0 place-items-center rounded-xl border border-[#dfe7db] text-[#183325] dark:border-[#314056] dark:text-[#f8fafc]" onClick={onClose} type="button">
+            <Icon name="close" />
+          </button>
+        </div>
+
+        <label className="mt-4 flex items-center gap-3 rounded-2xl border border-[#dfe7db] bg-[#f8faf6] px-4 py-3 dark:border-[#314056] dark:bg-[#0f172a]">
+          <Icon className="text-[#f59e0b] dark:text-[#60a5fa]" name="search" />
+          <input
+            className="w-full bg-transparent text-sm text-[#183325] outline-none placeholder:text-[#7b8b80] dark:text-white dark:placeholder:text-[#94a3b8]"
+            onChange={(event) => setSearch(event.target.value)}
+            placeholder="Buscar producto"
+            value={search}
+          />
+          {search ? (
+            <button className="grid h-8 w-8 place-items-center rounded-xl text-[#5b6d61] active:bg-white dark:text-[#c7d2e0] dark:active:bg-[#182235]" onClick={() => setSearch("")} type="button">
+              <Icon name="close" />
+            </button>
+          ) : null}
+        </label>
+
+        <div className="mt-4 min-h-0 flex-1 space-y-2 overflow-y-auto pr-1">
+          {filteredProducts.length ? (
+            filteredProducts.map((product) => {
+              const selected = selectedProductId === product.id;
+              return (
+                <button
+                  className={`flex w-full items-center gap-3 rounded-2xl border p-3 text-left transition active:scale-[0.99] ${
+                    Number(product.stock || 0) <= 0
+                      ? "border-[#e5e7eb] bg-[#f3f4f6] opacity-70 dark:border-[#23314d] dark:bg-[#0f172a]"
+                    : selected
+                      ? "border-[#f59e0b]/50 bg-[#fff7ed] dark:border-[#314056] dark:bg-[#182235]"
+                      : "border-[#e4ece2] bg-white active:bg-[#f7faf6] dark:border-[#23314d] dark:bg-[#111827] dark:active:bg-[#182235]"
+                  }`}
+                  disabled={Number(product.stock || 0) <= 0}
+                  key={product.id}
+                  onClick={() => onSelect(product.id)}
+                  type="button"
+                >
+                  <span className="grid h-12 w-12 shrink-0 place-items-center overflow-hidden rounded-xl bg-[#eef2ff] text-[#2563eb]">
+                    {product.imagen_url ? <img alt={product.nombre} className="h-full w-full object-cover" src={product.imagen_url} /> : <Icon name="inventory_2" />}
+                  </span>
+                  <span className="min-w-0 flex-1">
+                    <strong className="block truncate text-sm font-semibold text-[#183325] dark:text-[#f8fafc]">{product.nombre}</strong>
+                    <span className="mt-1 block text-xs text-[#5b6d61] dark:text-[#c7d2e0]">{money(product.precio)} - {Number(product.stock || 0) <= 0 ? "sin stock" : `stock ${product.stock}`}</span>
+                  </span>
+                  <span className={`grid h-8 w-8 shrink-0 place-items-center rounded-full ${Number(product.stock || 0) <= 0 ? "bg-[#e5e7eb] text-[#9ca3af] dark:bg-[#1f2937]" : selected ? "bg-[#f59e0b] text-white" : "bg-[#edf1ea] text-[#5b6d61] dark:bg-[#0f172a] dark:text-[#94a3b8]"}`}>
+                    <Icon name={Number(product.stock || 0) <= 0 ? "block" : selected ? "check" : "add"} />
+                  </span>
+                </button>
+              );
+            })
+          ) : (
+            <div className="rounded-2xl border border-dashed border-[#dfe7db] px-4 py-6 text-center text-sm text-[#5b6d61] dark:border-[#314056] dark:text-[#c7d2e0]">
+              No encontramos productos con esa busqueda.
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export default function SaleModal({
   activeShift,
   app,
@@ -55,16 +212,14 @@ export default function SaleModal({
 }) {
   const [step, setStep] = useState(1);
   const [activeLineIndex, setActiveLineIndex] = useState(0);
-  const [activeSearchIndex, setActiveSearchIndex] = useState(null);
-  const [productSearch, setProductSearch] = useState("");
+  const [pickerLineIndex, setPickerLineIndex] = useState(null);
   const stepPanelClassName = "max-h-[min(58vh,26rem)] overflow-y-auto pr-1 sm:min-h-[26rem] sm:max-h-[26rem]";
 
   useEffect(() => {
     if (open) {
       setStep(1);
       setActiveLineIndex(0);
-      setActiveSearchIndex(null);
-      setProductSearch("");
+      setPickerLineIndex(null);
     }
   }, [open]);
 
@@ -96,18 +251,6 @@ export default function SaleModal({
     [app.products, saleLines]
   );
 
-  const filteredProducts = useMemo(() => {
-    const query = productSearch.trim().toLowerCase();
-    if (!query) return activeProducts.slice(0, 8);
-    return activeProducts
-      .filter((product) =>
-        [product.nombre, product.categoria, product.marca, product.descripcion]
-          .filter(Boolean)
-          .some((value) => String(value).toLowerCase().includes(query))
-      )
-      .slice(0, 8);
-  }, [activeProducts, productSearch]);
-
   const selectedPayment = paymentOptions.find((item) => item.value === salePayment.method) || paymentOptions[0];
   const nextWalletTotal = Number(wallet?.saldoActual || 0) + Number(saleTotal || 0);
   const paymentNeedsEvidence = ["transferencia_directa"].includes(salePayment.method);
@@ -134,8 +277,21 @@ export default function SaleModal({
 
   const setLineProduct = (index, productId) => {
     const selectedProduct = activeProducts.find((item) => item.id === productId);
-    setSaleLines((current) =>
-      current.map((item, idx) => {
+    if (!selectedProduct || Number(selectedProduct.stock || 0) <= 0) return;
+    setSaleLines((current) => {
+      const existingIndex = current.findIndex((item, idx) => idx !== index && item.productId === productId);
+      if (existingIndex >= 0) {
+        const next = current
+          .map((item, idx) => {
+            if (idx !== existingIndex) return item;
+            return { ...item, cantidad: Math.min(Number(selectedProduct.stock || 1), Number(item.cantidad || 1) + 1) };
+          })
+          .filter((_, idx) => idx !== index);
+        setActiveLineIndex(existingIndex);
+        return next.length ? next : [{ productId, cantidad: 1 }];
+      }
+
+      return current.map((item, idx) => {
         if (idx !== index) return item;
         const nextQuantity = Math.max(1, Math.min(Number(item.cantidad || 1), Number(selectedProduct?.stock || item.cantidad || 1)));
         return {
@@ -143,11 +299,10 @@ export default function SaleModal({
           productId,
           cantidad: nextQuantity,
         };
-      })
-    );
+      });
+    });
     setActiveLineIndex(index);
-    setActiveSearchIndex(null);
-    setProductSearch("");
+    setPickerLineIndex(null);
   };
 
   const adjustLineQuantity = (index, delta) => {
@@ -165,14 +320,23 @@ export default function SaleModal({
 
   const removeLine = (index) => {
     setSaleLines((current) => current.filter((_, idx) => idx !== index));
-    setActiveSearchIndex((current) => (current === index ? null : current));
+    setPickerLineIndex((current) => (current === index ? null : current));
   };
 
   const addSaleLine = () => {
     setSaleLines((current) => [...current, { productId: "", cantidad: 1 }]);
     setActiveLineIndex(saleLines.length);
-    setActiveSearchIndex(null);
-    setProductSearch("");
+    setPickerLineIndex(saleLines.length);
+  };
+
+  const openProductPicker = () => {
+    const emptyIndex = saleLines.findIndex((line) => !line.productId);
+    if (emptyIndex >= 0) {
+      setActiveLineIndex(emptyIndex);
+      setPickerLineIndex(emptyIndex);
+      return;
+    }
+    addSaleLine();
   };
 
   const renderProductOption = (product, index, mode = "recent") => {
@@ -287,39 +451,28 @@ export default function SaleModal({
       <div className="grid gap-5">
         {requiresShift && !activeShift ? <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm font-semibold text-red-700 dark:border-[#4b5563] dark:bg-[#172033] dark:text-[#fca5a5]">Debes iniciar un turno antes de vender.</div> : null}
 
-        <div className="grid gap-3 md:grid-cols-3">
+        <div className="flex items-center justify-center gap-3 rounded-2xl border border-[#edf1ea] bg-[#fbfcfa] px-4 py-3 dark:border-[#23314d] dark:bg-[#111827]">
           {steps.map((item) => {
             const active = step === item.id;
             const completed = step > item.id;
             return (
-              <div
+              <button
                 key={item.id}
-                className={`rounded-lg border px-4 py-3 transition ${
+                aria-label={item.title}
+                className={`grid h-9 w-9 place-items-center rounded-full text-sm font-semibold transition ${
                   active
-                    ? "border-[#f59e0b]/40 bg-[#fff7ed] dark:border-[#2563eb]/50 dark:bg-[#172554]"
+                    ? "bg-[#f59e0b] text-white shadow-[0_8px_18px_rgba(245,158,11,0.22)] dark:bg-[#2563eb]"
                     : completed
-                      ? "border-[#cde4d3] bg-[#f6faf4] dark:border-[#314056] dark:bg-[#182235]"
-                      : "border-[#e4ece2] bg-white dark:border-[#23314d] dark:bg-[#111827]"
+                      ? "bg-[#1f7a3a] text-white dark:bg-[#2563eb]"
+                      : "bg-[#edf1ea] text-[#183325] dark:bg-[#0f172a] dark:text-[#f8fafc]"
                 }`}
+                onClick={() => {
+                  if (item.id < step) setStep(item.id);
+                }}
+                type="button"
               >
-                <div className="flex items-center gap-3">
-                  <span
-                    className={`inline-flex h-8 w-8 items-center justify-center rounded-full text-sm font-semibold ${
-                      active
-                        ? "bg-[#f59e0b] text-white dark:bg-[#2563eb] dark:text-[#eff6ff]"
-                        : completed
-                          ? "bg-[#1f7a3a] text-white dark:bg-[#2563eb]"
-                          : "bg-[#edf1ea] text-[#183325] dark:bg-[#0f172a] dark:text-[#f8fafc]"
-                    }`}
-                  >
-                    {completed ? <Icon name="check" /> : item.id}
-                  </span>
-                  <div>
-                    <p className="text-sm font-semibold text-[#183325] dark:text-[#f8fafc]">{item.title}</p>
-                    <p className="text-xs text-[#6a7b70] dark:text-[#94a3b8]">Paso {item.id}</p>
-                  </div>
-                </div>
-              </div>
+                {completed ? <Icon name="check" /> : item.id}
+              </button>
             );
           })}
         </div>
@@ -327,147 +480,47 @@ export default function SaleModal({
         {step === 1 ? (
           <div className="max-h-[min(70vh,32rem)] overflow-y-auto pr-1">
             <div className="grid gap-4">
-            {saleLines.map((line, index) => (
-              <div
-                className={`rounded-2xl border p-3 transition ${
-                  activeLineIndex === index
-                    ? "border-[#f59e0b]/40 bg-[#fffdf8] dark:border-[#314056] dark:bg-[#182235]"
-                    : "border-[#e4ece2] bg-white dark:border-[#23314d] dark:bg-[#111827]"
-                }`}
-                key={`${index}-${line.productId}`}
-              >
-                <div className="mb-3 flex items-center justify-between gap-3">
+              <div className="rounded-2xl border border-[#e4ece2] bg-white p-3 dark:border-[#23314d] dark:bg-[#111827]">
+                <div className="flex items-center justify-between gap-3">
                   <div>
-                    <p className="text-sm font-semibold text-[#183325] dark:text-[#f8fafc]">Producto {index + 1}</p>
-                    <p className="text-xs text-[#6a7b70] dark:text-[#94a3b8]">
-                      {line.productId ? "Puedes cambiarlo o ajustar unidades." : "Elige un producto rapido o buscalo con la lupa."}
-                    </p>
+                    <p className="text-sm font-semibold text-[#183325] dark:text-[#f8fafc]">Productos</p>
+                    <p className="mt-1 text-xs text-[#6a7b70] dark:text-[#94a3b8]">{salePreview.length ? `${salePreview.length} producto(s) en la venta` : "Agrega productos desde el selector."}</p>
                   </div>
-                  {saleLines.length > 1 ? (
-                  <button className={`${subtleButtonClassName} px-3 py-2`} onClick={() => removeLine(index)} type="button">
-                    Quitar
+                  <button className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[#1f7a3a] text-white shadow-[0_8px_18px_rgba(31,122,58,0.18)] dark:bg-[#2563eb]" onClick={openProductPicker} type="button">
+                    <Icon name="add" />
                   </button>
-                ) : null}
-              </div>
-
-                <div className="grid gap-3 md:grid-cols-[minmax(0,1fr)_56px_150px]">
-                  <button
-                    className={`${fieldClassName} flex min-h-[56px] cursor-pointer items-center justify-between text-left`}
-                    onClick={() => {
-                      setActiveLineIndex(index);
-                      setActiveSearchIndex((current) => {
-                        const nextValue = current === index ? null : index;
-                        if (nextValue === index) setProductSearch("");
-                        return nextValue;
-                      });
-                    }}
-                    type="button"
-                  >
-                    <span>
-                      <span className="block text-sm font-semibold text-[#183325] dark:text-[#f8fafc]">
-                        {line.productId ? activeProducts.find((product) => product.id === line.productId)?.nombre || "Producto seleccionado" : "Selecciona un producto"}
-                      </span>
-                      <span className="mt-1 block text-xs text-[#6a7b70] dark:text-[#94a3b8]">
-                        {line.productId
-                          ? `${money(activeProducts.find((product) => product.id === line.productId)?.precio || 0)} • stock ${
-                              activeProducts.find((product) => product.id === line.productId)?.stock || 0
-                            }`
-                          : "Usa una opcion rapida o buscalo."}
-                      </span>
-                    </span>
-                    <Icon className="text-xl text-[#f59e0b] dark:text-[#60a5fa]" name="inventory_2" />
-                  </button>
-
-                  <button
-                    className={`${subtleButtonClassName} flex min-h-[56px] cursor-pointer items-center justify-center px-0`}
-                    onClick={() => {
-                      setActiveLineIndex(index);
-                      setActiveSearchIndex((current) => (current === index ? null : index));
-                      setProductSearch("");
-                    }}
-                    type="button"
-                  >
-                    <Icon className="text-[24px]" name="search" />
-                  </button>
-
-                  <div className="flex min-h-[56px] items-center justify-between rounded-2xl border border-[#dfe7db] bg-[#f8faf6] px-2.5 dark:border-[#314056] dark:bg-[#0f172a]">
-                    <button
-                      className="inline-flex h-9 w-9 cursor-pointer items-center justify-center rounded-xl border border-[#dfe7db] bg-white text-[#183325] transition hover:bg-[#f7faf6] disabled:cursor-not-allowed disabled:opacity-50 dark:border-[#314056] dark:bg-[#182235] dark:text-white dark:hover:bg-[#1f2d44]"
-                      disabled={Number(line.cantidad || 1) <= 1}
-                      onClick={() => adjustLineQuantity(index, -1)}
-                      type="button"
-                    >
-                      <Icon className="text-[20px]" name="remove" />
-                    </button>
-                    <div className="min-w-[32px] text-center">
-                      <span className="block text-base font-semibold text-[#183325] dark:text-[#f8fafc]">{line.cantidad}</span>
-                      <span className="block text-[11px] uppercase tracking-[0.14em] text-[#6a7b70] dark:text-[#94a3b8]">uds</span>
-                    </div>
-                    <button
-                      className="inline-flex h-9 w-9 cursor-pointer items-center justify-center rounded-xl border border-[#dfe7db] bg-white text-[#183325] transition hover:bg-[#f7faf6] disabled:cursor-not-allowed disabled:opacity-50 dark:border-[#314056] dark:bg-[#182235] dark:text-white dark:hover:bg-[#1f2d44]"
-                      disabled={
-                        Boolean(line.productId) &&
-                        Number(line.cantidad || 1) >= Number(activeProducts.find((product) => product.id === line.productId)?.stock || 0)
-                      }
-                      onClick={() => adjustLineQuantity(index, 1)}
-                      type="button"
-                    >
-                      <Icon className="text-[20px]" name="add" />
-                    </button>
-                  </div>
                 </div>
 
-                {activeLineIndex === index ? (
-                  <div className="mt-4">
-                    {activeSearchIndex === index ? (
-                      <div className="rounded-2xl border border-[#e4ece2] bg-white p-3 dark:border-[#23314d] dark:bg-[#111827]">
-                        <div className="flex items-center gap-3 rounded-2xl border border-[#dfe7db] bg-[#f8faf6] px-4 py-2.5 dark:border-[#314056] dark:bg-[#0f172a]">
-                          <Icon className="text-[22px] text-[#f59e0b] dark:text-[#60a5fa]" name="search" />
-                          <input
-                            autoFocus
-                            className="w-full bg-transparent text-sm text-[#183325] outline-none placeholder:text-[#7b8b80] dark:text-white dark:placeholder:text-[#94a3b8]"
-                            onChange={(event) => setProductSearch(event.target.value)}
-                            placeholder="Busca por nombre, categoria o marca"
-                            value={productSearch}
-                          />
-                          <button
-                            className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-[#dfe7db] bg-white text-[#5b6d61] transition hover:bg-[#f1f5ef] hover:text-[#183325] dark:border-[#314056] dark:bg-[#182235] dark:text-[#c7d2e0] dark:hover:bg-[#1f2d44] dark:hover:text-white"
-                            onClick={() => {
-                              setActiveSearchIndex(null);
-                              setProductSearch("");
-                            }}
-                            type="button"
-                          >
-                            <Icon className="text-[18px]" name="close" />
-                          </button>
-                        </div>
-
-                        <div className="mt-4 grid gap-2">
-                          {filteredProducts.length ? (
-                            filteredProducts.map((product) => renderProductOption(product, index, "search"))
-                          ) : (
-                            <div className="rounded-2xl border border-dashed border-[#dfe7db] px-4 py-4 text-sm text-[#5b6d61] dark:border-[#314056] dark:text-[#c7d2e0]">
-                              No encontramos productos con esa busqueda.
-                            </div>
-                          )}
-                        </div>
-                      </div>
-                    ) : null}
-                  </div>
-                ) : null}
+                <div className="mt-3 space-y-2">
+                  {saleLines.filter((line) => line.productId).length ? (
+                    saleLines.map((line, index) => {
+                      const product = activeProducts.find((item) => item.id === line.productId);
+                      if (!product) return null;
+                      return (
+                        <SelectedProductRow
+                          index={index}
+                          key={`${index}-${line.productId}`}
+                          line={line}
+                          money={money}
+                          onAdjust={adjustLineQuantity}
+                          onChange={(lineIndex) => {
+                            setActiveLineIndex(lineIndex);
+                            setPickerLineIndex(lineIndex);
+                          }}
+                          onRemove={removeLine}
+                          product={product}
+                        />
+                      );
+                    })
+                  ) : (
+                    <button className="flex w-full items-center justify-center gap-2 rounded-xl border border-dashed border-[#dfe7db] px-4 py-6 text-sm font-semibold text-[#5b6d61] active:bg-[#f7faf6] dark:border-[#314056] dark:text-[#c7d2e0] dark:active:bg-[#182235]" onClick={openProductPicker} type="button">
+                      <Icon name="add_circle" />
+                      Agregar producto
+                    </button>
+                  )}
+                </div>
               </div>
-            ))}
 
-            <div className="flex justify-start">
-              <button
-                className="cursor-pointer rounded-xl border border-[#dfe7db] bg-white px-3 py-2 text-sm font-medium text-[#5b6d61] transition hover:bg-[#f7faf6] hover:text-[#183325] dark:border-[#314056] dark:bg-[#111827] dark:text-[#94a3b8] dark:hover:bg-[#182235] dark:hover:text-[#f8fafc]"
-                disabled={saleSubmitting}
-                onClick={addSaleLine}
-                type="button"
-              >
-                Agregar otro producto
-              </button>
-            </div>
 
             <div className="rounded-lg border border-[#e4ece2] bg-[#f8faf6] p-4 dark:border-[#23314d] dark:bg-[#182235]">
               <span className="block text-sm text-[#5b6d61] dark:text-[#c7d2e0]">Total calculado</span>
@@ -600,6 +653,16 @@ export default function SaleModal({
           </div>
         </div>
       </div>
+      <ProductPickerModal
+        money={money}
+        onClose={() => setPickerLineIndex(null)}
+        onSelect={(productId) => {
+          if (pickerLineIndex !== null) setLineProduct(pickerLineIndex, productId);
+        }}
+        open={pickerLineIndex !== null}
+        products={activeProducts}
+        selectedProductId={pickerLineIndex !== null ? saleLines[pickerLineIndex]?.productId : ""}
+      />
     </Modal>
   );
 }

@@ -1,9 +1,11 @@
 import { useMemo, useState } from "react";
 import SaleDetailsModal from "../../components/modals/SaleDetailsModal";
+import ShiftSummaryModal from "../../components/modals/ShiftSummaryModal";
 import EmptyState from "../../components/ui/EmptyState";
 import PageHeader from "../../components/ui/PageHeader";
 import SectionBlock from "../../components/ui/SectionBlock";
 import StatCard from "../../components/ui/StatCard";
+import { buildShiftSummary } from "../../services/shiftSummaryService.js";
 
 function startOfDay(date) {
   const next = new Date(date);
@@ -62,8 +64,9 @@ function buildMonthlySeries({ expenses, sales, today }) {
   });
 }
 
-export default function SalesAnalyticsPage({ expenses, money, sales }) {
+export default function SalesAnalyticsPage({ expenses, money, sales, schedules = [], turnos = [] }) {
   const [selectedSaleId, setSelectedSaleId] = useState(null);
+  const [selectedShiftId, setSelectedShiftId] = useState(null);
   const today = useMemo(() => new Date(), []);
   const todayStart = startOfDay(today);
   const currentMonthStart = startOfMonth(today);
@@ -135,6 +138,18 @@ export default function SalesAnalyticsPage({ expenses, money, sales }) {
   const getSaleDetails = (saleId) => sales.find((sale) => sale.id === saleId) || null;
   const selectedSale = selectedSaleId ? getSaleDetails(selectedSaleId) : null;
 
+  const closedShiftSummaries = useMemo(
+    () =>
+      (turnos || [])
+        .filter((shift) => shift.estado === "cerrado")
+        .map((shift) => buildShiftSummary({ shift, sales, schedules, money }))
+        .filter(Boolean)
+        .sort((a, b) => new Date(b.shift.closedAt || b.shift.startedAt).getTime() - new Date(a.shift.closedAt || a.shift.startedAt).getTime())
+        .slice(0, 10),
+    [money, schedules, sales, turnos]
+  );
+  const selectedShiftSummary = closedShiftSummaries.find((summaryItem) => summaryItem.shift.id === selectedShiftId) || null;
+
   const sellerRows = useMemo(() => {
     const map = new Map();
     salesThisMonth.forEach((sale) => {
@@ -170,6 +185,35 @@ export default function SalesAnalyticsPage({ expenses, money, sales }) {
           <StatCard key={card.label} accent={card.accent} detail={card.detail} label={card.label} value={card.value} />
         ))}
       </div>
+
+      <SectionBlock title="Resumen diario por vendedor" description="Turnos cerrados con total vendido, cantidad de ventas e ingreso del turno.">
+        {closedShiftSummaries.length ? (
+          <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+            {closedShiftSummaries.map((item) => (
+              <article key={item.shift.id} className="rounded-xl border border-[#e4ece2] bg-white p-4 dark:border-[#23314d] dark:bg-[#182235]">
+                <div className="flex items-start justify-between gap-3">
+                  <div className="min-w-0">
+                    <strong className="block truncate text-sm font-semibold text-[#183325] dark:text-[#f8fafc]">{item.shift.userName || "Vendedor"}</strong>
+                    <p className="mt-1 text-xs text-[#5b6d61] dark:text-[#c7d2e0]">{item.dateLabel} - {item.turnoLabel}</p>
+                  </div>
+                  <span className="rounded-full bg-[#eaf7ee] px-3 py-1 text-xs font-semibold text-[#166534] dark:bg-[#1e293b] dark:text-[#93c5fd]">{item.totalSales} venta(s)</span>
+                </div>
+                <div className="mt-4 flex items-end justify-between gap-3">
+                  <div>
+                    <span className="block text-xs font-semibold uppercase tracking-[0.14em] text-[#6a7b70] dark:text-[#94a3b8]">Ingresado</span>
+                    <strong className="mt-1 block text-2xl font-semibold text-[#183325] dark:text-[#f8fafc]">{item.totalAmountLabel}</strong>
+                  </div>
+                  <button className="rounded-xl border border-[#dfe7db] px-3 py-2 text-sm font-semibold text-[#183325] transition hover:bg-[#f7faf6] dark:border-[#314056] dark:text-[#f8fafc] dark:hover:bg-[#111827]" onClick={() => setSelectedShiftId(item.shift.id)} type="button">
+                    Ver resumen
+                  </button>
+                </div>
+              </article>
+            ))}
+          </div>
+        ) : (
+          <EmptyState title="Sin turnos cerrados" description="Cuando un vendedor cierre su turno, el resumen aparecera aqui." />
+        )}
+      </SectionBlock>
 
       <SectionBlock
         title="Ingresos y egresos"
@@ -335,6 +379,12 @@ export default function SalesAnalyticsPage({ expenses, money, sales }) {
         onClose={() => setSelectedSaleId(null)}
         open={Boolean(selectedSale)}
         sale={selectedSale}
+      />
+      <ShiftSummaryModal
+        money={money}
+        onClose={() => setSelectedShiftId(null)}
+        open={Boolean(selectedShiftSummary)}
+        summary={selectedShiftSummary}
       />
     </div>
   );

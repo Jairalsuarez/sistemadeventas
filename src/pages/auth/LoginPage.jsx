@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { Navigate, useNavigate } from "react-router-dom";
+import AuthCheckingScreen from "../../components/ui/AuthCheckingScreen.jsx";
 import Icon from "../../components/ui/Icon";
 import { useAppContext } from "../../context/AppContext";
 import { isNativeApp } from "../../utils/platform.js";
@@ -8,12 +9,16 @@ const LOGO_URL = "/images/IcoSinFondo.png";
 
 export default function LoginPage() {
   const navigate = useNavigate();
-  const { handleLogin, loginError, loginForm, loginLoading, session, setLoginForm } = useAppContext();
+  const { authChecking, handleLogin, loginError, loginForm, loginLoading, session, setLoginForm } = useAppContext();
   const [showPassword, setShowPassword] = useState(false);
   const nativeApp = isNativeApp();
 
   if (session) {
     return <Navigate replace to="/panel" />;
+  }
+
+  if (authChecking) {
+    return <AuthCheckingScreen />;
   }
 
   const submit = async (event) => {
@@ -91,7 +96,7 @@ export default function LoginPage() {
                       onChange={(event) => setLoginForm((current) => ({ ...current, rememberLogin: event.target.checked }))}
                       type="checkbox"
                     />
-                    Recordar correo
+                    Recordar credenciales
                   </label>
 
                   {loginError ? (

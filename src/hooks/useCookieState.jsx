@@ -16,9 +16,20 @@ function writeCookie(name, value, days) {
 }
 
 export default function useCookieState(name, initialValue, days = 90) {
-  const [value, setValue] = useState(() => readCookie(name) ?? initialValue);
+  const [value, setValue] = useState(() => {
+    if (typeof window !== "undefined") {
+      const stored = window.localStorage.getItem(name);
+      if (stored !== null) return stored;
+    }
+    return readCookie(name) ?? initialValue;
+  });
 
   useEffect(() => {
+    try {
+      window.localStorage.setItem(name, value);
+    } catch {
+      // Cookie persistence remains as a fallback.
+    }
     writeCookie(name, value, days);
   }, [days, name, value]);
 

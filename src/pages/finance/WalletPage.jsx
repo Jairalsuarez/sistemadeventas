@@ -41,11 +41,12 @@ export default function WalletPage({ expenses, isAdmin, money, onOpenExpense, on
         title="Control de cartera"
         action={
           <>
-            <button className="rounded-md border border-[#dfe7db] px-4 py-2 text-sm font-medium dark:border-white/10" onClick={onOpenExpense} type="button">
+            <button className="inline-flex items-center justify-center gap-2 rounded-xl bg-[linear-gradient(135deg,#1f7a3a,#2b8e46)] px-5 py-3 text-sm font-semibold text-white shadow-[0_12px_26px_rgba(31,122,58,0.22)] transition active:scale-[0.99] dark:bg-[linear-gradient(135deg,#2563eb,#1d4ed8)]" onClick={onOpenExpense} type="button">
+              <Icon name="add" />
               Registrar egreso
             </button>
             {isAdmin ? (
-              <button className="rounded-md bg-[#1f7a3a] dark:bg-[linear-gradient(135deg,#2563eb,#1d4ed8)] px-4 py-2 text-sm font-medium text-white" onClick={onOpenWallet} type="button">
+              <button className="px-1 py-3 text-sm font-semibold text-[#5b6d61] underline decoration-[#dfe7db] underline-offset-4 transition active:text-[#183325] dark:text-[#c7d2e0] dark:decoration-[#314056] dark:active:text-white" onClick={onOpenWallet} type="button">
                 Ajustar cartera
               </button>
             ) : null}

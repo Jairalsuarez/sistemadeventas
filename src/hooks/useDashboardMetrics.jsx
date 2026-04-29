@@ -15,7 +15,7 @@ export default function useDashboardMetrics({
     [app.turnos, session]
   );
 
-  const lowStock = useMemo(() => app.products.filter((product) => product.stock <= lowStockLimit), [app.products, lowStockLimit]);
+  const lowStock = useMemo(() => app.products.filter((product) => product.activo && product.stock <= lowStockLimit), [app.products, lowStockLimit]);
 
   const featuredProduct = useMemo(() => {
     if (!app.products.length) return null;

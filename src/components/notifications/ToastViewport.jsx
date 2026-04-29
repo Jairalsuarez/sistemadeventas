@@ -6,6 +6,7 @@ function ToastCard({ toast, onDismiss }) {
   const offsetX = drag.active ? drag.currentX - drag.startX : 0;
   const dismissThreshold = 90;
   const opacity = Math.max(0.35, 1 - Math.min(Math.abs(offsetX), 160) / 220);
+  const dismissing = Math.abs(offsetX) >= dismissThreshold;
 
   const resetDrag = () => setDrag({ active: false, startX: 0, currentX: 0 });
 
@@ -20,8 +21,12 @@ function ToastCard({ toast, onDismiss }) {
   };
 
   return (
+    <div className="pointer-events-auto relative w-full overflow-hidden rounded-2xl sm:min-w-[280px] sm:max-w-[380px]">
+      <div className={`absolute inset-y-0 ${offsetX >= 0 ? "left-0" : "right-0"} flex w-24 items-center ${offsetX >= 0 ? "justify-start pl-4" : "justify-end pr-4"} bg-[#fee2e2] text-[#dc2626] transition-opacity dark:bg-[#3b1115] dark:text-[#fca5a5] ${dismissing ? "opacity-100" : "opacity-0"}`}>
+        <Icon name="delete" />
+      </div>
     <div
-      className="pointer-events-auto flex w-full touch-pan-y select-none items-start justify-between gap-3 rounded-lg border border-[#dbe8db] bg-white px-3 py-3 shadow-[0_18px_38px_rgba(24,51,37,0.12)] transition-[opacity,transform] dark:border-[#23314d] dark:bg-[#111827] sm:min-w-[280px] sm:max-w-[380px] sm:px-4"
+      className="relative flex w-full touch-pan-y select-none items-start justify-between gap-3 rounded-2xl border border-[#dbe8db] bg-white px-3 py-3 shadow-[0_16px_32px_rgba(15,23,42,0.14)] transition-[opacity,transform] dark:border-[#23314d] dark:bg-[#111827] sm:px-4"
       onPointerCancel={finishDrag}
       onPointerDown={(event) => {
         event.currentTarget.setPointerCapture?.(event.pointerId);
@@ -49,6 +54,7 @@ function ToastCard({ toast, onDismiss }) {
       >
         <Icon name="close" />
       </button>
+    </div>
     </div>
   );
 }

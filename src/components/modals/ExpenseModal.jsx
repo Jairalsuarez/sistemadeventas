@@ -31,24 +31,21 @@ function normalizeMoneyInput(value) {
 function OptionCard({ active, description, icon, onClick, title }) {
   return (
     <button
-      className={`rounded-lg border px-4 py-4 text-left transition ${
+      className={`rounded-xl border px-3 py-3 text-left transition ${
         active
-          ? "border-[#f59e0b]/40 bg-[#fff7ed] shadow-[0_14px_30px_rgba(245,158,11,0.12)] dark:border-[#314056] dark:bg-[#182235]"
+          ? "border-[#f59e0b]/40 bg-[#fff7ed] shadow-[0_8px_18px_rgba(245,158,11,0.10)] dark:border-[#314056] dark:bg-[#182235]"
           : "border-[#e4ece2] bg-white hover:bg-[#fafcf9] dark:border-[#23314d] dark:bg-[#111827] dark:hover:bg-[#182235]"
       }`}
       onClick={onClick}
       type="button"
     >
-      <div className="flex items-start justify-between gap-3">
-        <span className={`inline-flex h-11 w-11 items-center justify-center rounded-full text-xl ${active ? "bg-white text-[#183325] dark:bg-[#0f172a] dark:text-[#93c5fd]" : "bg-[#eef6f0] text-[#1f7a3a] dark:bg-[#0f172a] dark:text-[#93c5fd]"}`}>
+      <div className="flex items-center gap-3">
+        <span className={`inline-flex h-9 w-9 items-center justify-center rounded-full text-xl ${active ? "bg-white text-[#183325] dark:bg-[#0f172a] dark:text-[#93c5fd]" : "bg-[#eef6f0] text-[#1f7a3a] dark:bg-[#0f172a] dark:text-[#93c5fd]"}`}>
           <Icon name={icon} />
         </span>
-        <span className={`inline-flex rounded-full px-2.5 py-1 text-xs font-semibold ${active ? "bg-[#f59e0b] text-white" : "bg-[#edf1ea] text-[#5b6d61] dark:bg-[#0f172a] dark:text-[#94a3b8]"}`}>
-          {active ? "Seleccionado" : "Elegir"}
-        </span>
+        <strong className="block text-sm font-semibold text-[#183325] dark:text-[#f8fafc]">{title}</strong>
       </div>
-      <strong className="mt-4 block text-sm font-semibold text-[#183325] dark:text-[#f8fafc]">{title}</strong>
-      <span className="mt-1 block text-sm leading-6 text-[#5b6d61] dark:text-[#c7d2e0]">{description}</span>
+      {description ? <span className="mt-1 block text-sm leading-6 text-[#5b6d61] dark:text-[#c7d2e0]">{description}</span> : null}
     </button>
   );
 }
@@ -184,35 +181,28 @@ export default function ExpenseModal({
   return (
     <Modal open={open} onClose={onClose} text="Registra el egreso en pasos claros antes de descontarlo de la cartera." title="Registrar egreso" wide>
       <div className="grid gap-5">
-        <div className={`grid gap-3 ${steps.length === 5 ? "sm:grid-cols-2 xl:grid-cols-5" : "sm:grid-cols-2 xl:grid-cols-4"}`}>
+        <div className="flex items-center justify-center gap-3 rounded-2xl border border-[#edf1ea] bg-[#fbfcfa] px-4 py-3 dark:border-[#23314d] dark:bg-[#111827]">
           {steps.map((item) => {
             const active = step === item.id;
             const completed = step > item.id;
             return (
-              <div
+              <button
                 key={item.id}
-                className={`flex min-h-[96px] rounded-lg border px-4 py-3 transition ${
+                aria-label={item.title}
+                className={`grid h-9 w-9 place-items-center rounded-full text-sm font-semibold transition ${
                   active
-                    ? "border-[#f59e0b]/40 bg-[#fff7ed] dark:border-[#314056] dark:bg-[#182235]"
+                    ? "bg-[#f59e0b] text-white shadow-[0_8px_18px_rgba(245,158,11,0.22)] dark:bg-[#2563eb]"
                     : completed
-                      ? "border-[#cde4d3] bg-[#f6faf4] dark:border-[#314056] dark:bg-[#182235]"
-                      : "border-[#e4ece2] bg-white dark:border-[#23314d] dark:bg-[#111827]"
+                      ? "bg-[#1f7a3a] text-white dark:bg-[#2563eb]"
+                      : "bg-[#edf1ea] text-[#183325] dark:bg-[#0f172a] dark:text-[#f8fafc]"
                 }`}
+                onClick={() => {
+                  if (item.id < step) setStep(item.id);
+                }}
+                type="button"
               >
-                <div className="flex items-center gap-3">
-                  <span
-                    className={`inline-flex h-8 w-8 items-center justify-center rounded-full text-sm font-semibold ${
-                      active ? "bg-[#f59e0b] text-white" : completed ? "bg-[#1f7a3a] text-white dark:bg-[#2563eb]" : "bg-[#edf1ea] text-[#183325] dark:bg-[#0f172a] dark:text-[#f8fafc]"
-                    }`}
-                  >
-                    {completed ? <Icon name="check" /> : item.id}
-                  </span>
-                  <div>
-                    <p className="text-sm font-semibold text-[#183325] dark:text-[#f8fafc]">{item.title}</p>
-                    <p className="text-xs text-[#6a7b70] dark:text-[#94a3b8]">Paso {item.id}</p>
-                  </div>
-                </div>
-              </div>
+                {completed ? <Icon name="check" /> : item.id}
+              </button>
             );
           })}
         </div>
@@ -220,23 +210,6 @@ export default function ExpenseModal({
         {step === 1 ? (
           <div className={stepPanelClassName}>
             <div className="grid gap-4">
-              <div className="grid gap-3 md:grid-cols-2">
-                <OptionCard
-                  active={!expense.isNewCategory}
-                  description="Elige una categoria ya creada para reutilizarla en futuros egresos."
-                  icon="category"
-                  onClick={() => updateExpense({ isNewCategory: false, newCategoryName: "" })}
-                  title="Elegir categoria"
-                />
-                <OptionCard
-                  active={expense.isNewCategory}
-                  description="Crea una categoria nueva cuando este egreso no encaje en las existentes."
-                  icon="add_circle"
-                  onClick={() => updateExpense({ isNewCategory: true, categoryId: "", categoryName: "", distributorId: "", distributorName: "", isNewDistributor: false, newDistributorName: "" })}
-                  title="Crear categoria"
-                />
-              </div>
-
               {!expense.isNewCategory ? (
                 <div className="grid gap-3">
                   <div className="flex items-center justify-between gap-3">
@@ -244,7 +217,7 @@ export default function ExpenseModal({
                     <span className="text-xs font-medium text-[#6a7b70] dark:text-[#94a3b8]">{sortedCategories.length} opcion(es)</span>
                   </div>
 
-                  <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+                  <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 xl:grid-cols-4">
                     {sortedCategories.map((item) => {
                       const isSelected = expense.categoryId === item.id;
                       const meta = getCategoryMeta(item.nombre);
@@ -252,10 +225,10 @@ export default function ExpenseModal({
                       return (
                         <button
                           key={item.id}
-                          className={`rounded-xl border p-4 text-left transition ${
+                          className={`rounded-xl border p-3 text-left transition ${
                             isSelected
-                              ? "border-[#f59e0b]/45 bg-[#fff7ed] shadow-[0_14px_30px_rgba(245,158,11,0.14)] dark:border-[#415a86] dark:bg-[#182235]"
-                              : "border-[#e4ece2] bg-white hover:-translate-y-0.5 hover:border-[#d6e2d8] hover:shadow-[0_10px_24px_rgba(24,51,37,0.08)] dark:border-[#23314d] dark:bg-[#111827] dark:hover:bg-[#182235]"
+                              ? "border-[#f59e0b]/45 bg-[#fff7ed] shadow-[0_8px_18px_rgba(245,158,11,0.12)] dark:border-[#415a86] dark:bg-[#182235]"
+                              : "border-[#e4ece2] bg-white active:bg-[#f7faf6] dark:border-[#23314d] dark:bg-[#111827] dark:active:bg-[#182235]"
                           }`}
                           onClick={() => {
                             const nextCategoryName = item.nombre || "";
@@ -272,27 +245,35 @@ export default function ExpenseModal({
                           }}
                           type="button"
                         >
-                          <div className="flex items-start justify-between gap-3">
-                            <span className={`inline-flex h-11 w-11 items-center justify-center rounded-2xl border ${meta.accent}`}>
+                          <div className="flex items-center justify-between gap-2">
+                            <span className={`inline-flex h-9 w-9 items-center justify-center rounded-xl border ${meta.accent}`}>
                               <Icon name={meta.icon} />
                             </span>
                             <span
-                              className={`inline-flex rounded-full px-2.5 py-1 text-[11px] font-semibold ${
+                              className={`grid h-7 w-7 place-items-center rounded-full text-[11px] font-semibold ${
                                 isSelected
                                   ? "bg-[#f59e0b] text-white"
                                   : "bg-[#edf1ea] text-[#5b6d61] dark:bg-[#0f172a] dark:text-[#94a3b8]"
                               }`}
                             >
-                              {isSelected ? "Seleccionada" : "Elegir"}
+                              {isSelected ? <Icon className="text-[17px]" name="check" /> : <Icon className="text-[17px]" name="add" />}
                             </span>
                           </div>
 
-                          <strong className="mt-4 block text-sm font-semibold text-[#183325] dark:text-[#f8fafc]">{item.nombre}</strong>
-                          <span className="mt-1 block text-sm leading-6 text-[#5b6d61] dark:text-[#c7d2e0]">{meta.hint}</span>
+                          <strong className="mt-3 block truncate text-sm font-semibold text-[#183325] dark:text-[#f8fafc]">{item.nombre}</strong>
                         </button>
                       );
                     })}
                   </div>
+
+                  <button
+                    className="inline-flex w-fit items-center gap-2 rounded-xl border border-[#dfe7db] px-3 py-2 text-sm font-semibold text-[#183325] active:bg-[#f7faf6] dark:border-[#314056] dark:text-[#f8fafc] dark:active:bg-[#111827]"
+                    onClick={() => updateExpense({ isNewCategory: true, categoryId: "", categoryName: "", distributorId: "", distributorName: "", isNewDistributor: false, newDistributorName: "" })}
+                    type="button"
+                  >
+                    <Icon name="add_circle" />
+                    Crear categoria
+                  </button>
 
                   <div className="relative">
                     <select
@@ -323,15 +304,25 @@ export default function ExpenseModal({
                   </div>
                 </div>
               ) : (
-                <label className="grid gap-2 text-sm font-semibold text-ink-900 dark:text-white">
-                  Nombre de la nueva categoria
-                  <input
-                    className={fieldClassName}
-                    onChange={(e) => updateExpense({ newCategoryName: e.target.value, categoryName: e.target.value, categoria: e.target.value })}
-                    placeholder="Ej. Mantenimiento, Publicidad, Emergencias"
-                    value={expense.newCategoryName}
-                  />
-                </label>
+                <div className="grid gap-3">
+                  <button
+                    className="inline-flex w-fit items-center gap-2 rounded-xl border border-[#dfe7db] px-3 py-2 text-sm font-semibold text-[#183325] active:bg-[#f7faf6] dark:border-[#314056] dark:text-[#f8fafc] dark:active:bg-[#111827]"
+                    onClick={() => updateExpense({ isNewCategory: false, newCategoryName: "" })}
+                    type="button"
+                  >
+                    <Icon name="category" />
+                    Elegir categoria
+                  </button>
+                  <label className="grid gap-2 text-sm font-semibold text-ink-900 dark:text-white">
+                    Nombre de la nueva categoria
+                    <input
+                      className={fieldClassName}
+                      onChange={(e) => updateExpense({ newCategoryName: e.target.value, categoryName: e.target.value, categoria: e.target.value })}
+                      placeholder="Ej. Mantenimiento"
+                      value={expense.newCategoryName}
+                    />
+                  </label>
+                </div>
               )}
 
               <div className="rounded-lg border border-[#e4ece2] bg-[#f8faf6] p-4 dark:border-[#23314d] dark:bg-[#182235]">

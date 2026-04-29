@@ -32,7 +32,7 @@ export default function AppShell() {
   const [openNotifications, setOpenNotifications] = useState(false);
   const [logoutModalOpen, setLogoutModalOpen] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  const [pullState, setPullState] = useState({ active: false, armed: false, startY: 0, distance: 0, refreshing: false });
+  const [pullState, setPullState] = useState({ active: false, armed: false, cancelled: false, startY: 0, distance: 0, maxDistance: 0, refreshing: false });
   const [isOnline, setIsOnline] = useState(() => (typeof navigator === "undefined" ? true : navigator.onLine));
   const notificationRef = useRef(null);
   const isAdmin = user?.role === "admin";
@@ -150,25 +150,27 @@ export default function AppShell() {
             className={`relative overflow-hidden px-3 py-5 sm:px-4 sm:py-6 lg:px-6 ${nativeApp ? "pb-6 lg:pb-6" : ""}`}
             onTouchEnd={async () => {
               if (!nativeApp || !pullState.active) return;
-              const shouldRefresh = pullState.armed && pullState.distance > 56;
+              const shouldRefresh = pullState.armed && !pullState.cancelled && pullState.distance >= 84;
               setPullState((current) => ({ ...current, active: false, refreshing: shouldRefresh, distance: shouldRefresh ? 56 : 0 }));
               if (shouldRefresh) {
                 await refreshAppData?.();
-                setPullState({ active: false, armed: false, startY: 0, distance: 0, refreshing: false });
+                setPullState({ active: false, armed: false, cancelled: false, startY: 0, distance: 0, maxDistance: 0, refreshing: false });
               } else {
-                setPullState({ active: false, armed: false, startY: 0, distance: 0, refreshing: false });
+                setPullState({ active: false, armed: false, cancelled: false, startY: 0, distance: 0, maxDistance: 0, refreshing: false });
               }
             }}
             onTouchMove={(event) => {
               if (!nativeApp || !pullState.active || window.scrollY > 0) return;
               const distance = Math.max(0, Math.min(110, (event.touches[0].clientY - pullState.startY) * 0.55));
-              const armed = pullState.armed ? distance > 56 : distance > 84;
+              const maxDistance = Math.max(pullState.maxDistance, distance);
+              const armed = pullState.armed || distance > 84;
+              const cancelled = armed && distance < 72;
               if (distance > 4) event.preventDefault();
-              setPullState((current) => ({ ...current, armed, distance }));
+              setPullState((current) => ({ ...current, armed, cancelled, distance, maxDistance }));
             }}
             onTouchStart={(event) => {
               if (!nativeApp || window.scrollY > 0 || pullState.refreshing) return;
-              setPullState({ active: true, armed: false, startY: event.touches[0].clientY, distance: 0, refreshing: false });
+              setPullState({ active: true, armed: false, cancelled: false, startY: event.touches[0].clientY, distance: 0, maxDistance: 0, refreshing: false });
             }}
           >
             {nativeApp ? (
@@ -176,9 +178,11 @@ export default function AppShell() {
                 className="pointer-events-none absolute inset-x-0 top-0 z-30 flex justify-center transition-transform"
                 style={{ transform: `translateY(${Math.max(-52, pullState.distance - 52)}px)` }}
               >
-                <div className="mt-2 inline-flex h-11 items-center gap-2 rounded-full border border-[#dfe7db] bg-white px-4 text-sm font-semibold text-[#183325] shadow-[0_12px_28px_rgba(15,23,42,0.12)] dark:border-[#314056] dark:bg-[#111827] dark:text-[#f8fafc]">
-                  <span className={`h-4 w-4 rounded-full border-2 border-[#1f7a3a]/25 border-t-[#1f7a3a] ${pullState.refreshing || pullState.distance > 76 ? "animate-spin" : ""}`} />
-                  {pullState.refreshing ? "Actualizando..." : pullState.armed ? "Suelta para actualizar o sube para cancelar" : "Desliza para actualizar"}
+                <div className={`mt-1 inline-flex h-10 min-w-10 items-center justify-center rounded-full border bg-white px-3 text-[#183325] shadow-[0_10px_22px_rgba(15,23,42,0.12)] transition-colors dark:bg-[#111827] dark:text-[#f8fafc] ${
+                  pullState.cancelled ? "border-[#fecaca] text-[#dc2626] dark:border-[#7f1d1d] dark:text-[#fca5a5]" : "border-[#dfe7db] dark:border-[#314056]"
+                }`}>
+                  <Icon className={`${pullState.refreshing ? "animate-spin" : ""}`} name={pullState.cancelled ? "close" : pullState.armed ? "sync" : "keyboard_arrow_down"} />
+                  {pullState.armed && !pullState.refreshing && !pullState.cancelled ? <span className="ml-2 text-xs font-semibold">Suelta</span> : null}
                 </div>
               </div>
             ) : null}

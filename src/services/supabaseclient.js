@@ -19,15 +19,30 @@ const cookieStorage = {
     const chunk = document.cookie
       .split("; ")
       .find((item) => item.startsWith(`${storageKey}=`));
-    return chunk ? decodeURIComponent(chunk.split("=").slice(1).join("=")) : null;
+    if (chunk) return decodeURIComponent(chunk.split("=").slice(1).join("="));
+    try {
+      return window.localStorage.getItem(storageKey);
+    } catch {
+      return null;
+    }
   },
   setItem(storageKey, value) {
     if (typeof document === "undefined") return;
     document.cookie = `${storageKey}=${encodeURIComponent(value)}; path=/; SameSite=Lax${secureSuffix()}; max-age=${60 * 60 * 24 * 30}`;
+    try {
+      window.localStorage.setItem(storageKey, value);
+    } catch {
+      // Cookie remains the primary persistence layer.
+    }
   },
   removeItem(storageKey) {
     if (typeof document === "undefined") return;
     document.cookie = `${storageKey}=; path=/; SameSite=Lax${secureSuffix()}; expires=Thu, 01 Jan 1970 00:00:00 GMT`;
+    try {
+      window.localStorage.removeItem(storageKey);
+    } catch {
+      // Ignore storage cleanup failures.
+    }
   },
 };
 

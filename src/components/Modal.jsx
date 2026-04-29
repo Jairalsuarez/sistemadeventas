@@ -1,4 +1,18 @@
+import { useEffect } from "react";
+
 export default function Modal({ open, title, text, onClose, children, wide = false, closeOnBackdrop = false, variant = "default", containerClassName = "" }) {
+  useEffect(() => {
+    if (!open) return undefined;
+    const previousOverflow = document.body.style.overflow;
+    const previousOverscroll = document.documentElement.style.overscrollBehavior;
+    document.body.style.overflow = "hidden";
+    document.documentElement.style.overscrollBehavior = "none";
+    return () => {
+      document.body.style.overflow = previousOverflow;
+      document.documentElement.style.overscrollBehavior = previousOverscroll;
+    };
+  }, [open]);
+
   if (!open) return null;
 
   const isPublic = variant === "public";
