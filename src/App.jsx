@@ -8,6 +8,7 @@ import SaleModal from "./components/modals/SaleModal";
 import WalletModal from "./components/modals/WalletModal";
 import ToastViewport from "./components/notifications/ToastViewport";
 import CookieBanner from "./components/CookieBanner.jsx";
+import NativeBootSplash from "./components/ui/NativeBootSplash.jsx";
 import PageSkeleton from "./components/ui/PageSkeleton.jsx";
 import { useAppContext } from "./context/AppContext";
 import PanelLayout from "./layouts/PanelLayout.jsx";
@@ -111,6 +112,7 @@ function App() {
   return (
     <>
       {!nativeApp ? <CookieBanner /> : null}
+      <NativeBootSplash checking={authChecking || syncing} />
       <ToastViewport onDismiss={dismissToast} suspended={authChecking || syncing} toasts={toasts} />
       <Suspense fallback={<PageSkeleton />}>
         <Routes>

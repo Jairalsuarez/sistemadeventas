@@ -38,12 +38,13 @@ export default function useToastQueue(limit = 3, duration = 2200) {
   };
 
   const dismissToast = (id) => setToasts((current) => current.filter((toast) => toast.id !== id));
+  const dismissAllToasts = () => setToasts([]);
 
   useEffect(() => {
     if (!toasts.length) return undefined;
-    const timer = window.setTimeout(() => dismissToast(toasts[0].id), duration);
+    const timer = window.setTimeout(() => dismissAllToasts(), duration);
     return () => window.clearTimeout(timer);
   }, [duration, toasts]);
 
-  return { toasts, pushToast, dismissToast };
+  return { toasts, pushToast, dismissToast, dismissAllToasts };
 }

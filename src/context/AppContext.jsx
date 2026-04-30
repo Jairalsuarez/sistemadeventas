@@ -191,6 +191,12 @@ export function AppProvider({ children }) {
         return;
       }
       setAuthChecking(true);
+      const localSession = getSession();
+      if (localSession) {
+        setSession(localSession);
+        setAuthChecking(false);
+        return;
+      }
       const restored = await restoreSupabaseSession();
       if (cancelled) return;
       if (restored.ok) {

@@ -32,6 +32,48 @@ body {
   min-height: 100vh;
 }
 
+.native-boot-splash {
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  display: grid;
+  place-items: center;
+  background: #ffffff;
+  pointer-events: none;
+  opacity: 1;
+}
+
+.native-boot-splash__logo {
+  position: fixed;
+  left: 50%;
+  top: 50%;
+  display: grid;
+  height: 132px;
+  width: 132px;
+  place-items: center;
+  transform: translate(-50%, -50%) scale(1);
+  transform-origin: center;
+  animation: nativeLogoArrive 520ms cubic-bezier(0.2, 0.8, 0.2, 1) both;
+}
+
+.native-boot-splash__logo img {
+  height: 100%;
+  width: 100%;
+  object-fit: contain;
+}
+
+.native-boot-splash--leave {
+  animation: nativeSplashFade 320ms ease both;
+}
+
+.native-boot-splash--checking .native-boot-splash__logo {
+  animation: nativeLogoChecking 920ms ease-in-out infinite;
+}
+
+.auth-checking-logo {
+  animation: authLogoPulse 920ms ease-in-out infinite;
+}
+
 @media (prefers-reduced-motion: reduce) {
   html {
     scroll-behavior: auto;
@@ -39,6 +81,57 @@ body {
 
   body {
     transition: none;
+  }
+
+  .native-boot-splash__logo,
+  .native-boot-splash--checking .native-boot-splash__logo,
+  .native-boot-splash--leave .native-boot-splash__logo,
+  .auth-checking-logo {
+    animation: none;
+  }
+}
+
+@keyframes nativeLogoArrive {
+  from {
+    opacity: 0;
+    transform: translate(-50%, -46%) scale(0.86);
+  }
+  to {
+    opacity: 1;
+    transform: translate(-50%, -50%) scale(1);
+  }
+}
+
+@keyframes nativeLogoChecking {
+  0%,
+  100% {
+    opacity: 1;
+    transform: translate(-50%, -50%) scale(1);
+  }
+  50% {
+    opacity: 0.58;
+    transform: translate(-50%, -50%) scale(0.96);
+  }
+}
+
+@keyframes authLogoPulse {
+  0%,
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.58;
+    transform: scale(0.96);
+  }
+}
+
+@keyframes nativeSplashFade {
+  0% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
   }
 }
 

@@ -31,14 +31,16 @@ function removeCookie(name) {
 
 export function getSession() {
   try {
-    const raw = readCookie(SESSION_KEY);
+    const raw = readCookie(SESSION_KEY) || (() => {
+      try {
+        return window.localStorage.getItem(SESSION_KEY);
+      } catch {
+        return null;
+      }
+    })();
     if (!raw) return null;
     const session = JSON.parse(raw);
     if (new Date(session.expiresAt).getTime() < Date.now()) {
-      removeCookie(SESSION_KEY);
-      return null;
-    }
-    if (session.mode === "supabase") {
       removeCookie(SESSION_KEY);
       return null;
     }
@@ -65,14 +67,28 @@ function createSession(user, mode = "local") {
   return session;
 }
 
+function persistSession(session) {
+  writeCookie(SESSION_KEY, JSON.stringify(session));
+  try {
+    window.localStorage.setItem(SESSION_KEY, JSON.stringify(session));
+  } catch {
+    // Cookie is enough when localStorage is unavailable.
+  }
+  return session;
+}
+
 function persistLocalSession(user) {
   const session = createSession(user, "local");
-  writeCookie(SESSION_KEY, JSON.stringify(session));
-  return session;
+  return persistSession(session);
 }
 
 export function clearSession() {
   removeCookie(SESSION_KEY);
+  try {
+    window.localStorage.removeItem(SESSION_KEY);
+  } catch {
+    // Ignore cleanup failures.
+  }
 }
 
 async function loginSupabase(email, password) {
@@ -87,20 +103,24 @@ async function loginSupabase(email, password) {
       return { ok: false, error: `${profileResult.error} UID autenticado: ${data.user.id}.` };
     }
 
+    const session = createSession(
+      {
+        id: data.user.id,
+        email: data.user.email,
+        nombre: profileResult.profile.nombre || data.user.email,
+        apellido: profileResult.profile.apellido || "",
+        telefono: profileResult.profile.telefono || "",
+        role: profileResult.profile.role,
+        avatarUrl: profileResult.profile.avatarUrl || "",
+      },
+      "supabase"
+    );
+
+    persistSession(session);
+
     return {
       ok: true,
-      session: createSession(
-        {
-          id: data.user.id,
-          email: data.user.email,
-          nombre: profileResult.profile.nombre || data.user.email,
-          apellido: profileResult.profile.apellido || "",
-          telefono: profileResult.profile.telefono || "",
-          role: profileResult.profile.role,
-          avatarUrl: profileResult.profile.avatarUrl || "",
-        },
-        "supabase"
-      ),
+      session,
     };
   } catch {
     return { ok: false, error: "No se pudo conectar con Supabase." };
@@ -133,20 +153,24 @@ export async function refreshSupabaseSession(localSession) {
   const profileResult = await fetchSupabaseProfile(data.user.id);
   if (!profileResult.ok) return { ok: false, error: profileResult.error };
 
+  const session = createSession(
+    {
+      id: data.user.id,
+      email: data.user.email,
+      nombre: profileResult.profile.nombre || data.user.email,
+      apellido: profileResult.profile.apellido || "",
+      telefono: profileResult.profile.telefono || "",
+      role: profileResult.profile.role,
+      avatarUrl: profileResult.profile.avatarUrl || "",
+    },
+    "supabase"
+  );
+
+  persistSession(session);
+
   return {
     ok: true,
-    session: createSession(
-      {
-        id: data.user.id,
-        email: data.user.email,
-        nombre: profileResult.profile.nombre || data.user.email,
-        apellido: profileResult.profile.apellido || "",
-        telefono: profileResult.profile.telefono || "",
-        role: profileResult.profile.role,
-        avatarUrl: profileResult.profile.avatarUrl || "",
-      },
-      "supabase"
-    ),
+    session,
   };
 }
 
@@ -159,17 +183,21 @@ export async function restoreSupabaseSession() {
   const profileResult = await fetchSupabaseProfile(data.user.id);
   if (!profileResult.ok) return { ok: false, error: profileResult.error };
 
+  const session = createSession({
+    id: data.user.id,
+    email: data.user.email,
+    nombre: profileResult.profile.nombre || data.user.email,
+    apellido: profileResult.profile.apellido || "",
+    telefono: profileResult.profile.telefono || "",
+    role: profileResult.profile.role,
+    avatarUrl: profileResult.profile.avatarUrl || "",
+  }, "supabase");
+
+  persistSession(session);
+
   return {
     ok: true,
-    session: createSession({
-      id: data.user.id,
-      email: data.user.email,
-      nombre: profileResult.profile.nombre || data.user.email,
-      apellido: profileResult.profile.apellido || "",
-      telefono: profileResult.profile.telefono || "",
-      role: profileResult.profile.role,
-      avatarUrl: profileResult.profile.avatarUrl || "",
-    }, "supabase"),
+    session,
   };
 }
 
