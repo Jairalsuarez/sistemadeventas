@@ -24,7 +24,7 @@ function rememberShownToast(key) {
   }
 }
 
-export default function useToastQueue(limit = 4, duration = 3500) {
+export default function useToastQueue(limit = 3, duration = 2200) {
   const [toasts, setToasts] = useState([]);
 
   const pushToast = (message, type = "info", dedupeKey = "") => {

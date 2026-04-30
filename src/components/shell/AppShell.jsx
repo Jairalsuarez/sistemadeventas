@@ -123,7 +123,7 @@ export default function AppShell() {
             <button
               aria-label="Abrir menu"
               aria-expanded={mobileMenuOpen}
-              className="grid h-10 w-10 shrink-0 place-items-center rounded-xl border border-[#dfe7db] bg-white text-[#183325] transition-colors active:bg-[#f4f7f2] dark:border-[#314056] dark:bg-[#111827] dark:text-[#f8fafc] dark:active:bg-[#182235] lg:hidden"
+              className="grid h-12 w-12 shrink-0 place-items-center rounded-2xl border border-[#dfe7db] bg-white text-[26px] text-[#183325] shadow-[0_8px_18px_rgba(15,23,42,0.08)] transition-colors active:bg-[#f4f7f2] dark:border-[#314056] dark:bg-[#111827] dark:text-[#f8fafc] dark:active:bg-[#182235]"
               onClick={(event) => {
                 event.preventDefault();
                 setMobileMenuOpen((current) => !current);
@@ -139,7 +139,7 @@ export default function AppShell() {
       />
 
       <div className="mx-auto flex max-w-[1440px] flex-col lg:flex-row">
-        <SideNav isAdmin={isAdmin} onClose={() => setMobileMenuOpen(false)} open={mobileMenuOpen} />
+        <SideNav businessName={app.business.nombre} isAdmin={isAdmin} onClose={() => setMobileMenuOpen(false)} open={mobileMenuOpen} user={user} />
         <div className="min-w-0 flex-1">
           {!isOnline ? (
             <div className="mx-3 mt-3 rounded-xl border border-[#f7c28f] bg-[#fff8f2] px-4 py-3 text-sm font-semibold text-[#9a3412] dark:border-[#f97316]/30 dark:bg-[#2b1b10] dark:text-[#fdba74] sm:mx-4 lg:mx-6">
@@ -150,7 +150,7 @@ export default function AppShell() {
             className={`relative overflow-hidden px-3 py-5 sm:px-4 sm:py-6 lg:px-6 ${nativeApp ? "pb-6 lg:pb-6" : ""}`}
             onTouchEnd={async () => {
               if (!nativeApp || !pullState.active) return;
-              const shouldRefresh = pullState.armed && !pullState.cancelled && pullState.distance >= 84;
+              const shouldRefresh = pullState.armed && !pullState.cancelled && pullState.distance >= 94;
               setPullState((current) => ({ ...current, active: false, refreshing: shouldRefresh, distance: shouldRefresh ? 56 : 0 }));
               if (shouldRefresh) {
                 await refreshAppData?.();
@@ -163,8 +163,8 @@ export default function AppShell() {
               if (!nativeApp || !pullState.active || window.scrollY > 0) return;
               const distance = Math.max(0, Math.min(110, (event.touches[0].clientY - pullState.startY) * 0.55));
               const maxDistance = Math.max(pullState.maxDistance, distance);
-              const armed = pullState.armed || distance > 84;
-              const cancelled = armed && distance < 72;
+              const armed = pullState.armed || distance > 94;
+              const cancelled = armed && distance < 92;
               if (distance > 4) event.preventDefault();
               setPullState((current) => ({ ...current, armed, cancelled, distance, maxDistance }));
             }}

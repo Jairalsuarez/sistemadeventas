@@ -264,16 +264,29 @@ export default function useOperationsActions({
   };
 
   const createSale = async () => {
-    if (saleSubmitting) return;
-    if (user?.role === "vendedor" && !activeShift) return inform("Debes iniciar un turno.", "warning");
-    if (!salePreview.length || salePreview.some((line) => !line.cantidad)) return inform("Agrega productos validos.", "warning");
-    if (!salePayment.method) return inform("Selecciona un metodo de pago.", "warning");
+    if (saleSubmitting) return false;
+    if (user?.role === "vendedor" && !activeShift) {
+      inform("Debes iniciar un turno.", "warning");
+      return false;
+    }
+    if (!salePreview.length || salePreview.some((line) => !line.cantidad)) {
+      inform("Agrega productos validos.", "warning");
+      return false;
+    }
+    if (!salePayment.method) {
+      inform("Selecciona un metodo de pago.", "warning");
+      return false;
+    }
     if (["transferencia_directa", "deuna"].includes(salePayment.method) && !salePayment.evidenceUrl) {
-      return inform("Debes subir la evidencia del pago antes de finalizar.", "warning");
+      inform("Debes subir la evidencia del pago antes de finalizar.", "warning");
+      return false;
     }
 
     const bad = salePreview.find((line) => (app.products.find((product) => product.id === line.productId)?.stock || 0) < line.cantidad);
-    if (bad) return inform(`Sin stock suficiente para ${bad.nombre}.`, "warning");
+    if (bad) {
+      inform(`Sin stock suficiente para ${bad.nombre}.`, "warning");
+      return false;
+    }
 
     setSaleSubmitting(true);
 
@@ -309,6 +322,7 @@ export default function useOperationsActions({
     setSalePayment({ method: "efectivo", evidenceUrl: "", evidenceName: "" });
     setSaleModal(false);
     inform("Venta registrada con exito.", "success");
+    const savedLocally = true;
 
     try {
       const saleRemote = await createRemoteSale(draftSale);
@@ -321,7 +335,7 @@ export default function useOperationsActions({
           turnos: app.turnos,
         }));
         inform(`No se pudo guardar la venta en Supabase. ${saleRemote.error || "Intenta de nuevo."}`, "error");
-        return;
+        return false;
       }
 
       const saleRecord = saleRemote.ok ? saleRemote.sale : draftSale;
@@ -358,22 +372,37 @@ export default function useOperationsActions({
         turnos: app.turnos,
       }));
       inform(`No se pudo completar la venta. ${error?.message || "Intenta de nuevo."}`, "error");
+      return false;
     } finally {
       setSaleSubmitting(false);
     }
+    return savedLocally;
   };
 
   const createInformalSale = async () => {
-    if (informalSaleSubmitting) return;
-    if (user?.role === "vendedor" && !activeShift) return inform("Debes iniciar un turno.", "warning");
+    if (informalSaleSubmitting) return false;
+    if (user?.role === "vendedor" && !activeShift) {
+      inform("Debes iniciar un turno.", "warning");
+      return false;
+    }
 
     const total = parseMoneyInput(informalSale.totalInput || informalSale.total);
     const description = String(informalSale.description || "").trim();
-    if (total <= 0) return inform("Ingresa un valor total valido.", "warning");
-    if (!description) return inform("Escribe una descripcion de la venta.", "warning");
-    if (!informalSalePayment.method) return inform("Selecciona un metodo de pago.", "warning");
+    if (total <= 0) {
+      inform("Ingresa un valor total valido.", "warning");
+      return false;
+    }
+    if (!description) {
+      inform("Escribe una descripcion de la venta.", "warning");
+      return false;
+    }
+    if (!informalSalePayment.method) {
+      inform("Selecciona un metodo de pago.", "warning");
+      return false;
+    }
     if (["transferencia_directa", "deuna"].includes(informalSalePayment.method) && !informalSalePayment.evidenceUrl) {
-      return inform("Debes subir la evidencia del pago antes de finalizar.", "warning");
+      inform("Debes subir la evidencia del pago antes de finalizar.", "warning");
+      return false;
     }
 
     setInformalSaleSubmitting(true);
@@ -413,7 +442,7 @@ export default function useOperationsActions({
           turnos: app.turnos,
         }));
         inform(`No se pudo guardar la venta informal en Supabase. ${saleRemote.error || "Intenta de nuevo."}`, "error");
-        return;
+        return false;
       }
 
       notify(`${personName(user)} registro una venta informal por ${money(total)}.`, personName(user), "success");
@@ -437,9 +466,11 @@ export default function useOperationsActions({
         turnos: app.turnos,
       }));
       inform(`No se pudo completar la venta informal. ${error?.message || "Intenta de nuevo."}`, "error");
+      return false;
     } finally {
       setInformalSaleSubmitting(false);
     }
+    return true;
   };
 
   const createExpense = async () => {

@@ -1,5 +1,5 @@
 import { Suspense, lazy, useEffect } from "react";
-import { Navigate, Route, Routes, useLocation } from "react-router-dom";
+import { Navigate, Route, Routes, useLocation, useNavigate } from "react-router-dom";
 import ProductDetailsModal from "./components/modals/ProductDetailsModal";
 import ExpenseModal from "./components/modals/ExpenseModal";
 import InformalSaleModal from "./components/modals/InformalSaleModal";
@@ -25,6 +25,7 @@ const SalesAnalyticsPage = lazy(() => import("./pages/admin/SalesAnalyticsPage.j
 
 function App() {
   const location = useLocation();
+  const navigate = useNavigate();
   const nativeApp = isNativeApp();
   const {
     activeShift,
@@ -103,6 +104,10 @@ function App() {
     document.documentElement.classList.toggle("dark", isPanelRoute && theme === "dark");
   }, [location.pathname, theme]);
 
+  const openSaleAction = nativeApp ? () => navigate("/panel/ventas/nueva") : openSaleFlow;
+  const openInformalSaleAction = nativeApp ? () => navigate("/panel/ventas/informal") : openInformalSaleFlow;
+  const openExpenseAction = nativeApp ? () => navigate("/panel/cartera/egreso") : () => setExpenseModal(true);
+
   return (
     <>
       {!nativeApp ? <CookieBanner /> : null}
@@ -120,10 +125,58 @@ function App() {
                 element={
                   <DashboardPage
                     onNewProduct={openCreateProduct}
-                    onNewInformalSale={openInformalSaleFlow}
-                    onNewSale={openSaleFlow}
-                    onOpenExpense={() => setExpenseModal(true)}
+                    onNewInformalSale={openInformalSaleAction}
+                    onNewSale={openSaleAction}
+                    onOpenExpense={openExpenseAction}
                     onOpenWallet={() => setWalletModal(true)}
+                  />
+                }
+              />
+              <Route
+                path="/panel/ventas/nueva"
+                element={
+                  <SaleModal
+                    activeShift={activeShift}
+                    app={app}
+                    createSale={createSale}
+                    money={money}
+                    onClose={() => navigate("/panel")}
+                    open
+                    presentation="page"
+                    saleLines={saleLines}
+                    salePayment={salePayment}
+                    saleSubmitting={saleSubmitting}
+                    saleTotal={saleTotal}
+                    setSaleLines={setSaleLines}
+                    setSalePayment={setSalePayment}
+                    uploadError={uploadError}
+                    uploadSaleEvidence={uploadSaleEvidence}
+                    uploading={uploading}
+                    userRole={user?.role}
+                    wallet={app.wallet}
+                  />
+                }
+              />
+              <Route
+                path="/panel/ventas/informal"
+                element={
+                  <InformalSaleModal
+                    activeShift={activeShift}
+                    createInformalSale={createInformalSale}
+                    informalSale={informalSale}
+                    informalSalePayment={informalSalePayment}
+                    informalSaleSubmitting={informalSaleSubmitting}
+                    money={money}
+                    onClose={() => navigate("/panel")}
+                    open
+                    presentation="page"
+                    setInformalSale={setInformalSale}
+                    setInformalSalePayment={setInformalSalePayment}
+                    uploadError={uploadError}
+                    uploadInformalSaleEvidence={uploadInformalSaleEvidence}
+                    uploading={uploading}
+                    userRole={user?.role}
+                    wallet={app.wallet}
                   />
                 }
               />
@@ -134,8 +187,29 @@ function App() {
                     expenses={app.expenses || []}
                     isAdmin={user?.role === "admin"}
                     money={money}
-                    onOpenExpense={() => setExpenseModal(true)}
+                    onOpenExpense={openExpenseAction}
                     onOpenWallet={() => setWalletModal(true)}
+                    wallet={app.wallet}
+                  />
+                }
+              />
+              <Route
+                path="/panel/cartera/egreso"
+                element={
+                  <ExpenseModal
+                    createExpense={createExpense}
+                    distributors={distributors || []}
+                    expense={expense}
+                    expenseCategories={expenseCategories || []}
+                    expenseSubmitting={expenseSubmitting}
+                    money={money}
+                    onClose={() => navigate("/panel/cartera")}
+                    open
+                    presentation="page"
+                    setExpense={setExpense}
+                    uploadError={uploadError}
+                    uploadExpenseEvidence={uploadExpenseEvidence}
+                    uploading={uploading}
                     wallet={app.wallet}
                   />
                 }

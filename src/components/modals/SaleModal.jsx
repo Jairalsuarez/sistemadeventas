@@ -1,6 +1,8 @@
 import { useEffect, useMemo, useState } from "react";
 import Modal from "../Modal";
 import Icon from "../ui/Icon";
+import PaymentMethodCard from "../sales/PaymentMethodCard";
+import SelectedSaleProductCard from "../sales/SelectedSaleProductCard";
 
 const fieldClassName =
   "rounded-md border border-[#dfe7db] bg-[#f8faf6] px-4 py-3 text-[#183325] transition focus:border-[#f59e0b] focus:outline-none focus:ring-2 focus:ring-[#f59e0b]/20 dark:border-[#314056] dark:bg-[#0f172a] dark:text-white";
@@ -34,72 +36,6 @@ const steps = [
   { id: 3, title: "Resumen" },
 ];
 
-function SelectedProductRow({ line, index, product, money, onAdjust, onChange, onRemove }) {
-  const [drag, setDrag] = useState({ active: false, startX: 0, currentX: 0 });
-  const offsetX = drag.active ? drag.currentX - drag.startX : 0;
-  const dismissing = Math.abs(offsetX) > 72;
-
-  const finishDrag = () => {
-    if (dismissing) onRemove(index);
-    setDrag({ active: false, startX: 0, currentX: 0 });
-  };
-
-  return (
-    <article className="relative overflow-hidden rounded-xl">
-      <div className={`absolute inset-y-0 ${offsetX >= 0 ? "left-0" : "right-0"} flex w-20 items-center ${offsetX >= 0 ? "justify-start pl-4" : "justify-end pr-4"} bg-[#fee2e2] text-[#dc2626] transition-opacity dark:bg-[#3b1115] dark:text-[#fca5a5] ${dismissing ? "opacity-100" : "opacity-0"}`}>
-        <Icon name="delete" />
-      </div>
-      <div
-        className="relative rounded-xl border border-[#edf1ea] bg-[#f8faf6] p-3 transition-[opacity,transform] dark:border-[#314056] dark:bg-[#0f172a]"
-        onPointerCancel={finishDrag}
-        onPointerDown={(event) => {
-          event.currentTarget.setPointerCapture?.(event.pointerId);
-          setDrag({ active: true, startX: event.clientX, currentX: event.clientX });
-        }}
-        onPointerMove={(event) => {
-          if (!drag.active) return;
-          setDrag((current) => ({ ...current, currentX: event.clientX }));
-        }}
-        onPointerUp={finishDrag}
-        style={{ opacity: Math.max(0.45, 1 - Math.min(Math.abs(offsetX), 160) / 230), transform: `translateX(${offsetX}px)` }}
-      >
-        <div className="flex min-w-0 items-center gap-3">
-          <button className="flex min-w-0 flex-1 items-center gap-3 text-left" onClick={() => onChange(index)} type="button">
-            <span className="grid h-11 w-11 shrink-0 place-items-center overflow-hidden rounded-xl bg-[#eef2ff] text-[#2563eb]">
-              {product.imagen_url ? <img alt={product.nombre} className="h-full w-full object-cover" src={product.imagen_url} /> : <Icon name="inventory_2" />}
-            </span>
-            <span className="min-w-0 flex-1">
-              <strong className="block truncate text-sm font-semibold text-[#183325] dark:text-[#f8fafc]">{product.nombre}</strong>
-              <span className="mt-1 block text-xs text-[#5b6d61] dark:text-[#c7d2e0]">{money(product.precio)} - stock {product.stock}</span>
-            </span>
-          </button>
-          <div className="grid shrink-0 grid-cols-[36px_34px_36px] items-center rounded-xl border border-[#dfe7db] bg-white p-1 dark:border-[#314056] dark:bg-[#182235]">
-            <button
-              className="grid h-8 w-8 place-items-center rounded-lg text-[#183325] disabled:opacity-40 dark:text-white"
-              disabled={Number(line.cantidad || 1) <= 1}
-              onClick={() => onAdjust(index, -1)}
-              onPointerDown={(event) => event.stopPropagation()}
-              type="button"
-            >
-              <Icon name="remove" />
-            </button>
-            <span className="text-center text-sm font-semibold text-[#183325] dark:text-[#f8fafc]">{line.cantidad}</span>
-            <button
-              className="grid h-8 w-8 place-items-center rounded-lg text-[#183325] disabled:opacity-40 dark:text-white"
-              disabled={Number(line.cantidad || 1) >= Number(product.stock || 0)}
-              onClick={() => onAdjust(index, 1)}
-              onPointerDown={(event) => event.stopPropagation()}
-              type="button"
-            >
-              <Icon name="add" />
-            </button>
-          </div>
-        </div>
-      </div>
-    </article>
-  );
-}
-
 function ProductPickerModal({ money, onClose, onSelect, open, products, selectedProductId }) {
   const [search, setSearch] = useState("");
 
@@ -116,7 +52,9 @@ function ProductPickerModal({ money, onClose, onSelect, open, products, selected
             .some((value) => String(value).toLowerCase().includes(query))
         )
       : products;
-    return source.slice(0, 40);
+    return source
+      .sort((a, b) => Number(b.stock > 0) - Number(a.stock > 0) || String(a.nombre || "").localeCompare(String(b.nombre || "")))
+      .slice(0, 40);
   }, [products, search]);
 
   if (!open) return null;
@@ -198,6 +136,7 @@ export default function SaleModal({
   money,
   onClose,
   open,
+  presentation = "modal",
   saleLines,
   salePayment,
   saleSubmitting,
@@ -431,23 +370,17 @@ export default function SaleModal({
         </div>
 
         {salePayment.evidenceUrl ? (
-          <div className="rounded-lg border border-[#dbe6d8] bg-white p-3">
-            <p className="mb-3 text-xs font-semibold uppercase tracking-[0.18em] text-[#6a7b70]">Vista previa de evidencia</p>
-            <div className="overflow-hidden rounded-lg border border-[#edf1ea] bg-[#f8faf6]">
-              <img
-                alt="Evidencia del pago"
-                className="h-48 w-full object-contain"
-                src={salePayment.evidenceUrl}
-              />
-            </div>
-          </div>
+          <a className={`${subtleButtonClassName} inline-flex w-fit items-center gap-2`} href={salePayment.evidenceUrl} rel="noreferrer" target="_blank">
+            <Icon name="visibility" />
+            Ver evidencia
+          </a>
         ) : null}
       </div>
     );
   };
 
   return (
-    <Modal open={open} onClose={onClose} text="Registra la venta en tres pasos claros." title="Nueva venta" wide>
+    <Modal open={open} onClose={onClose} text={presentation === "page" ? "" : "Registra la venta en tres pasos claros."} title="Nueva venta" variant={presentation === "page" ? "page" : "default"} wide>
       <div className="grid gap-5">
         {requiresShift && !activeShift ? <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm font-semibold text-red-700 dark:border-[#4b5563] dark:bg-[#172033] dark:text-[#fca5a5]">Debes iniciar un turno antes de vender.</div> : null}
 
@@ -497,7 +430,7 @@ export default function SaleModal({
                       const product = activeProducts.find((item) => item.id === line.productId);
                       if (!product) return null;
                       return (
-                        <SelectedProductRow
+                        <SelectedSaleProductCard
                           index={index}
                           key={`${index}-${line.productId}`}
                           line={line}
@@ -533,35 +466,17 @@ export default function SaleModal({
         {step === 2 ? (
           <div className={stepPanelClassName}>
             <div className="grid gap-4">
-            <div className="grid gap-3 md:grid-cols-3">
+            <div className="grid gap-2 sm:grid-cols-2">
               {paymentOptions.map((option) => {
                 const selected = salePayment.method === option.value;
                 return (
-                  <button
+                  <PaymentMethodCard
+                    icon={option.icon}
                     key={option.value}
-                    className={`rounded-lg border px-4 py-4 text-left transition ${
-                      selected
-                        ? "border-[#f59e0b]/40 bg-[#fff7ed] shadow-[0_14px_30px_rgba(245,158,11,0.12)] dark:border-[#314056] dark:bg-[#182235]"
-                        : "border-[#e4ece2] bg-white hover:bg-[#fafcf9] dark:border-[#23314d] dark:bg-[#111827] dark:hover:bg-[#182235]"
-                    }`}
+                    label={option.label}
                     onClick={() => setSalePayment((current) => ({ ...current, method: option.value, evidenceUrl: "", evidenceName: "" }))}
-                    type="button"
-                  >
-                    <div className="flex items-start justify-between gap-3">
-                      <span className={`inline-flex h-11 w-11 items-center justify-center rounded-full text-xl ${selected ? "bg-white text-[#183325] dark:bg-[#0f172a] dark:text-[#93c5fd]" : option.accentClassName}`}>
-                        <Icon name={option.icon} />
-                      </span>
-                      <span className={`inline-flex rounded-full px-2.5 py-1 text-xs font-semibold ${selected ? "bg-[#f59e0b] text-white" : "bg-[#edf1ea] text-[#5b6d61] dark:bg-[#0f172a] dark:text-[#94a3b8]"}`}>
-                        {selected ? "Seleccionado" : "Elegir"}
-                      </span>
-                    </div>
-                    <strong className="mt-4 block text-sm font-semibold text-[#183325] dark:text-[#f8fafc]">{option.label}</strong>
-                    <span className="mt-1 block text-sm leading-6 text-[#5b6d61] dark:text-[#c7d2e0]">{option.description}</span>
-                    <span className="mt-4 inline-flex items-center gap-2 text-xs font-medium text-[#6a7b70] dark:text-[#94a3b8]">
-                      <Icon className="text-base" name="arrow_forward" />
-                      {selected ? "Metodo activo" : "Cambiar a este metodo"}
-                    </span>
-                  </button>
+                    selected={selected}
+                  />
                 );
               })}
             </div>
@@ -572,16 +487,18 @@ export default function SaleModal({
         ) : null}
 
         {step === 3 ? (
-          <div className={stepPanelClassName}>
-            <div className="grid gap-4 lg:grid-cols-[minmax(0,1.2fr)_320px]">
-            <div className="rounded-lg border border-[#e4ece2] bg-white p-4 dark:border-[#23314d] dark:bg-[#111827]">
-              <h3 className="text-base font-semibold text-[#183325] dark:text-[#f8fafc]">Detalle de la venta</h3>
-              <div className="mt-4 space-y-3">
+          <div className="grid gap-3">
+            <div className="rounded-lg border border-[#e4ece2] bg-white p-3 dark:border-[#23314d] dark:bg-[#111827]">
+              <div className="flex items-center justify-between gap-3">
+                <h3 className="text-sm font-semibold text-[#183325] dark:text-[#f8fafc]">Detalle</h3>
+                <span className="text-xs font-semibold text-[#6a7b70] dark:text-[#94a3b8]">{salePreview.length} producto(s)</span>
+              </div>
+              <div className="mt-3 grid max-h-36 gap-2 overflow-y-auto pr-1">
                 {salePreview.map((line) => (
-                  <article key={`${line.productId}-${line.nombre}`} className="flex items-center justify-between rounded-lg border border-[#edf1ea] px-4 py-3 dark:border-[#23314d] dark:bg-[#182235]">
+                  <article key={`${line.productId}-${line.nombre}`} className="flex items-center justify-between gap-3 rounded-lg border border-[#edf1ea] px-3 py-2 dark:border-[#23314d] dark:bg-[#182235]">
                     <div className="min-w-0">
-                      <strong className="block text-sm font-semibold text-[#183325] dark:text-[#f8fafc]">{line.nombre}</strong>
-                      <span className="text-sm text-[#5b6d61] dark:text-[#c7d2e0]">
+                      <strong className="block truncate text-sm font-semibold text-[#183325] dark:text-[#f8fafc]">{line.nombre}</strong>
+                      <span className="text-xs text-[#5b6d61] dark:text-[#c7d2e0]">
                         {line.cantidad} x {money(line.precio)}
                       </span>
                     </div>
@@ -591,9 +508,8 @@ export default function SaleModal({
               </div>
             </div>
 
-            <div className="rounded-lg border border-[#e4ece2] bg-[#f8faf6] p-4 dark:border-[#23314d] dark:bg-[#182235]">
-              <h3 className="text-base font-semibold text-[#183325] dark:text-[#f8fafc]">Resumen de registro</h3>
-              <div className="mt-4 space-y-3 text-sm text-[#5b6d61] dark:text-[#c7d2e0]">
+            <div className="rounded-lg border border-[#e4ece2] bg-[#f8faf6] p-3 dark:border-[#23314d] dark:bg-[#182235]">
+              <div className="space-y-2 text-sm text-[#5b6d61] dark:text-[#c7d2e0]">
                 <div className="flex items-center justify-between gap-3">
                   <span>Metodo de pago</span>
                   <strong className="text-[#183325] dark:text-[#f8fafc]">{selectedPayment.label}</strong>
@@ -603,34 +519,18 @@ export default function SaleModal({
                   <strong className="text-[#183325] dark:text-[#f8fafc]">{money(saleTotal)}</strong>
                 </div>
                 <div className="flex items-center justify-between gap-3">
-                  <span>Saldo actual de cartera</span>
-                  <strong className="text-[#183325] dark:text-[#f8fafc]">{money(wallet?.saldoActual || 0)}</strong>
-                </div>
-                <div className="flex items-center justify-between gap-3">
-                  <span>Saldo luego de registrar</span>
+                  <span>Cartera luego</span>
                   <strong className="text-[#1f7a3a] dark:text-[#93c5fd]">{money(nextWalletTotal)}</strong>
                 </div>
-                {salePayment.evidenceName ? <div className="rounded-md border border-[#dbe6d8] bg-white px-3 py-2 text-xs text-[#5b6d61] dark:border-[#314056] dark:bg-[#0f172a] dark:text-[#c7d2e0]">Evidencia: {salePayment.evidenceName}</div> : null}
+                {salePayment.evidenceName ? <div className="truncate rounded-md border border-[#dbe6d8] bg-white px-3 py-2 text-xs text-[#5b6d61] dark:border-[#314056] dark:bg-[#0f172a] dark:text-[#c7d2e0]">Evidencia: {salePayment.evidenceName}</div> : null}
               </div>
 
-              {salePayment.evidenceUrl ? (
-                <div className="mt-4 rounded-lg border border-[#dbe6d8] bg-white p-3">
-                  <p className="mb-3 text-xs font-semibold uppercase tracking-[0.18em] text-[#6a7b70]">Vista previa de evidencia</p>
-                  <div className="overflow-hidden rounded-lg border border-[#edf1ea] bg-[#f8faf6]">
-                    <img
-                      alt="Vista previa de la evidencia del pago"
-                      className="h-36 w-full object-contain"
-                      src={salePayment.evidenceUrl}
-                    />
-                  </div>
-                </div>
-              ) : null}
-            </div>
+              {salePayment.evidenceUrl ? <a className="mt-3 inline-flex items-center gap-2 text-xs font-semibold text-[#1f7a3a] dark:text-[#93c5fd]" href={salePayment.evidenceUrl} rel="noreferrer" target="_blank"><Icon className="text-base" name="visibility" />Ver evidencia</a> : null}
             </div>
           </div>
         ) : null}
 
-        <div className="flex flex-col-reverse gap-3 border-t border-[#edf1ea] pt-4 sm:flex-row sm:items-center sm:justify-between">
+        <div className="sticky bottom-0 z-10 -mx-1 flex flex-col-reverse gap-3 border-t border-[#edf1ea] bg-white/95 px-1 pt-3 backdrop-blur dark:bg-[#111827]/95 sm:flex-row sm:items-center sm:justify-between">
           <button className={`${subtleButtonClassName} w-full sm:w-auto`} onClick={step === 1 ? onClose : prevStep} type="button">
             {step === 1 ? "Cancelar" : "Volver"}
           </button>
@@ -646,7 +546,10 @@ export default function SaleModal({
                 Continuar
               </button>
             ) : (
-              <button className={`${primaryButtonClassName} w-full sm:w-auto`} disabled={saleSubmitting || !canContinuePayment || !canContinueProducts} onClick={createSale} type="button">
+              <button className={`${primaryButtonClassName} w-full sm:w-auto`} disabled={saleSubmitting || !canContinuePayment || !canContinueProducts} onClick={async () => {
+                const saved = await createSale();
+                if (saved && presentation === "page") onClose();
+              }} type="button">
                 {saleSubmitting ? "Procesando..." : "Finalizar venta"}
               </button>
             )}

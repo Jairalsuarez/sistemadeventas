@@ -50,7 +50,7 @@ function seed() {
       logoUrl: DEFAULT_LOGO,
       featuredProductId: null,
     },
-    wallet: { saldoActual: 325, updatedAt: new Date().toISOString() },
+    wallet: { saldoActual: 0, updatedAt: new Date().toISOString() },
     users: localUsers,
     products: [
       normalizeProduct({

@@ -465,8 +465,17 @@ export function AppProvider({ children }) {
     })();
 
     if (!browserNotificationReadyRef.current) {
-      shownBrowserNotificationIdsRef.current = storedSeenIds;
+      shownBrowserNotificationIdsRef.current = new Set([
+        ...storedSeenIds,
+        ...visibleNotifications.map((notification) => notification.id).filter(Boolean),
+      ]);
       browserNotificationReadyRef.current = true;
+      try {
+        window.localStorage.setItem(seenStorageKey, JSON.stringify([...shownBrowserNotificationIdsRef.current].slice(-120)));
+      } catch {
+        // Ignore storage errors; notifications still work in the current session.
+      }
+      return;
     }
 
     const now = Date.now();

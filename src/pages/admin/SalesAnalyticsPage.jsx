@@ -2,16 +2,10 @@ import { useMemo, useState } from "react";
 import SaleDetailsModal from "../../components/modals/SaleDetailsModal";
 import ShiftSummaryModal from "../../components/modals/ShiftSummaryModal";
 import EmptyState from "../../components/ui/EmptyState";
+import Icon from "../../components/ui/Icon";
 import PageHeader from "../../components/ui/PageHeader";
 import SectionBlock from "../../components/ui/SectionBlock";
-import StatCard from "../../components/ui/StatCard";
 import { buildShiftSummary } from "../../services/shiftSummaryService.js";
-
-function startOfDay(date) {
-  const next = new Date(date);
-  next.setHours(0, 0, 0, 0);
-  return next;
-}
 
 function startOfMonth(date) {
   return new Date(date.getFullYear(), date.getMonth(), 1);
@@ -25,118 +19,118 @@ function sumAmount(items, key) {
   return items.reduce((acc, item) => acc + Number(item?.[key] || 0), 0);
 }
 
-function capitalizeLabel(value = "") {
-  if (!value) return value;
-  return value.charAt(0).toUpperCase() + value.slice(1);
-}
-
 function formatPaymentMethod(value = "") {
   const map = {
     efectivo: "Efectivo",
-    transferencia_directa: "Transferencia directa",
+    transferencia_directa: "Transferencia",
     deuna: "Deuna",
   };
   return map[value] || value || "Sin definir";
 }
 
-function buildMonthlySeries({ expenses, sales, today }) {
-  return Array.from({ length: 6 }, (_, index) => {
-    const date = new Date(today.getFullYear(), today.getMonth() - (5 - index), 1);
-    const start = startOfMonth(date);
-    const end = endOfMonth(date);
-    const monthSales = sales.filter((item) => {
-      const time = new Date(item.createdAt).getTime();
-      return time >= start.getTime() && time <= end.getTime();
-    });
-    const monthExpenses = expenses.filter((item) => {
-      const time = new Date(item.createdAt).getTime();
-      return time >= start.getTime() && time <= end.getTime();
-    });
+function getMonthKey(value) {
+  const date = new Date(value);
+  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}`;
+}
 
-    return {
-      id: `${date.getFullYear()}-${date.getMonth()}`,
-      label: new Intl.DateTimeFormat("es-EC", { month: "short" }).format(date),
-      fullLabel: capitalizeLabel(new Intl.DateTimeFormat("es-EC", { month: "long", year: "numeric" }).format(date)),
-      income: sumAmount(monthSales, "total"),
-      expense: sumAmount(monthExpenses, "monto"),
-      salesCount: monthSales.length,
-    };
-  });
+function getMonthRange(key) {
+  const [year, month] = key.split("-").map(Number);
+  const date = new Date(year, month - 1, 1);
+  return { start: startOfMonth(date), end: endOfMonth(date) };
+}
+
+function MetricPanel({ icon, label, value, tone = "green" }) {
+  const tones = {
+    green: "bg-[#eaf7ee] text-[#166534] dark:bg-[#14281d] dark:text-[#86efac]",
+    orange: "bg-[#fff7ed] text-[#c2410c] dark:bg-[#2b1b10] dark:text-[#fdba74]",
+    blue: "bg-[#eff6ff] text-[#1d4ed8] dark:bg-[#172554] dark:text-[#93c5fd]",
+  };
+
+  return (
+    <article className="rounded-xl border border-[#e4ece2] bg-white p-4 dark:border-[#23314d] dark:bg-[#111827]">
+      <div className="flex items-center gap-3">
+        <span className={`grid h-10 w-10 place-items-center rounded-xl ${tones[tone]}`}>
+          <Icon name={icon} />
+        </span>
+        <div className="min-w-0">
+          <p className="text-xs font-semibold uppercase tracking-[0.12em] text-[#6a7b70] dark:text-[#94a3b8]">{label}</p>
+          <strong className="mt-1 block truncate text-xl font-semibold text-[#183325] dark:text-[#f8fafc]">{value}</strong>
+        </div>
+      </div>
+    </article>
+  );
+}
+
+function HubCard({ count, icon, onClick, title, value }) {
+  return (
+    <button className="rounded-xl border border-[#e4ece2] bg-white p-4 text-left transition active:scale-[0.99] dark:border-[#23314d] dark:bg-[#111827]" onClick={onClick} type="button">
+      <div className="flex items-start justify-between gap-3">
+        <span className="grid h-11 w-11 place-items-center rounded-xl bg-[#eef6f0] text-[#1f7a3a] dark:bg-[#172554] dark:text-[#93c5fd]">
+          <Icon name={icon} />
+        </span>
+        <Icon className="text-[#6a7b70] dark:text-[#94a3b8]" name="chevron_right" />
+      </div>
+      <strong className="mt-4 block text-base font-semibold text-[#183325] dark:text-[#f8fafc]">{title}</strong>
+      <p className="mt-1 text-sm text-[#5b6d61] dark:text-[#c7d2e0]">{value}</p>
+      <span className="mt-4 inline-flex rounded-full bg-[#f6f8f4] px-3 py-1 text-xs font-semibold text-[#5b6d61] dark:bg-[#182235] dark:text-[#c7d2e0]">{count}</span>
+    </button>
+  );
 }
 
 export default function SalesAnalyticsPage({ expenses, money, sales, schedules = [], turnos = [] }) {
+  const [view, setView] = useState("home");
   const [selectedSaleId, setSelectedSaleId] = useState(null);
   const [selectedShiftId, setSelectedShiftId] = useState(null);
-  const today = useMemo(() => new Date(), []);
-  const todayStart = startOfDay(today);
-  const currentMonthStart = startOfMonth(today);
-  const currentMonthEnd = endOfMonth(today);
+  const currentMonthKey = getMonthKey(new Date());
+  const [selectedMonth, setSelectedMonth] = useState(currentMonthKey);
 
-  const salesThisMonth = useMemo(
-    () =>
-      sales.filter((item) => {
-        const time = new Date(item.createdAt).getTime();
-        return time >= currentMonthStart.getTime() && time <= currentMonthEnd.getTime();
-      }),
-    [currentMonthEnd, currentMonthStart, sales]
+  const monthOptions = useMemo(() => {
+    const keys = new Set([currentMonthKey]);
+    [...sales, ...expenses].forEach((item) => {
+      if (item.createdAt) keys.add(getMonthKey(item.createdAt));
+    });
+    return [...keys]
+      .sort((a, b) => b.localeCompare(a))
+      .map((key) => {
+        const [year, month] = key.split("-").map(Number);
+        const label = new Intl.DateTimeFormat("es-EC", { month: "long", year: "numeric" }).format(new Date(year, month - 1, 1));
+        return { key, label: label.charAt(0).toUpperCase() + label.slice(1) };
+      });
+  }, [currentMonthKey, expenses, sales]);
+
+  const selectedRange = useMemo(() => getMonthRange(selectedMonth), [selectedMonth]);
+  const monthSales = useMemo(
+    () => sales.filter((item) => {
+      const time = new Date(item.createdAt).getTime();
+      return time >= selectedRange.start.getTime() && time <= selectedRange.end.getTime();
+    }),
+    [sales, selectedRange]
+  );
+  const monthExpenses = useMemo(
+    () => expenses.filter((item) => {
+      const time = new Date(item.createdAt).getTime();
+      return time >= selectedRange.start.getTime() && time <= selectedRange.end.getTime();
+    }),
+    [expenses, selectedRange]
   );
 
-  const expensesThisMonth = useMemo(
-    () =>
-      expenses.filter((item) => {
-        const time = new Date(item.createdAt).getTime();
-        return time >= currentMonthStart.getTime() && time <= currentMonthEnd.getTime();
-      }),
-    [currentMonthEnd, currentMonthStart, expenses]
-  );
+  const recentSales = useMemo(() => [...sales].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()), [sales]);
+  const income = sumAmount(monthSales, "total");
+  const expenseTotal = sumAmount(monthExpenses, "monto");
+  const net = income - expenseTotal;
+  const movementMax = Math.max(income, expenseTotal, 1);
 
-  const salesToday = useMemo(
-    () =>
-      sales.filter((item) => {
-        const time = new Date(item.createdAt).getTime();
-        return time >= todayStart.getTime();
-      }),
-    [sales, todayStart]
-  );
-
-  const monthlySeries = useMemo(() => buildMonthlySeries({ expenses, sales, today }), [expenses, sales, today]);
-  const chartMax = Math.max(1, ...monthlySeries.flatMap((item) => [item.income, item.expense]));
-
-  const summary = useMemo(() => {
-    const incomeMonth = sumAmount(salesThisMonth, "total");
-    const expenseMonth = sumAmount(expensesThisMonth, "monto");
-    const incomeToday = sumAmount(salesToday, "total");
-    return [
-      {
-        label: "Total por mes",
-        value: money(incomeMonth),
-        detail: `${salesThisMonth.length} venta(s) registradas este mes`,
-        accent: "green",
-      },
-      {
-        label: "Egresos del mes",
-        value: money(expenseMonth),
-        detail: `${expensesThisMonth.length} egreso(s) cargados este mes`,
-        accent: "orange",
-      },
-      {
-        label: "Total de hoy",
-        value: money(incomeToday),
-        detail: `${salesToday.length} venta(s) registradas hoy`,
-        accent: "yellow",
-      },
-    ];
-  }, [expensesThisMonth, money, salesThisMonth, salesToday]);
-
-  const recentSales = useMemo(
-    () =>
-      [...sales]
-        .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
-        .slice(0, 12),
-    [sales]
-  );
-  const getSaleDetails = (saleId) => sales.find((sale) => sale.id === saleId) || null;
-  const selectedSale = selectedSaleId ? getSaleDetails(selectedSaleId) : null;
+  const paymentRows = useMemo(() => {
+    const map = new Map();
+    monthSales.forEach((sale) => {
+      const key = formatPaymentMethod(sale.paymentMethod);
+      const current = map.get(key) || { label: key, total: 0, count: 0 };
+      current.total += Number(sale.total || 0);
+      current.count += 1;
+      map.set(key, current);
+    });
+    return [...map.values()].sort((a, b) => b.total - a.total);
+  }, [monthSales]);
 
   const closedShiftSummaries = useMemo(
     () =>
@@ -144,27 +138,12 @@ export default function SalesAnalyticsPage({ expenses, money, sales, schedules =
         .filter((shift) => shift.estado === "cerrado")
         .map((shift) => buildShiftSummary({ shift, sales, schedules, money }))
         .filter(Boolean)
-        .sort((a, b) => new Date(b.shift.closedAt || b.shift.startedAt).getTime() - new Date(a.shift.closedAt || a.shift.startedAt).getTime())
-        .slice(0, 10),
+        .sort((a, b) => new Date(b.shift.closedAt || b.shift.startedAt).getTime() - new Date(a.shift.closedAt || a.shift.startedAt).getTime()),
     [money, schedules, sales, turnos]
   );
+
+  const selectedSale = selectedSaleId ? sales.find((sale) => sale.id === selectedSaleId) || null : null;
   const selectedShiftSummary = closedShiftSummaries.find((summaryItem) => summaryItem.shift.id === selectedShiftId) || null;
-
-  const sellerRows = useMemo(() => {
-    const map = new Map();
-    salesThisMonth.forEach((sale) => {
-      const key = sale.userName || "Sin nombre";
-      const current = map.get(key) || { seller: key, total: 0, count: 0, lastSaleAt: sale.createdAt };
-      current.total += Number(sale.total || 0);
-      current.count += 1;
-      if (new Date(sale.createdAt).getTime() > new Date(current.lastSaleAt).getTime()) {
-        current.lastSaleAt = sale.createdAt;
-      }
-      map.set(key, current);
-    });
-
-    return [...map.values()].sort((a, b) => b.total - a.total);
-  }, [salesThisMonth]);
 
   const formatDateTime = (value) =>
     new Intl.DateTimeFormat("es-EC", {
@@ -172,220 +151,138 @@ export default function SalesAnalyticsPage({ expenses, money, sales, schedules =
       timeStyle: "short",
     }).format(new Date(value));
 
+  const BackButton = () => (
+    <button className="inline-flex items-center gap-2 rounded-xl border border-[#dfe7db] px-3 py-2 text-sm font-semibold text-[#183325] dark:border-[#314056] dark:text-[#f8fafc]" onClick={() => setView("home")} type="button">
+      <Icon name="arrow_back" />
+      Volver
+    </button>
+  );
+
   return (
     <div className="space-y-6">
-      <PageHeader
-        eyebrow="Admin"
-        title="Ventas"
-        description="Revisión clara de ingresos, egresos y ventas recientes para saber quién vendió, cuándo y cuánto se movió."
-      />
+      <PageHeader eyebrow="Admin" title="Ventas" description={view === "home" ? "Elige que quieres revisar." : ""} />
 
-      <div className="grid gap-4 xl:grid-cols-3">
-        {summary.map((card) => (
-          <StatCard key={card.label} accent={card.accent} detail={card.detail} label={card.label} value={card.value} />
-        ))}
-      </div>
-
-      <SectionBlock title="Resumen diario por vendedor" description="Turnos cerrados con total vendido, cantidad de ventas e ingreso del turno.">
-        {closedShiftSummaries.length ? (
-          <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
-            {closedShiftSummaries.map((item) => (
-              <article key={item.shift.id} className="rounded-xl border border-[#e4ece2] bg-white p-4 dark:border-[#23314d] dark:bg-[#182235]">
-                <div className="flex items-start justify-between gap-3">
-                  <div className="min-w-0">
-                    <strong className="block truncate text-sm font-semibold text-[#183325] dark:text-[#f8fafc]">{item.shift.userName || "Vendedor"}</strong>
-                    <p className="mt-1 text-xs text-[#5b6d61] dark:text-[#c7d2e0]">{item.dateLabel} - {item.turnoLabel}</p>
-                  </div>
-                  <span className="rounded-full bg-[#eaf7ee] px-3 py-1 text-xs font-semibold text-[#166534] dark:bg-[#1e293b] dark:text-[#93c5fd]">{item.totalSales} venta(s)</span>
-                </div>
-                <div className="mt-4 flex items-end justify-between gap-3">
-                  <div>
-                    <span className="block text-xs font-semibold uppercase tracking-[0.14em] text-[#6a7b70] dark:text-[#94a3b8]">Ingresado</span>
-                    <strong className="mt-1 block text-2xl font-semibold text-[#183325] dark:text-[#f8fafc]">{item.totalAmountLabel}</strong>
-                  </div>
-                  <button className="rounded-xl border border-[#dfe7db] px-3 py-2 text-sm font-semibold text-[#183325] transition hover:bg-[#f7faf6] dark:border-[#314056] dark:text-[#f8fafc] dark:hover:bg-[#111827]" onClick={() => setSelectedShiftId(item.shift.id)} type="button">
-                    Ver resumen
-                  </button>
-                </div>
-              </article>
-            ))}
+      {view === "home" ? (
+        <>
+          <div className="grid gap-4 sm:grid-cols-3">
+            <MetricPanel icon="payments" label="Ingresos del mes" tone="green" value={money(income)} />
+            <MetricPanel icon="shopping_cart" label="Ventas" tone="blue" value={monthSales.length} />
+            <MetricPanel icon="receipt_long" label="Egresos" tone="orange" value={money(expenseTotal)} />
           </div>
-        ) : (
-          <EmptyState title="Sin turnos cerrados" description="Cuando un vendedor cierre su turno, el resumen aparecera aqui." />
-        )}
-      </SectionBlock>
 
-      <SectionBlock
-        title="Ingresos y egresos"
-        description="Comparación mensual de los últimos seis meses para leer rápido cómo se viene moviendo el negocio."
-      >
-        {monthlySeries.length ? (
-          <div className="space-y-5">
-            <div className="flex flex-wrap gap-4 text-sm text-[#5b6d61] dark:text-[#c7d2e0]">
-              <span className="inline-flex items-center gap-2">
-                <span className="h-3 w-3 rounded-full bg-[#1f7a3a] dark:bg-[#60a5fa]" />
-                Ingresos
-              </span>
-              <span className="inline-flex items-center gap-2">
-                <span className="h-3 w-3 rounded-full bg-[#f97316]" />
-                Egresos
-              </span>
-            </div>
+          <div className="grid gap-4 md:grid-cols-3">
+            <HubCard count={`${recentSales.length} registro(s)`} icon="receipt_long" onClick={() => setView("records")} title="Registro de ventas" value="Historial compacto y detalles." />
+            <HubCard count={`${monthSales.length} venta(s)`} icon="query_stats" onClick={() => setView("analysis")} title="Analisis del mes" value="Ingresos, egresos y pagos." />
+            <HubCard count={`${closedShiftSummaries.length} turno(s)`} icon="groups" onClick={() => setView("shifts")} title="Resumen de turnos" value="Cierre diario por vendedor." />
+          </div>
+        </>
+      ) : null}
 
-            <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-6">
-              {monthlySeries.map((item) => (
-                <article key={item.id} className="rounded-xl border border-[#e4ece2] bg-white p-4 dark:border-[#23314d] dark:bg-[#182235]">
-                  <div className="flex h-44 items-end justify-center gap-3">
-                    <div className="flex h-full flex-col items-center justify-end gap-2">
-                      <div
-                        className="w-8 rounded-t-xl bg-[#1f7a3a] shadow-[0_10px_20px_rgba(31,122,58,0.22)] dark:bg-[#60a5fa] dark:shadow-[0_10px_20px_rgba(96,165,250,0.2)]"
-                        style={{ height: `${Math.max((item.income / chartMax) * 100, item.income ? 8 : 0)}%` }}
-                      />
-                      <span className="text-[11px] font-semibold uppercase tracking-[0.12em] text-[#6a7b70] dark:text-[#94a3b8]">Ing</span>
-                    </div>
-                    <div className="flex h-full flex-col items-center justify-end gap-2">
-                      <div
-                        className="w-8 rounded-t-xl bg-[#f97316] shadow-[0_10px_20px_rgba(249,115,22,0.22)]"
-                        style={{ height: `${Math.max((item.expense / chartMax) * 100, item.expense ? 8 : 0)}%` }}
-                      />
-                      <span className="text-[11px] font-semibold uppercase tracking-[0.12em] text-[#6a7b70] dark:text-[#94a3b8]">Egr</span>
-                    </div>
-                  </div>
-                  <div className="mt-4 space-y-1">
-                    <strong className="block text-sm font-semibold text-[#183325] dark:text-[#f8fafc]">{item.fullLabel}</strong>
-                    <p className="text-xs text-[#5b6d61] dark:text-[#c7d2e0]">Ingresos: {money(item.income)}</p>
-                    <p className="text-xs text-[#5b6d61] dark:text-[#c7d2e0]">Egresos: {money(item.expense)}</p>
-                    <p className="text-xs text-[#6a7b70] dark:text-[#94a3b8]">{item.salesCount} venta(s)</p>
-                  </div>
-                </article>
+      {view === "records" ? (
+        <SectionBlock title="Registro de ventas" action={<BackButton />}>
+          {recentSales.length ? (
+            <div className="space-y-2">
+              {recentSales.map((sale) => (
+                <button key={sale.id} className="grid w-full grid-cols-[minmax(0,1fr)_auto] items-center gap-3 rounded-xl border border-[#edf1ea] bg-white p-3 text-left dark:border-[#23314d] dark:bg-[#111827]" onClick={() => setSelectedSaleId(sale.id)} type="button">
+                  <span className="min-w-0">
+                    <span className="flex items-center gap-2">
+                      <strong className="truncate text-sm font-semibold text-[#183325] dark:text-[#f8fafc]">{sale.userName || "Sin nombre"}</strong>
+                      <span className={`shrink-0 rounded-full px-2 py-0.5 text-[11px] font-semibold ${sale.informal ? "bg-[#fff7ed] text-[#c2410c] dark:bg-[#3b1d12] dark:text-[#fdba74]" : "bg-[#eff6ff] text-[#1d4ed8] dark:bg-[#172554] dark:text-[#93c5fd]"}`}>{sale.informal ? "Informal" : "Formal"}</span>
+                    </span>
+                    <span className="mt-1 block truncate text-xs text-[#5b6d61] dark:text-[#c7d2e0]">{formatDateTime(sale.createdAt)} - {formatPaymentMethod(sale.paymentMethod)}</span>
+                  </span>
+                  <strong className="text-sm text-[#183325] dark:text-[#f8fafc]">{money(sale.total)}</strong>
+                </button>
               ))}
             </div>
-          </div>
-        ) : (
-          <EmptyState title="Sin movimientos" description="Todavia no hay datos suficientes para construir la grafica." />
-        )}
-      </SectionBlock>
+          ) : (
+            <EmptyState title="Sin ventas" description="Cuando registres ventas apareceran aqui." />
+          )}
+        </SectionBlock>
+      ) : null}
 
-      <div className="grid gap-6 xl:grid-cols-[minmax(0,1.45fr)_360px]">
+      {view === "analysis" ? (
         <SectionBlock
-          title="Registro de ventas"
-          description="Vista directa para revisar quien hizo cada venta, cuando la hizo y el monto registrado."
-        >
-          {recentSales.length ? (
+          title="Analisis"
+          action={
             <>
-              <div className="space-y-3 md:hidden">
-                {recentSales.map((sale) => (
-                  <button key={sale.id} className="block w-full rounded-xl border border-[#edf1ea] p-4 text-left transition hover:border-[#1f7a3a] hover:bg-[#fafcf9] dark:border-[#23314d] dark:bg-[#182235] dark:hover:border-[#60a5fa]" onClick={() => setSelectedSaleId(sale.id)} type="button">
-                    <div className="space-y-3">
-                      <div className="flex flex-wrap items-start justify-between gap-3">
-                        <div>
-                          <strong className="block text-sm font-semibold text-[#183325] dark:text-[#f8fafc]">{sale.userName || "Sin nombre"}</strong>
-                          <span className="mt-1 block text-xs text-[#5b6d61] dark:text-[#c7d2e0]">{formatDateTime(sale.createdAt)}</span>
-                        </div>
-                        <span
-                          className={`inline-flex rounded-full px-3 py-1 text-xs font-semibold ${
-                            sale.informal
-                              ? "bg-[#fff7ed] text-[#c2410c] dark:bg-[#3b1d12] dark:text-[#fdba74]"
-                              : "bg-[#eff6ff] text-[#1d4ed8] dark:bg-[#172554] dark:text-[#93c5fd]"
-                          }`}
-                        >
-                          {sale.informal ? "Informal" : "Formal"}
-                        </span>
-                      </div>
-                      {sale.description ? <p className="text-sm text-[#5b6d61] dark:text-[#c7d2e0]">{sale.description}</p> : null}
-                      <div className="flex flex-wrap items-center justify-between gap-3 text-sm">
-                        <span className="text-[#5b6d61] dark:text-[#c7d2e0]">{formatPaymentMethod(sale.paymentMethod)}</span>
-                        <strong className="text-[#183325] dark:text-[#f8fafc]">{money(sale.total)}</strong>
-                      </div>
+              <select className="rounded-xl border border-[#dfe7db] bg-white px-3 py-2 text-sm font-semibold text-[#183325] dark:border-[#314056] dark:bg-[#0f172a] dark:text-[#f8fafc]" onChange={(event) => setSelectedMonth(event.target.value)} value={selectedMonth}>
+                {monthOptions.map((item) => <option key={item.key} value={item.key}>{item.label}</option>)}
+              </select>
+              <BackButton />
+            </>
+          }
+        >
+          <div className="grid gap-4 sm:grid-cols-3">
+            <MetricPanel icon="payments" label="Ingresos" value={money(income)} />
+            <MetricPanel icon="remove_circle" label="Egresos" tone="orange" value={money(expenseTotal)} />
+            <MetricPanel icon="account_balance_wallet" label="Neto" tone={net >= 0 ? "green" : "orange"} value={money(net)} />
+          </div>
+
+          <div className="mt-4 grid gap-4 lg:grid-cols-[minmax(0,1fr)_320px]">
+            <article className="rounded-xl border border-[#e4ece2] bg-white p-4 dark:border-[#23314d] dark:bg-[#111827]">
+              <h3 className="text-sm font-semibold text-[#183325] dark:text-[#f8fafc]">Movimiento del mes</h3>
+              <div className="mt-4 space-y-4">
+                {[
+                  ["Ingresos", income, "#1f7a3a"],
+                  ["Egresos", expenseTotal, "#f97316"],
+                ].map(([label, value, color]) => (
+                  <div key={label}>
+                    <div className="mb-2 flex items-center justify-between text-sm">
+                      <span className="text-[#5b6d61] dark:text-[#c7d2e0]">{label}</span>
+                      <strong className="text-[#183325] dark:text-[#f8fafc]">{money(value)}</strong>
                     </div>
-                  </button>
+                    <div className="h-3 overflow-hidden rounded-full bg-[#edf1ea] dark:bg-[#182235]">
+                      <div className="h-full rounded-full" style={{ width: `${Math.max(6, (Number(value) / movementMax) * 100)}%`, backgroundColor: color }} />
+                    </div>
+                  </div>
                 ))}
               </div>
+            </article>
 
-              <div className="hidden overflow-x-auto md:block">
-                <table className="min-w-full text-left text-sm">
-                  <thead className="text-[#6a7b70] dark:text-[#94a3b8]">
-                    <tr>
-                      <th className="pb-3">Fecha</th>
-                      <th className="pb-3">Vendedor</th>
-                      <th className="pb-3 pr-6">Tipo</th>
-                      <th className="pb-3 pl-4">Pago</th>
-                      <th className="pb-3 text-right">Total</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {recentSales.map((sale) => (
-                      <tr key={sale.id} className="cursor-pointer border-t border-[#edf1ea] transition hover:bg-[#f8faf6] dark:border-[#23314d] dark:hover:bg-[#111827]" onClick={() => setSelectedSaleId(sale.id)}>
-                        <td className="py-3 text-[#183325] dark:text-[#f8fafc]">{formatDateTime(sale.createdAt)}</td>
-                        <td className="py-3">
-                          <div>
-                            <strong className="block text-sm font-semibold text-[#183325] dark:text-[#f8fafc]">{sale.userName || "Sin nombre"}</strong>
-                            {sale.description ? <span className="mt-1 block text-xs text-[#5b6d61] dark:text-[#c7d2e0]">{sale.description}</span> : null}
-                          </div>
-                        </td>
-                        <td className="py-3 pr-6">
-                          <span
-                            className={`inline-flex rounded-full px-3 py-1 text-xs font-semibold ${
-                              sale.informal
-                                ? "bg-[#fff7ed] text-[#c2410c] dark:bg-[#3b1d12] dark:text-[#fdba74]"
-                                : "bg-[#eff6ff] text-[#1d4ed8] dark:bg-[#172554] dark:text-[#93c5fd]"
-                            }`}
-                          >
-                            {sale.informal ? "Informal" : "Formal"}
-                          </span>
-                        </td>
-                        <td className="py-3 pl-4 text-[#5b6d61] dark:text-[#c7d2e0]">{formatPaymentMethod(sale.paymentMethod)}</td>
-                        <td className="py-3 text-right font-semibold text-[#183325] dark:text-[#f8fafc]">{money(sale.total)}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            </>
-          ) : (
-            <EmptyState title="Sin ventas recientes" description="Cuando registres ventas, aqui aparecera el historial mas reciente." />
-          )}
-        </SectionBlock>
-
-        <SectionBlock
-          title="Ventas por vendedor"
-          description="Resumen del mes actual para ver quien esta moviendo mas dinero."
-        >
-          {sellerRows.length ? (
-            <div className="space-y-3">
-              {sellerRows.map((item) => (
-                <article key={item.seller} className="rounded-xl border border-[#e4ece2] bg-white px-4 py-4 dark:border-[#23314d] dark:bg-[#182235]">
-                  <div className="flex items-start justify-between gap-3">
-                    <div>
-                      <strong className="block text-sm font-semibold text-[#183325] dark:text-[#f8fafc]">{item.seller}</strong>
-                      <p className="mt-1 text-sm text-[#5b6d61] dark:text-[#c7d2e0]">
-                        {item.count} venta(s) este mes
-                      </p>
+            <article className="rounded-xl border border-[#e4ece2] bg-white p-4 dark:border-[#23314d] dark:bg-[#111827]">
+              <h3 className="text-sm font-semibold text-[#183325] dark:text-[#f8fafc]">Pagos</h3>
+              <div className="mt-4 space-y-3">
+                {paymentRows.length ? paymentRows.map((row) => (
+                  <div key={row.label} className="rounded-lg bg-[#f8faf6] p-3 dark:bg-[#182235]">
+                    <div className="flex items-center justify-between gap-3">
+                      <span className="text-sm text-[#5b6d61] dark:text-[#c7d2e0]">{row.label}</span>
+                      <strong className="text-sm text-[#183325] dark:text-[#f8fafc]">{money(row.total)}</strong>
                     </div>
-                    <strong className="text-sm font-semibold text-[#183325] dark:text-[#f8fafc]">{money(item.total)}</strong>
+                    <p className="mt-1 text-xs text-[#6a7b70] dark:text-[#94a3b8]">{row.count} venta(s)</p>
                   </div>
-                  <p className="mt-3 text-xs text-[#6a7b70] dark:text-[#94a3b8]">Ultima venta: {formatDateTime(item.lastSaleAt)}</p>
-                </article>
+                )) : <EmptyState title="Sin pagos" description="No hay ventas en este mes." />}
+              </div>
+            </article>
+          </div>
+        </SectionBlock>
+      ) : null}
+
+      {view === "shifts" ? (
+        <SectionBlock title="Resumen de turnos" action={<BackButton />}>
+          {closedShiftSummaries.length ? (
+            <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+              {closedShiftSummaries.map((item) => (
+                <button key={item.shift.id} className="rounded-xl border border-[#e4ece2] bg-white p-4 text-left dark:border-[#23314d] dark:bg-[#111827]" onClick={() => setSelectedShiftId(item.shift.id)} type="button">
+                  <div className="flex items-start justify-between gap-3">
+                    <span className="min-w-0">
+                      <strong className="block truncate text-sm font-semibold text-[#183325] dark:text-[#f8fafc]">{item.shift.userName || "Vendedor"}</strong>
+                      <span className="mt-1 block text-xs text-[#5b6d61] dark:text-[#c7d2e0]">{item.dateLabel} - {item.turnoLabel}</span>
+                    </span>
+                    <span className="rounded-full bg-[#eaf7ee] px-2.5 py-1 text-xs font-semibold text-[#166534] dark:bg-[#1e293b] dark:text-[#93c5fd]">{item.totalSales}</span>
+                  </div>
+                  <strong className="mt-4 block text-2xl font-semibold text-[#183325] dark:text-[#f8fafc]">{item.totalAmountLabel}</strong>
+                </button>
               ))}
             </div>
           ) : (
-            <EmptyState title="Sin ventas en el mes" description="Todavia no hay ventas registradas este mes para comparar vendedores." />
+            <EmptyState title="Sin turnos cerrados" description="Cuando un vendedor cierre su turno, el resumen aparecera aqui." />
           )}
         </SectionBlock>
-      </div>
-      <SaleDetailsModal
-        formatDateTime={formatDateTime}
-        money={money}
-        onClose={() => setSelectedSaleId(null)}
-        open={Boolean(selectedSale)}
-        sale={selectedSale}
-      />
-      <ShiftSummaryModal
-        money={money}
-        onClose={() => setSelectedShiftId(null)}
-        open={Boolean(selectedShiftSummary)}
-        summary={selectedShiftSummary}
-      />
+      ) : null}
+
+      <SaleDetailsModal formatDateTime={formatDateTime} money={money} onClose={() => setSelectedSaleId(null)} open={Boolean(selectedSale)} sale={selectedSale} />
+      <ShiftSummaryModal money={money} onClose={() => setSelectedShiftId(null)} open={Boolean(selectedShiftSummary)} summary={selectedShiftSummary} />
     </div>
   );
 }

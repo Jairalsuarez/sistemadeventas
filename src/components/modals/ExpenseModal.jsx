@@ -109,6 +109,7 @@ export default function ExpenseModal({
   money,
   onClose,
   open,
+  presentation = "modal",
   setExpense,
   uploadError,
   uploadExpenseEvidence,
@@ -179,7 +180,7 @@ export default function ExpenseModal({
   const summaryStep = requiresDistributor ? 5 : 4;
 
   return (
-    <Modal open={open} onClose={onClose} text="Registra el egreso en pasos claros antes de descontarlo de la cartera." title="Registrar egreso" wide>
+    <Modal open={open} onClose={onClose} text={presentation === "page" ? "" : "Registra el egreso en pasos claros antes de descontarlo de la cartera."} title="Registrar egreso" variant={presentation === "page" ? "page" : "default"} wide>
       <div className="grid gap-5">
         <div className="flex items-center justify-center gap-3 rounded-2xl border border-[#edf1ea] bg-[#fbfcfa] px-4 py-3 dark:border-[#23314d] dark:bg-[#111827]">
           {steps.map((item) => {
@@ -504,76 +505,56 @@ export default function ExpenseModal({
         ) : null}
 
         {step === summaryStep ? (
-          <div className={stepPanelClassName}>
-            <div className="grid gap-4 lg:grid-cols-[minmax(0,1.2fr)_320px]">
-              <div className="rounded-lg border border-[#e4ece2] bg-white p-4 dark:border-[#23314d] dark:bg-[#111827]">
-                <h3 className="text-base font-semibold text-[#183325] dark:text-[#f8fafc]">Detalle del egreso</h3>
-                <div className="mt-4 space-y-3 text-sm text-[#5b6d61] dark:text-[#c7d2e0]">
-                  <div className="flex items-center justify-between gap-3">
+          <div className="grid gap-3">
+              <div className="rounded-lg border border-[#e4ece2] bg-white p-3 dark:border-[#23314d] dark:bg-[#111827]">
+                <div className="space-y-2 text-sm text-[#5b6d61] dark:text-[#c7d2e0]">
+                  <div className="grid grid-cols-[112px_minmax(0,1fr)] items-start gap-3">
                     <span>Categoria</span>
-                    <strong className="text-[#183325] dark:text-[#f8fafc]">{categoryName}</strong>
+                    <strong className="min-w-0 break-words text-right text-[#183325] dark:text-[#f8fafc]">{categoryName}</strong>
                   </div>
                   {requiresDistributor ? (
-                    <div className="flex items-center justify-between gap-3">
+                    <div className="grid grid-cols-[112px_minmax(0,1fr)] items-start gap-3">
                       <span>Distribuidor</span>
-                      <strong className="text-[#183325] dark:text-[#f8fafc]">{distributorName}</strong>
+                      <strong className="min-w-0 break-words text-right text-[#183325] dark:text-[#f8fafc]">{distributorName}</strong>
                     </div>
                   ) : null}
-                  <div className="flex items-center justify-between gap-3">
+                  <div className="grid grid-cols-[112px_minmax(0,1fr)] items-start gap-3">
                     <span>Descripcion</span>
-                    <strong className="text-right text-[#183325] dark:text-[#f8fafc]">{expense.descripcion}</strong>
+                    <strong className="min-w-0 break-words text-right text-[#183325] dark:text-[#f8fafc]">{expense.descripcion}</strong>
                   </div>
-                  <div className="rounded-md border border-[#dbe6d8] bg-[#f8faf6] px-3 py-3 dark:border-[#314056] dark:bg-[#182235]">
-                    <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[#6a7b70] dark:text-[#94a3b8]">Detalle registrado</p>
-                    <p className="mt-2 leading-6 text-[#5b6d61] dark:text-[#c7d2e0]">{expense.detalleOferta}</p>
+                  <div className="rounded-md border border-[#dbe6d8] bg-[#f8faf6] px-3 py-2 dark:border-[#314056] dark:bg-[#182235]">
+                    <p className="line-clamp-3 break-words leading-6 text-[#5b6d61] dark:text-[#c7d2e0]">{expense.detalleOferta}</p>
                   </div>
-                  {expense.evidenceName ? <div className="rounded-md border border-[#dbe6d8] bg-[#f8faf6] px-3 py-2 text-xs text-[#5b6d61] dark:border-[#314056] dark:bg-[#182235] dark:text-[#c7d2e0]">Evidencia: {expense.evidenceName}</div> : null}
+                  {expense.evidenceUrl ? <a className="inline-flex items-center gap-2 text-xs font-semibold text-[#1f7a3a] dark:text-[#93c5fd]" href={expense.evidencePreviewUrl || expense.evidenceUrl} rel="noreferrer" target="_blank"><Icon className="text-base" name="visibility" />Ver evidencia</a> : null}
                 </div>
               </div>
 
-              <div className="rounded-lg border border-[#e4ece2] bg-[#f8faf6] p-4 dark:border-[#23314d] dark:bg-[#182235]">
-                <h3 className="text-base font-semibold text-[#183325] dark:text-[#f8fafc]">Resumen de cartera</h3>
-                <div className="mt-4 space-y-3 text-sm text-[#5b6d61] dark:text-[#c7d2e0]">
+              <div className="rounded-lg border border-[#e4ece2] bg-[#f8faf6] p-3 dark:border-[#23314d] dark:bg-[#182235]">
+                <div className="space-y-2 text-sm text-[#5b6d61] dark:text-[#c7d2e0]">
                   <div className="flex items-center justify-between gap-3">
                     <span>Egreso total</span>
                     <strong className="text-[#183325] dark:text-[#f8fafc]">{money(totalAmount)}</strong>
                   </div>
                   <div className="flex items-center justify-between gap-3">
-                    <span>Cartera actual</span>
-                    <strong className="text-[#183325] dark:text-[#f8fafc]">{money(wallet?.saldoActual || 0)}</strong>
-                  </div>
-                  <div className="flex items-center justify-between gap-3">
-                    <span>Cartera luego del egreso</span>
+                    <span>Cartera luego</span>
                     <strong className="text-[#b42318] dark:text-[#fca5a5]">{money(nextWalletTotal)}</strong>
                   </div>
                 </div>
 
-                {expense.evidenceUrl ? (
-                  <div className="mt-4 rounded-lg border border-[#dbe6d8] bg-white p-3 dark:border-[#314056] dark:bg-[#111827]">
-                    <p className="mb-3 text-xs font-semibold uppercase tracking-[0.18em] text-[#6a7b70] dark:text-[#94a3b8]">Vista previa de evidencia</p>
-                    <div className="overflow-hidden rounded-lg border border-[#edf1ea] bg-[#f8faf6] dark:border-[#23314d] dark:bg-[#0f172a]">
-                      <img alt="Vista previa del egreso" className="h-36 w-full object-contain" src={expense.evidencePreviewUrl || expense.evidenceUrl} />
-                    </div>
-                  </div>
-                ) : null}
-
-                <label className="mt-4 flex items-start gap-3 rounded-lg border border-[#dbe6d8] bg-white px-4 py-3 dark:border-[#314056] dark:bg-[#111827]">
+                <label className="mt-3 flex items-center gap-3 rounded-lg border border-[#dbe6d8] bg-white px-3 py-2 dark:border-[#314056] dark:bg-[#111827]">
                   <input
                     checked={Boolean(expense.confirmationAccepted)}
                     className="mt-1 h-4 w-4 rounded border-[#d0dcd0] text-[#1f7a3a] focus:ring-[#1f7a3a] dark:border-[#314056] dark:bg-[#0f172a] dark:text-[#60a5fa] dark:focus:ring-[#60a5fa]"
                     onChange={(e) => updateExpense({ confirmationAccepted: e.target.checked })}
                     type="checkbox"
                   />
-                  <span className="text-sm leading-6 text-[#5b6d61] dark:text-[#c7d2e0]">
-                    Confirmo que estoy de acuerdo en registrar este egreso y entiendo que reducira la cartera actual.
-                  </span>
+                  <span className="text-sm leading-5 text-[#5b6d61] dark:text-[#c7d2e0]">Confirmo este egreso.</span>
                 </label>
               </div>
-            </div>
           </div>
         ) : null}
 
-        <div className="flex flex-col-reverse gap-3 border-t border-[#edf1ea] pt-4 sm:flex-row sm:items-center sm:justify-between">
+        <div className="sticky bottom-0 z-10 -mx-1 flex flex-col-reverse gap-3 border-t border-[#edf1ea] bg-white/95 px-1 pt-3 backdrop-blur dark:bg-[#111827]/95 sm:flex-row sm:items-center sm:justify-between">
           <button className={`${subtleButtonClassName} w-full sm:w-auto`} onClick={step === 1 ? onClose : prevStep} type="button">
             {step === 1 ? "Cancelar" : "Volver"}
           </button>
