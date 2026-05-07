@@ -5,7 +5,7 @@ export async function fetchRemoteProducts() {
   if (!supabaseReady || !supabase) return { ok: false, error: "Supabase no configurado." };
   const { data, error } = await supabase
     .from("products")
-    .select("id,nombre,categoria,marca,descripcion,precio,stock,imagen_url,activo,updated_at")
+    .select("id,nombre,categoria,marca,descripcion,precio,stock,stock_local,stock_deposito,imagen_url,activo,updated_at")
     .order("created_at", { ascending: false });
 
   if (error) return { ok: false, error: error.message };
@@ -21,7 +21,9 @@ export async function upsertRemoteProduct(product, userId) {
     marca: product.marca || null,
     descripcion: product.descripcion,
     precio: safeNumber(product.precio),
-    stock: safeNumber(product.stock),
+    stock: safeNumber(product.stockLocal) + safeNumber(product.stockDeposito),
+    stock_local: safeNumber(product.stockLocal),
+    stock_deposito: safeNumber(product.stockDeposito),
     imagen_url: product.imagen_url,
     activo: product.activo ?? true,
     updated_by: userId || null,
@@ -31,7 +33,7 @@ export async function upsertRemoteProduct(product, userId) {
   const { data, error } = await supabase
     .from("products")
     .upsert(payload)
-    .select("id,nombre,categoria,marca,descripcion,precio,stock,imagen_url,activo,updated_at")
+    .select("id,nombre,categoria,marca,descripcion,precio,stock,stock_local,stock_deposito,imagen_url,activo,updated_at")
     .single();
 
   if (error) return { ok: false, error: error.message };

@@ -19,12 +19,17 @@ export default function useCatalogActions({
   };
 
   const saveProduct = async () => {
-    if (!productForm.nombre || !productForm.imagen_url) return inform("Completa nombre e imagen.", "warning");
+    if (!productForm.nombre) {
+      inform("Completa el nombre del producto.", "warning");
+      return false;
+    }
 
     const draft = {
       ...productForm,
       precio: Number(productForm.precio),
-      stock: Number(productForm.stock),
+      stockLocal: Number(productForm.stockLocal || 0),
+      stockDeposito: Number(productForm.stockDeposito || 0),
+      stock: Number(productForm.stockLocal || 0) + Number(productForm.stockDeposito || 0),
       id: editing?.id || crypto.randomUUID(),
       updatedAt: new Date().toISOString(),
     };
@@ -32,7 +37,7 @@ export default function useCatalogActions({
     const remote = await upsertRemoteProduct(draft, session?.mode === "supabase" ? session.userId : null);
     if (requiresRemoteWrite && !remote.ok) {
       inform(remote.error || "No se pudo guardar el producto.", "error");
-      return;
+      return false;
     }
 
     const record = remote.ok ? remote.product : draft;
@@ -45,11 +50,12 @@ export default function useCatalogActions({
     notify(`${personName(user)} ${editing ? "actualizo" : "creo"} el producto ${record.nombre}.`, personName(user));
     resetProductFlow();
     inform("Producto guardado correctamente.", "success");
+    return true;
   };
 
   const removeProduct = async (id) => {
     const product = app.products.find((item) => item.id === id);
-    if (!product) return;
+    if (!product) return false;
 
     const remote = await deleteRemoteProduct(id);
     if (requiresRemoteWrite && !remote.ok) {
@@ -62,7 +68,7 @@ export default function useCatalogActions({
         const archivedRemote = await upsertRemoteProduct(archivedDraft, session?.userId || null);
         if (!archivedRemote.ok) {
           inform(archivedRemote.error || "No se pudo desactivar el producto.", "error");
-          return;
+          return false;
         }
 
         commit((current) => ({
@@ -72,17 +78,18 @@ export default function useCatalogActions({
         notify(`${personName(user)} desactivo el producto ${product.nombre}.`, personName(user), "warning");
         resetProductFlow();
         inform("Este producto ya tiene ventas registradas, por eso no se puede eliminar. Lo desactive del catalogo.", "warning");
-        return;
+        return true;
       }
 
       inform(remote.error || "No se pudo eliminar el producto.", "error");
-      return;
+      return false;
     }
 
     commit((current) => ({ ...current, products: current.products.filter((item) => item.id !== id) }));
     notify(`${personName(user)} elimino el producto ${product.nombre}.`, personName(user), "warning");
     resetProductFlow();
     inform("Producto eliminado correctamente.", "success");
+    return true;
   };
 
   const setFeaturedProduct = (productId) => {

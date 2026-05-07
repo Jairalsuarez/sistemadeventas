@@ -15,7 +15,6 @@ import { getSession, restoreSupabaseSession, verifySupabasePassword } from "../s
 import { registerPlugin } from "@capacitor/core";
 import {
   createRemoteDistributor,
-  createRemoteExpenseCategory,
   createRemoteCommunityFeedback,
   createRemoteExpense,
   createRemoteInformalSale,
@@ -47,6 +46,8 @@ const EMPTY_PRODUCT = {
   marca: "",
   descripcion: "",
   precio: 0,
+  stockLocal: 0,
+  stockDeposito: 0,
   stock: 0,
   imagen_url: "",
   activo: true,
@@ -75,6 +76,15 @@ const EMPTY_EXPENSE = {
 };
 const EMPTY_SALE_PAYMENT = { method: "efectivo", evidenceUrl: "", evidenceName: "" };
 const EMPTY_INFORMAL_SALE = { total: 0, totalInput: "", description: "" };
+const EMPTY_MERCHANDISE = {
+  distributorId: "",
+  distributorName: "",
+  isNewDistributor: false,
+  newDistributorName: "",
+  location: "deposito",
+  amount: 0,
+  amountInput: "",
+};
 const EMPTY_SCHEDULE_FORM = { fecha: "", inicio: "", fin: "", responsable: "", turno: "Mañana", notas: "" };
 
 let nativeNotificationChannelReady = false;
@@ -127,8 +137,10 @@ export function AppProvider({ children }) {
   const [saleModal, setSaleModal] = useState(false);
   const [informalSaleModal, setInformalSaleModal] = useState(false);
   const [expenseModal, setExpenseModal] = useState(false);
+  const [merchandiseModal, setMerchandiseModal] = useState(false);
   const [walletModal, setWalletModal] = useState(false);
   const [syncing, setSyncing] = useState(false);
+  const [syncedSessionKey, setSyncedSessionKey] = useState("");
   const [uploading, setUploading] = useState(false);
   const [uploadError, setUploadError] = useState("");
   const [skipNextSessionRestore, setSkipNextSessionRestore] = useState(false);
@@ -139,10 +151,13 @@ export function AppProvider({ children }) {
   const [salePayment, setSalePayment] = useState(EMPTY_SALE_PAYMENT);
   const [informalSale, setInformalSale] = useState(EMPTY_INFORMAL_SALE);
   const [informalSalePayment, setInformalSalePayment] = useState(EMPTY_SALE_PAYMENT);
+  const [merchandise, setMerchandise] = useState(EMPTY_MERCHANDISE);
+  const [merchandiseLines, setMerchandiseLines] = useState([{ productId: "", cantidad: 1 }]);
   const [scheduleForm, setScheduleForm] = useState(EMPTY_SCHEDULE_FORM);
   const [saleSubmitting, setSaleSubmitting] = useState(false);
   const [informalSaleSubmitting, setInformalSaleSubmitting] = useState(false);
   const [expenseSubmitting, setExpenseSubmitting] = useState(false);
+  const [merchandiseSubmitting, setMerchandiseSubmitting] = useState(false);
   const [feedbackSubmitting, setFeedbackSubmitting] = useState(false);
   const [notificationPermission, setNotificationPermission] = useState(getBrowserNotificationPermission);
   const { toasts, pushToast, dismissToast } = useToastQueue();
@@ -175,12 +190,24 @@ export function AppProvider({ children }) {
 
   useEffect(() => saveAppData(app), [app]);
   useEffect(() => setWalletForm((current) => ({ ...current, saldo: app.wallet.saldoActual })), [app.wallet.saldoActual]);
-  const { syncRemoteData } = useSupabaseSync(session, setSession, commit, setSyncing);
+  const sessionKey = session ? `${session.mode}:${session.userId || ""}` : "";
+  const { syncRemoteData } = useSupabaseSync(session, setSession, commit, setSyncing, (syncedSession) => {
+    if (syncedSession?.mode === "supabase") {
+      setSyncedSessionKey(`${syncedSession.mode}:${syncedSession.userId || ""}`);
+    }
+  });
   useEffect(() => {
-    if (session && !syncing) {
+    if (session?.mode === "supabase") {
+      setSyncedSessionKey("");
+    }
+  }, [sessionKey]);
+  useEffect(() => {
+    if (!session) return;
+    if (session.mode === "supabase" && syncedSessionKey !== sessionKey) return;
+    if (!syncing) {
       setAuthChecking(false);
     }
-  }, [session, syncing, setAuthChecking]);
+  }, [session, sessionKey, syncedSessionKey, syncing, setAuthChecking]);
   useEffect(() => {
     let cancelled = false;
     (async () => {
@@ -194,7 +221,9 @@ export function AppProvider({ children }) {
       const localSession = getSession();
       if (localSession) {
         setSession(localSession);
-        setAuthChecking(false);
+        if (localSession.mode !== "supabase") {
+          setAuthChecking(false);
+        }
         return;
       }
       const restored = await restoreSupabaseSession();
@@ -524,6 +553,12 @@ export function AppProvider({ children }) {
     setInformalSaleModal(true);
   };
 
+  const openMerchandiseFlow = ({ asPage = false } = {}) => {
+    setMerchandise(EMPTY_MERCHANDISE);
+    setMerchandiseLines([{ productId: "", cantidad: 1 }]);
+    setMerchandiseModal(!asPage);
+  };
+
   const uploadAsset = async (file, folder = "products") => {
     try {
       setUploading(true);
@@ -583,15 +618,13 @@ export function AppProvider({ children }) {
     upsertRemoteProduct,
     deleteRemoteProduct,
   });
-  const { startShift, closeShift, createSale, createInformalSale, createExpense, adjustWallet, createSchedule, updateScheduleStatus, deleteSchedule } =
+  const { startShift, closeShift, createSale, createInformalSale, createExpense, createMerchandiseExpense, transferInventory, adjustWallet, createSchedule, updateScheduleStatus, deleteSchedule } =
     useOperationsActions({
       app,
       session,
       user,
       activeShift,
       shiftCash,
-      setShiftCash,
-      saleLines,
       setSaleLines,
       salePayment,
       setSalePayment,
@@ -608,12 +641,18 @@ export function AppProvider({ children }) {
       setSaleModal,
       setInformalSaleModal,
       expense,
-      expenseCategories: app.expenseCategories || [],
       distributors: app.distributors || [],
       setExpense,
       expenseSubmitting,
       setExpenseSubmitting,
       setExpenseModal,
+      merchandise,
+      setMerchandise,
+      merchandiseLines,
+      setMerchandiseLines,
+      merchandiseSubmitting,
+      setMerchandiseSubmitting,
+      setMerchandiseModal,
       walletForm,
       setWalletForm,
       setWalletModal,
@@ -635,8 +674,8 @@ export function AppProvider({ children }) {
       upsertRemoteWalletState,
       createRemoteWalletMovement,
       createRemoteExpense,
-      createRemoteExpenseCategory,
       createRemoteDistributor,
+      upsertRemoteProduct,
       createRemoteNotification,
       createRemoteSchedule,
       updateRemoteScheduleStatus,
@@ -735,6 +774,8 @@ export function AppProvider({ children }) {
     setInformalSaleModal,
     expenseModal,
     setExpenseModal,
+    merchandiseModal,
+    setMerchandiseModal,
     walletModal,
     setWalletModal,
     editing,
@@ -744,6 +785,7 @@ export function AppProvider({ children }) {
     saleSubmitting,
     informalSaleSubmitting,
     expenseSubmitting,
+    merchandiseSubmitting,
     feedbackSubmitting,
     authChecking,
     loginLoading,
@@ -766,6 +808,10 @@ export function AppProvider({ children }) {
     setInformalSale,
     informalSalePayment,
     setInformalSalePayment,
+    merchandise,
+    setMerchandise,
+    merchandiseLines,
+    setMerchandiseLines,
     scheduleForm,
     setScheduleForm,
     activeShift,
@@ -796,6 +842,7 @@ export function AppProvider({ children }) {
     openEditProduct,
     openSaleFlow,
     openInformalSaleFlow,
+    openMerchandiseFlow,
     handleLogin,
     saveProduct,
     removeProduct,
@@ -808,6 +855,8 @@ export function AppProvider({ children }) {
     createSale,
     createInformalSale,
     createExpense,
+    createMerchandiseExpense,
+    transferInventory,
     adjustWallet,
     createSchedule,
     deleteSchedule,

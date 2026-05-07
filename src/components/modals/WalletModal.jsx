@@ -41,7 +41,7 @@ export default function WalletModal({ adjustWallet, onClose, open, setWalletForm
             type="checkbox"
           />
           <span className="text-sm leading-6 text-[#5b6d61] dark:text-[#c7d2e0]">
-            Confirmo que entiendo este ajuste manual y que modificara directamente la cartera actual del negocio.
+            Confirmo que entiendo este ajuste manual y que modificara directamente el saldo actual del negocio.
           </span>
         </label>
 

@@ -71,8 +71,6 @@ export default function useOperationsActions({
   user,
   activeShift,
   shiftCash,
-  setShiftCash,
-  saleLines,
   setSaleLines,
   salePayment,
   setSalePayment,
@@ -89,12 +87,18 @@ export default function useOperationsActions({
   setSaleModal,
   setInformalSaleModal,
   expense,
-  expenseCategories,
   distributors,
   setExpense,
   expenseSubmitting,
   setExpenseSubmitting,
   setExpenseModal,
+  merchandise,
+  setMerchandise,
+  merchandiseLines,
+  setMerchandiseLines,
+  merchandiseSubmitting,
+  setMerchandiseSubmitting,
+  setMerchandiseModal,
   walletForm,
   setWalletForm,
   setWalletModal,
@@ -116,8 +120,8 @@ export default function useOperationsActions({
   upsertRemoteWalletState,
   createRemoteWalletMovement,
   createRemoteExpense,
-  createRemoteExpenseCategory,
   createRemoteDistributor,
+  upsertRemoteProduct,
   createRemoteNotification,
   createRemoteSchedule,
   updateRemoteScheduleStatus,
@@ -141,6 +145,58 @@ export default function useOperationsActions({
   };
 
   const cleanName = (value) => String(value || "").trim();
+
+  const rollbackProductSale = (draftSale, amount) => {
+    const soldQuantities = new Map(
+      (draftSale.items || []).map((line) => [line.productId, Number(line.cantidad || 0)])
+    );
+
+    commit((current) => ({
+      ...current,
+      sales: current.sales.filter((sale) => sale.id !== draftSale.id),
+      wallet: {
+        ...current.wallet,
+        saldoActual: Math.max(Number(current.wallet?.saldoActual || 0) - Number(amount || 0), 0),
+        updatedAt: new Date().toISOString(),
+      },
+      products: current.products.map((product) => {
+        const quantity = soldQuantities.get(product.id);
+        if (!quantity) return product;
+        const stockLocal = Number(product.stockLocal || 0) + quantity;
+        return {
+          ...product,
+          stockLocal,
+          stock: stockLocal + Number(product.stockDeposito || 0),
+        };
+      }),
+      turnos: draftSale.shiftId
+        ? current.turnos.map((turno) =>
+            turno.id === draftSale.shiftId
+              ? { ...turno, totalVentas: Math.max(Number(turno.totalVentas || 0) - Number(amount || 0), 0) }
+              : turno
+          )
+        : current.turnos,
+    }));
+  };
+
+  const rollbackInformalSale = (draftSale, amount) => {
+    commit((current) => ({
+      ...current,
+      sales: current.sales.filter((sale) => sale.id !== draftSale.id),
+      wallet: {
+        ...current.wallet,
+        saldoActual: Math.max(Number(current.wallet?.saldoActual || 0) - Number(amount || 0), 0),
+        updatedAt: new Date().toISOString(),
+      },
+      turnos: draftSale.shiftId
+        ? current.turnos.map((turno) =>
+            turno.id === draftSale.shiftId
+              ? { ...turno, totalVentas: Math.max(Number(turno.totalVentas || 0) - Number(amount || 0), 0) }
+              : turno
+          )
+        : current.turnos,
+    }));
+  };
 
   const startShift = async () => {
     if (user?.role !== "vendedor") return inform("Los turnos solo aplican para vendedores.", "warning");
@@ -282,7 +338,7 @@ export default function useOperationsActions({
       return false;
     }
 
-    const bad = salePreview.find((line) => (app.products.find((product) => product.id === line.productId)?.stock || 0) < line.cantidad);
+    const bad = salePreview.find((line) => (app.products.find((product) => product.id === line.productId)?.stockLocal || 0) < line.cantidad);
     if (bad) {
       inform(`Sin stock suficiente para ${bad.nombre}.`, "warning");
       return false;
@@ -312,7 +368,13 @@ export default function useOperationsActions({
       wallet: nextWallet,
       products: current.products.map((product) => {
         const line = salePreview.find((item) => item.productId === product.id);
-        return line ? { ...product, stock: product.stock - line.cantidad } : product;
+        return line
+          ? {
+              ...product,
+              stockLocal: Math.max(Number(product.stockLocal || 0) - line.cantidad, 0),
+              stock: Math.max(Number(product.stockLocal || 0) - line.cantidad, 0) + Number(product.stockDeposito || 0),
+            }
+          : product;
       }),
       turnos: nextShift ? current.turnos.map((turno) => (turno.id === activeShift.id ? nextShift : turno)) : current.turnos,
     }));
@@ -327,34 +389,15 @@ export default function useOperationsActions({
     try {
       const saleRemote = await createRemoteSale(draftSale);
       if (session?.mode === "supabase" && !saleRemote.ok) {
-        commit((current) => ({
-          ...current,
-          sales: app.sales,
-          wallet: app.wallet,
-          products: app.products,
-          turnos: app.turnos,
-        }));
+        rollbackProductSale(draftSale, saleTotal);
         inform(`No se pudo guardar la venta en Supabase. ${saleRemote.error || "Intenta de nuevo."}`, "error");
         return false;
       }
 
       const saleRecord = saleRemote.ok ? saleRemote.sale : draftSale;
-      const walletRemote = await upsertRemoteWalletState(nextWallet, session?.mode === "supabase" ? session.userId : null);
-      if (session?.mode === "supabase" && !walletRemote.ok) {
-        inform(`La venta se registro, pero no se pudo actualizar la cartera en Supabase. ${walletRemote.error || "Revisa wallet_state."}`, "warning");
-      }
-
-      if (session?.mode === "supabase") {
-        await createRemoteWalletMovement({
-          tipo: "venta",
-          monto: saleTotal,
-          descripcion: `Venta ${saleRecord.id} - ${salePayment.method}`,
-          createdBy: session.userId,
-        });
-      }
-
+      const walletRemote = session?.mode === "supabase" ? { ok: true, wallet: nextWallet } : await upsertRemoteWalletState(nextWallet, null);
       const finalWallet = walletRemote.ok ? walletRemote.wallet : nextWallet;
-      const shiftRemote = nextShift ? await updateRemoteShift(nextShift) : null;
+      const shiftRemote = session?.mode === "supabase" || !nextShift ? null : await updateRemoteShift(nextShift);
       const finalShift = nextShift ? (shiftRemote?.ok ? remoteShiftOr(nextShift, shiftRemote) : nextShift) : null;
 
       commit((current) => ({
@@ -364,13 +407,7 @@ export default function useOperationsActions({
         turnos: finalShift ? current.turnos.map((turno) => (turno.id === activeShift.id ? finalShift : turno)) : current.turnos,
       }));
     } catch (error) {
-      commit((current) => ({
-        ...current,
-        sales: app.sales,
-        wallet: app.wallet,
-        products: app.products,
-        turnos: app.turnos,
-      }));
+      rollbackProductSale(draftSale, saleTotal);
       inform(`No se pudo completar la venta. ${error?.message || "Intenta de nuevo."}`, "error");
       return false;
     } finally {
@@ -409,7 +446,7 @@ export default function useOperationsActions({
 
     const draftSale = {
       id: crypto.randomUUID(),
-      shiftId: activeShift?.id || null,
+      shiftId: activeShift?.id && activeShift.id !== "" ? activeShift.id : null,
       userId: user.id,
       userName: personName(user),
       items: [],
@@ -435,12 +472,7 @@ export default function useOperationsActions({
     try {
       const saleRemote = await createRemoteInformalSale(draftSale);
       if (session?.mode === "supabase" && !saleRemote.ok) {
-        commit((current) => ({
-          ...current,
-          sales: app.sales,
-          wallet: app.wallet,
-          turnos: app.turnos,
-        }));
+        rollbackInformalSale(draftSale, total);
         inform(`No se pudo guardar la venta informal en Supabase. ${saleRemote.error || "Intenta de nuevo."}`, "error");
         return false;
       }
@@ -459,12 +491,7 @@ export default function useOperationsActions({
         turnos: nextShift ? current.turnos.map((turno) => (turno.id === activeShift.id ? nextShift : turno)) : current.turnos,
       }));
     } catch (error) {
-      commit((current) => ({
-        ...current,
-        sales: app.sales,
-        wallet: app.wallet,
-        turnos: app.turnos,
-      }));
+      rollbackInformalSale(draftSale, total);
       inform(`No se pudo completar la venta informal. ${error?.message || "Intenta de nuevo."}`, "error");
       return false;
     } finally {
@@ -473,59 +500,137 @@ export default function useOperationsActions({
     return true;
   };
 
+  const resetExpenseForm = () =>
+    setExpense((current) => ({
+      ...current,
+      categoria: "Egreso",
+      categoryId: "",
+      categoryName: "Egreso",
+      descripcion: "",
+      detalleOferta: "",
+      distributorId: "",
+      distributorName: "",
+      evidenceUrl: "",
+      evidencePreviewUrl: "",
+      evidenceName: "",
+      cantidad: 1,
+      unitCost: 0,
+      monto: 0,
+      montoInput: "",
+      confirmationAccepted: false,
+    }));
+
   const createExpense = async () => {
-    if (expenseSubmitting) return;
+    if (expenseSubmitting) return false;
     const amount = parseMoneyInput(expense.montoInput || expense.monto);
-    const categoryName = expense.isNewCategory ? cleanName(expense.newCategoryName) : cleanName(expense.categoryName);
-    const needsDistributor = categoryName.toLowerCase() === "mercaderia";
-    const distributorName = expense.isNewDistributor ? cleanName(expense.newDistributorName) : cleanName(expense.distributorName);
-    const currentCategories = expenseCategories || [];
-    const currentDistributors = distributors || [];
-    if (!user || !categoryName || (needsDistributor && !distributorName) || !expense.descripcion.trim() || !expense.detalleOferta.trim() || !expense.evidenceUrl || amount <= 0 || !expense.confirmationAccepted) {
-      return inform("Completa el egreso correctamente.", "warning");
+    const description = cleanName(expense.descripcion);
+    if (!user || amount <= 0 || !description) {
+      inform("Ingresa el saldo a egresar y una descripcion.", "warning");
+      return false;
     }
 
     setExpenseSubmitting(true);
+    const draftExpense = {
+      id: crypto.randomUUID(),
+      categoria: "Egreso",
+      categoryId: null,
+      categoryName: "Egreso",
+      descripcion: description,
+      detalleOferta: description,
+      distributorId: null,
+      distributorName: "",
+      evidenceUrl: "",
+      evidencePreviewUrl: "",
+      evidenceName: "",
+      cantidad: 1,
+      unitCost: amount,
+      confirmationAccepted: true,
+      monto: amount,
+      userId: user.id,
+      userName: personName(user),
+      createdAt: new Date().toISOString(),
+    };
+    const nextWallet = { saldoActual: app.wallet.saldoActual - amount, updatedAt: new Date().toISOString() };
+
+    commit((current) => ({
+      ...current,
+      expenses: [draftExpense, ...current.expenses],
+      wallet: nextWallet,
+    }));
+    notify(`${personName(user)} registro un egreso de ${money(amount)}.`, personName(user), "warning");
+    resetExpenseForm();
+    setExpenseModal(false);
+    inform("Egreso registrado con exito.", "success");
+
     try {
-      let nextCategory =
-        currentCategories.find((item) =>
-          expense.isNewCategory
-            ? cleanName(item?.nombre).toLowerCase() === categoryName.toLowerCase()
-            : item.id === expense.categoryId
-        ) || null;
-
-      if (!nextCategory && expense.isNewCategory) {
-        if (session?.mode === "supabase") {
-          const remoteCategory = await createRemoteExpenseCategory({
-            nombre: categoryName,
-            createdBy: session.userId,
-          });
-
-          if (!remoteCategory.ok) {
-            inform(`No se pudo crear la categoria en Supabase. ${remoteCategory.error || "Revisa la tabla y sus politicas."}`, "error");
-            return;
-          }
-
-          nextCategory = remoteCategory.category;
-        } else {
-          nextCategory = {
-            id: crypto.randomUUID(),
-            nombre: categoryName,
-            createdAt: new Date().toISOString(),
-          };
-        }
+      const expenseRemote = await createRemoteExpense(draftExpense);
+      if (session?.mode === "supabase" && !expenseRemote.ok && !isMissingRelationError(expenseRemote.error)) {
+        inform("No se pudo guardar el egreso. Intenta de nuevo.", "error");
+        return false;
       }
 
-      let nextDistributor =
-        needsDistributor
-          ? currentDistributors.find((item) =>
-              expense.isNewDistributor
-                ? cleanName(item?.nombre).toLowerCase() === distributorName.toLowerCase()
-                : item.id === expense.distributorId
-            ) || null
-          : null;
+      const expenseRecord = expenseRemote.ok ? expenseRemote.expense : draftExpense;
+      const walletRemote = await upsertRemoteWalletState(nextWallet, session?.mode === "supabase" ? session.userId : null);
 
-      if (needsDistributor && !nextDistributor && expense.isNewDistributor) {
+      if (session?.mode === "supabase") {
+        await createRemoteWalletMovement({
+          tipo: "egreso",
+          monto: amount,
+          descripcion: description,
+          createdBy: session.userId,
+        });
+      }
+
+      commit((current) => ({
+        ...current,
+        expenses: current.expenses.map((item) => (item.id === draftExpense.id ? expenseRecord : item)),
+        wallet: walletRemote.ok ? walletRemote.wallet : nextWallet,
+      }));
+    } catch (error) {
+      inform(`No se pudo completar el egreso. ${error?.message || "Intenta de nuevo."}`, "error");
+      return false;
+    } finally {
+      setExpenseSubmitting(false);
+    }
+    return true;
+  };
+
+  const createMerchandiseExpense = async () => {
+    if (merchandiseSubmitting) return false;
+    const amount = parseMoneyInput(merchandise.amountInput || merchandise.amount);
+    const distributorName = merchandise.isNewDistributor ? cleanName(merchandise.newDistributorName) : cleanName(merchandise.distributorName);
+    const selectedLines = (merchandiseLines || [])
+      .map((line) => {
+        const product = app.products.find((item) => item.id === line.productId);
+        const quantity = Number(line.cantidad || 0);
+        return product && quantity > 0
+          ? {
+              productId: product.id,
+              nombre: product.nombre,
+              precio: product.precio,
+              cantidad: quantity,
+              subtotal: 0,
+            }
+          : null;
+      })
+      .filter(Boolean);
+
+    if (!user || !distributorName || amount <= 0 || !selectedLines.length) {
+      inform("Completa distribuidor, valor de mercaderia y productos.", "warning");
+      return false;
+    }
+
+    setMerchandiseSubmitting(true);
+    const currentDistributors = distributors || [];
+    let nextDistributor =
+      currentDistributors.find((item) =>
+        merchandise.isNewDistributor
+          ? cleanName(item?.nombre).toLowerCase() === distributorName.toLowerCase()
+          : item.id === merchandise.distributorId
+      ) || null;
+
+    try {
+      if (!nextDistributor && merchandise.isNewDistributor) {
         if (session?.mode === "supabase") {
           const remoteDistributor = await createRemoteDistributor({
             nombre: distributorName,
@@ -536,9 +641,8 @@ export default function useOperationsActions({
 
           if (!remoteDistributor.ok) {
             inform(`No se pudo crear el distribuidor en Supabase. ${remoteDistributor.error || "Revisa la tabla y sus politicas."}`, "error");
-            return;
+            return false;
           }
-
           nextDistributor = remoteDistributor.distributor;
         } else {
           nextDistributor = {
@@ -551,97 +655,95 @@ export default function useOperationsActions({
         }
       }
 
+      const lineSummary = selectedLines.map((line) => `${line.nombre} x ${line.cantidad}`).join(", ");
       const draftExpense = {
-        ...expense,
         id: crypto.randomUUID(),
-        categoria: nextCategory?.nombre || categoryName,
-        categoryId: nextCategory?.id || expense.categoryId || null,
-        categoryName,
-        descripcion: expense.descripcion.trim(),
-        detalleOferta: expense.detalleOferta.trim(),
-        distributorId: needsDistributor ? nextDistributor?.id || expense.distributorId || null : null,
-        distributorName: needsDistributor ? distributorName : "",
-        monto: amount,
-        cantidad: amount > 0 ? 1 : 0,
+        categoria: "Mercaderia",
+        categoryId: null,
+        categoryName: "Mercaderia",
+        descripcion: `Mercaderia - ${distributorName}`,
+        detalleOferta: lineSummary,
+        distributorId: nextDistributor?.id || merchandise.distributorId || null,
+        distributorName,
+        evidenceUrl: "",
+        evidencePreviewUrl: "",
+        evidenceName: "",
+        cantidad: selectedLines.reduce((acc, line) => acc + line.cantidad, 0),
         unitCost: amount,
+        confirmationAccepted: true,
+        monto: amount,
         userId: user.id,
         userName: personName(user),
         createdAt: new Date().toISOString(),
       };
-
       const nextWallet = { saldoActual: app.wallet.saldoActual - amount, updatedAt: new Date().toISOString() };
+      const nextProducts = app.products.map((product) => {
+        const line = selectedLines.find((item) => item.productId === product.id);
+        if (!line) return product;
+        const targetKey = merchandise.location === "local" ? "stockLocal" : "stockDeposito";
+        const nextProduct = { ...product, [targetKey]: Number(product[targetKey] || 0) + line.cantidad, updatedAt: new Date().toISOString() };
+        return { ...nextProduct, stock: Number(nextProduct.stockLocal || 0) + Number(nextProduct.stockDeposito || 0) };
+      });
 
       commit((current) => ({
         ...current,
-        expenseCategories:
-          nextCategory && !(current.expenseCategories || []).some((item) => item.id === nextCategory.id)
-            ? [nextCategory, ...(current.expenseCategories || [])]
-            : current.expenseCategories || [],
         distributors:
           nextDistributor && !(current.distributors || []).some((item) => item.id === nextDistributor.id)
             ? [nextDistributor, ...(current.distributors || [])]
             : current.distributors || [],
         expenses: [draftExpense, ...current.expenses],
         wallet: nextWallet,
+        products: current.products.map((product) => nextProducts.find((item) => item.id === product.id) || product),
       }));
 
-      notify(`${personName(user)} registro un egreso de ${money(amount)}.`, personName(user), "warning");
-      const nextCategoriesSnapshot =
-        nextCategory && !currentCategories.some((item) => item.id === nextCategory.id) ? [nextCategory, ...currentCategories] : currentCategories;
-      const defaultCategory = nextCategoriesSnapshot.find((item) => item.nombre === "Mercaderia") || nextCategoriesSnapshot[0] || null;
-      setExpense({
-        categoria: defaultCategory?.nombre || "Mercaderia",
-        categoryId: "",
-        categoryName: defaultCategory?.nombre || "Mercaderia",
-        isNewCategory: false,
-        newCategoryName: "",
-        descripcion: "",
-        detalleOferta: "",
+      notify(`${personName(user)} registro mercaderia por ${money(amount)}.`, personName(user), "warning");
+      setMerchandise({
         distributorId: "",
         distributorName: "",
         isNewDistributor: false,
         newDistributorName: "",
-        evidenceUrl: "",
-        evidencePreviewUrl: "",
-        evidenceName: "",
-        cantidad: 1,
-        unitCost: 0,
-        monto: 0,
-        montoInput: "",
-        confirmationAccepted: false,
+        location: "deposito",
+        amount: 0,
+        amountInput: "",
       });
-      setExpenseModal(false);
-      inform("Egreso registrado con exito.", "success");
+      setMerchandiseLines([{ productId: "", cantidad: 1 }]);
+      setMerchandiseModal(false);
+      inform("Mercaderia registrada con exito.", "success");
 
       const expenseRemote = await createRemoteExpense(draftExpense);
       if (session?.mode === "supabase" && !expenseRemote.ok && !isMissingRelationError(expenseRemote.error)) {
-        inform("No se pudo guardar el egreso. Intenta de nuevo.", "error");
-        return;
+        inform("No se pudo guardar la mercaderia. Intenta de nuevo.", "error");
+        return false;
+      }
+
+      const walletRemote = await upsertRemoteWalletState(nextWallet, session?.mode === "supabase" ? session.userId : null);
+      if (session?.mode === "supabase") {
+        await createRemoteWalletMovement({
+          tipo: "mercaderia",
+          monto: amount,
+          descripcion: `Mercaderia - ${distributorName}`,
+          createdBy: session.userId,
+        });
+        await Promise.all(
+          nextProducts
+            .filter((product) => selectedLines.some((line) => line.productId === product.id))
+            .map((product) => upsertRemoteProduct(product, session.userId))
+        );
       }
 
       const expenseRecord = expenseRemote.ok ? expenseRemote.expense : draftExpense;
-      const walletRemote = await upsertRemoteWalletState(nextWallet, session?.mode === "supabase" ? session.userId : null);
-
-      if (session?.mode === "supabase") {
-        await createRemoteWalletMovement({
-          tipo: "egreso",
-          monto: amount,
-          descripcion: expense.descripcion,
-          createdBy: session.userId,
-        });
-      }
-
-      const finalWallet = walletRemote.ok ? walletRemote.wallet : nextWallet;
       commit((current) => ({
         ...current,
         expenses: current.expenses.map((item) => (item.id === draftExpense.id ? expenseRecord : item)),
-        wallet: finalWallet,
+        wallet: walletRemote.ok ? walletRemote.wallet : nextWallet,
       }));
     } catch (error) {
-      inform(`No se pudo completar el egreso. ${error?.message || "Intenta de nuevo."}`, "error");
+      inform(`No se pudo completar la mercaderia. ${error?.message || "Intenta de nuevo."}`, "error");
+      return false;
     } finally {
-      setExpenseSubmitting(false);
+      setMerchandiseSubmitting(false);
     }
+    return true;
   };
 
   const adjustWallet = async () => {
@@ -651,7 +753,7 @@ export default function useOperationsActions({
     const password = String(walletForm.password || "").trim();
     if (!Number.isFinite(nextBalance) || !reason) return inform("Indica el saldo y un motivo del ajuste.", "warning");
     if (!password) return inform("Ingresa tu contrasena para confirmar el ajuste.", "warning");
-    if (!walletForm.confirmationAccepted) return inform("Confirma que estas de acuerdo con modificar la cartera.", "warning");
+    if (!walletForm.confirmationAccepted) return inform("Confirma que estas de acuerdo con modificar el saldo.", "warning");
 
     if (session?.mode === "supabase") {
       const verification = await verifySupabasePassword?.(session.email, password);
@@ -681,6 +783,50 @@ export default function useOperationsActions({
     setWalletModal(false);
     setWalletForm({ ...emptyWalletForm, saldo: finalWallet.saldoActual, password: "", confirmationAccepted: false });
     inform("Saldo general actualizado.", "success");
+  };
+
+  const transferInventory = async ({ productId, from, quantity, to }) => {
+    if (!isAdminRole) return inform("Solo administracion puede transferir inventario.", "warning");
+    const product = app.products.find((item) => item.id === productId);
+    const amount = Number(quantity || 0);
+    if (!product || !from || !to || from === to || amount <= 0) {
+      return inform("Completa la transferencia correctamente.", "warning");
+    }
+
+    const fromKey = from === "local" ? "stockLocal" : "stockDeposito";
+    const toKey = to === "local" ? "stockLocal" : "stockDeposito";
+    if (Number(product[fromKey] || 0) < amount) {
+      return inform(`No hay suficiente stock en ${from === "local" ? "Local" : "Deposito"}.`, "warning");
+    }
+
+    const nextProduct = {
+      ...product,
+      [fromKey]: Number(product[fromKey] || 0) - amount,
+      [toKey]: Number(product[toKey] || 0) + amount,
+      updatedAt: new Date().toISOString(),
+    };
+    nextProduct.stock = Number(nextProduct.stockLocal || 0) + Number(nextProduct.stockDeposito || 0);
+
+    commit((current) => ({
+      ...current,
+      products: current.products.map((item) => (item.id === product.id ? nextProduct : item)),
+    }));
+
+    if (session?.mode === "supabase") {
+      const remote = await upsertRemoteProduct(nextProduct, session.userId);
+      if (!remote.ok) {
+        inform(remote.error || "No se pudo guardar la transferencia.", "error");
+        return false;
+      }
+      commit((current) => ({
+        ...current,
+        products: current.products.map((item) => (item.id === product.id ? remote.product : item)),
+      }));
+    }
+
+    notify(`${personName(user)} transfirio ${amount} unidad(es) de ${product.nombre}.`, personName(user));
+    inform("Transferencia registrada.", "success");
+    return true;
   };
 
   const createSchedule = async () => {
@@ -767,6 +913,8 @@ export default function useOperationsActions({
     createSale,
     createInformalSale,
     createExpense,
+    createMerchandiseExpense,
+    transferInventory,
     adjustWallet,
     createSchedule,
     updateScheduleStatus,

@@ -8,6 +8,7 @@ import SideNav from "./SideNav";
 import TopNav from "./TopNav";
 import useClickOutside from "../../hooks/useClickOutside.jsx";
 import { isNativeApp } from "../../utils/platform.js";
+import DebugModal from "../modals/DebugModal";
 
 export default function AppShell() {
   const navigate = useNavigate();
@@ -32,6 +33,7 @@ export default function AppShell() {
   const [openNotifications, setOpenNotifications] = useState(false);
   const [logoutModalOpen, setLogoutModalOpen] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [debugModalOpen, setDebugModalOpen] = useState(false);
   const [pullState, setPullState] = useState({ active: false, armed: false, cancelled: false, startY: 0, distance: 0, maxDistance: 0, refreshing: false });
   const [isOnline, setIsOnline] = useState(() => (typeof navigator === "undefined" ? true : navigator.onLine));
   const notificationRef = useRef(null);
@@ -56,6 +58,17 @@ export default function AppShell() {
       window.removeEventListener("online", updateOnlineState);
       window.removeEventListener("offline", updateOnlineState);
     };
+  }, []);
+
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      if (e.ctrlKey && e.shiftKey && e.key === "D") {
+        e.preventDefault();
+        setDebugModalOpen((prev) => !prev);
+      }
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
   }, []);
 
   useClickOutside(notificationRef, openNotifications, () => setOpenNotifications(false));
@@ -214,6 +227,18 @@ export default function AppShell() {
           </div>
         </div>
       </Modal>
+
+      <DebugModal open={debugModalOpen} onClose={() => setDebugModalOpen(false)} />
+
+      {user?.role === "admin" && (
+        <button
+          onClick={() => setDebugModalOpen(true)}
+          className="fixed bottom-4 right-4 z-40 h-10 w-10 rounded-full bg-red-600 text-white shadow-lg hover:bg-red-700 flex items-center justify-center text-xs font-bold"
+          title="Debug Supabase (Ctrl+Shift+D)"
+        >
+          D
+        </button>
+      )}
     </div>
   );
 }

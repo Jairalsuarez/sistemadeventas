@@ -9,7 +9,7 @@ function StockBadge({ stock }) {
         ? "bg-[#fff7ed] text-[#c2410c] dark:bg-[#172033] dark:text-[#fdba74]"
         : "bg-[#f0fdf4] text-[#166534] dark:bg-[#0f172a] dark:text-[#93c5fd]";
 
-  return <span className={`rounded-full px-3 py-1 text-xs font-semibold ${tone}`}>{Number(stock) <= 0 ? "Agotado" : `${stock} disponibles`}</span>;
+  return <span className={`rounded-full px-3 py-1 text-xs font-semibold ${tone}`}>{Number(stock) <= 0 ? "Agotado" : `${stock} total`}</span>;
 }
 
 export default function ProductListTable({ canEdit = false, emptyMessage, money, onEdit, onView, products }) {
@@ -25,9 +25,30 @@ export default function ProductListTable({ canEdit = false, emptyMessage, money,
     <>
       <div className="space-y-3 md:hidden">
         {products.map((product) => (
-          <article key={product.id} className="rounded-xl border border-[#edf1ea] p-4 dark:border-[#23314d] dark:bg-[#182235]">
+          <article
+            key={product.id}
+            className={`rounded-xl border border-[#edf1ea] p-4 dark:border-[#23314d] dark:bg-[#182235] ${canEdit ? "cursor-pointer active:scale-[0.99]" : ""}`}
+            onClick={() => (canEdit ? onEdit(product) : onView(product))}
+            onKeyDown={(event) => {
+              if (event.key === "Enter" || event.key === " ") {
+                event.preventDefault();
+                if (canEdit) onEdit(product);
+                else onView(product);
+              }
+            }}
+            role="button"
+            tabIndex={0}
+          >
             <div className="flex gap-3">
-              <button className="h-20 w-20 shrink-0 overflow-hidden rounded-lg border border-[#e4ece2] bg-[#f7faf6] dark:border-[#314056] dark:bg-[#0f172a]" onClick={() => onView(product)} type="button">
+              <button
+                className="h-20 w-20 shrink-0 overflow-hidden rounded-lg border border-[#e4ece2] bg-[#f7faf6] dark:border-[#314056] dark:bg-[#0f172a]"
+                onClick={(event) => {
+                  event.stopPropagation();
+                  if (canEdit) onEdit(product);
+                  else onView(product);
+                }}
+                type="button"
+              >
                 <img alt={product.nombre} className="h-full w-full object-cover" decoding="async" loading="lazy" src={getOptimizedImageUrl(product.imagen_url, { width: 160, height: 160 })} />
               </button>
               <div className="min-w-0 flex-1">
@@ -36,7 +57,8 @@ export default function ProductListTable({ canEdit = false, emptyMessage, money,
                 <div className="mt-3 flex flex-wrap items-center gap-2 text-xs text-[#5b6d61] dark:text-[#c7d2e0]">
                   <span className="rounded-full bg-[#f4f8ef] px-3 py-1 dark:bg-[#0f172a]">{product.categoria}</span>
                   <span className="font-medium text-[#183325] dark:text-[#f8fafc]">{money(product.precio)}</span>
-                  <span>Stock: {product.stock}</span>
+                  <span>Local: {product.stockLocal}</span>
+                  <span>Deposito: {product.stockDeposito}</span>
                 </div>
               </div>
             </div>
@@ -44,12 +66,26 @@ export default function ProductListTable({ canEdit = false, emptyMessage, money,
             <div className="mt-4 flex flex-wrap items-center justify-between gap-3">
               <StockBadge stock={product.stock} />
               <div className="flex w-full flex-wrap gap-2 sm:w-auto sm:justify-end">
-                <button className="inline-flex flex-1 items-center justify-center gap-2 rounded-md border border-[#dfe7db] px-3 py-2 dark:border-[#314056] dark:bg-[#0f172a] dark:text-[#f8fafc] sm:flex-none" onClick={() => onView(product)} type="button">
+                <button
+                  className="inline-flex flex-1 items-center justify-center gap-2 rounded-md border border-[#dfe7db] px-3 py-2 dark:border-[#314056] dark:bg-[#0f172a] dark:text-[#f8fafc] sm:flex-none"
+                  onClick={(event) => {
+                    event.stopPropagation();
+                    onView(product);
+                  }}
+                  type="button"
+                >
                   <Icon name="visibility" />
                   Ver
                 </button>
                 {canEdit ? (
-                  <button className="inline-flex flex-1 items-center justify-center gap-2 rounded-md bg-[#1f7a3a] px-3 py-2 text-white dark:bg-[linear-gradient(135deg,#2563eb,#1d4ed8)] sm:flex-none" onClick={() => onEdit(product)} type="button">
+                  <button
+                    className="inline-flex flex-1 items-center justify-center gap-2 rounded-md bg-[#1f7a3a] px-3 py-2 text-white dark:bg-[linear-gradient(135deg,#2563eb,#1d4ed8)] sm:flex-none"
+                    onClick={(event) => {
+                      event.stopPropagation();
+                      onEdit(product);
+                    }}
+                    type="button"
+                  >
                     <Icon name="edit" />
                     Editar
                   </button>
@@ -74,10 +110,22 @@ export default function ProductListTable({ canEdit = false, emptyMessage, money,
         </thead>
         <tbody>
           {products.map((product) => (
-            <tr key={product.id} className="border-t border-[#edf1ea] align-top dark:border-[#23314d]">
+            <tr
+              key={product.id}
+              className={`border-t border-[#edf1ea] align-top dark:border-[#23314d] ${canEdit ? "cursor-pointer hover:bg-[#f8fafc] dark:hover:bg-[#182235]" : ""}`}
+              onClick={() => (canEdit ? onEdit(product) : undefined)}
+            >
               <td className="py-4">
                 <div className="flex gap-3">
-                  <button className="h-16 w-16 overflow-hidden rounded-md border border-[#e4ece2] bg-[#f7faf6] dark:border-[#314056] dark:bg-[#0f172a]" onClick={() => onView(product)} type="button">
+                  <button
+                    className="h-16 w-16 overflow-hidden rounded-md border border-[#e4ece2] bg-[#f7faf6] dark:border-[#314056] dark:bg-[#0f172a]"
+                    onClick={(event) => {
+                      event.stopPropagation();
+                      if (canEdit) onEdit(product);
+                      else onView(product);
+                    }}
+                    type="button"
+                  >
                     <img alt={product.nombre} className="h-full w-full object-cover" decoding="async" loading="lazy" src={getOptimizedImageUrl(product.imagen_url, { width: 128, height: 128 })} />
                   </button>
                   <div className="min-w-0">
@@ -88,18 +136,37 @@ export default function ProductListTable({ canEdit = false, emptyMessage, money,
               </td>
               <td className="py-4">{product.categoria}</td>
               <td className="py-4 font-medium">{money(product.precio)}</td>
-              <td className="py-4">{product.stock}</td>
+              <td className="py-4">
+                <div className="grid gap-1 text-xs text-[#5b6d61] dark:text-[#c7d2e0]">
+                  <span>Local: {product.stockLocal}</span>
+                  <span>Deposito: {product.stockDeposito}</span>
+                </div>
+              </td>
               <td className="py-4">
                 <StockBadge stock={product.stock} />
               </td>
               <td className="py-4">
                 <div className="flex justify-end gap-2">
-                  <button className="inline-flex items-center gap-2 rounded-md border border-[#dfe7db] px-3 py-2 dark:border-[#314056] dark:bg-[#0f172a] dark:text-[#f8fafc]" onClick={() => onView(product)} type="button">
+                  <button
+                    className="inline-flex items-center gap-2 rounded-md border border-[#dfe7db] px-3 py-2 dark:border-[#314056] dark:bg-[#0f172a] dark:text-[#f8fafc]"
+                    onClick={(event) => {
+                      event.stopPropagation();
+                      onView(product);
+                    }}
+                    type="button"
+                  >
                     <Icon name="visibility" />
                     Ver
                   </button>
                   {canEdit ? (
-                    <button className="inline-flex items-center gap-2 rounded-md bg-[#1f7a3a] px-3 py-2 text-white dark:bg-[linear-gradient(135deg,#2563eb,#1d4ed8)]" onClick={() => onEdit(product)} type="button">
+                    <button
+                      className="inline-flex items-center gap-2 rounded-md bg-[#1f7a3a] px-3 py-2 text-white dark:bg-[linear-gradient(135deg,#2563eb,#1d4ed8)]"
+                      onClick={(event) => {
+                        event.stopPropagation();
+                        onEdit(product);
+                      }}
+                      type="button"
+                    >
                       <Icon name="edit" />
                       Editar
                     </button>

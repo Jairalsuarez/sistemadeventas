@@ -130,14 +130,6 @@ export function getAppData() {
     merged.business = { ...seed().business, ...(parsed.business || {}), ...BUSINESS_CONTACT };
     if (supabaseReady) {
       merged.users = [];
-      merged.products = [];
-      merged.sales = [];
-      merged.expenses = [];
-      merged.turnos = [];
-      merged.schedules = [];
-      merged.notifications = [];
-      merged.communityFeedbacks = [];
-      merged.distributors = [];
     }
     return merged;
   } catch {

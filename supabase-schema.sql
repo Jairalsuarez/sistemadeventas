@@ -3,11 +3,17 @@ create extension if not exists pgcrypto;
 create table if not exists public.profiles (
   id uuid primary key references auth.users(id) on delete cascade,
   nombre text not null,
+  apellido text,
+  telefono text,
   role text not null check (role in ('admin', 'vendedor')),
   avatar_url text,
   updated_at timestamptz not null default now(),
   created_at timestamptz not null default now()
 );
+
+alter table public.profiles add column if not exists apellido text;
+alter table public.profiles add column if not exists telefono text;
+alter table public.profiles add column if not exists avatar_url text;
 
 create table if not exists public.products (
   id uuid primary key default gen_random_uuid(),
@@ -17,6 +23,8 @@ create table if not exists public.products (
   descripcion text,
   precio numeric(10,2) not null default 0,
   stock integer not null default 0,
+  stock_local integer not null default 0,
+  stock_deposito integer not null default 0,
   imagen_url text,
   activo boolean not null default true,
   updated_by uuid references public.profiles(id),
@@ -25,6 +33,14 @@ create table if not exists public.products (
 );
 
 alter table public.products add column if not exists marca text;
+alter table public.products add column if not exists stock_local integer not null default 0;
+alter table public.products add column if not exists stock_deposito integer not null default 0;
+update public.products
+set stock_local = stock,
+    stock_deposito = 0
+where stock <> 0
+  and coalesce(stock_local, 0) = 0
+  and coalesce(stock_deposito, 0) = 0;
 
 create table if not exists public.distributors (
   id uuid primary key default gen_random_uuid(),
@@ -37,12 +53,33 @@ create table if not exists public.distributors (
 
 create table if not exists public.wallet_movements (
   id uuid primary key default gen_random_uuid(),
-  tipo text not null check (tipo in ('ajuste', 'venta', 'egreso')),
+  tipo text not null check (tipo in ('ajuste', 'venta', 'egreso', 'mercaderia')),
   monto numeric(10,2) not null,
   descripcion text,
   created_by uuid references public.profiles(id),
   created_at timestamptz not null default now()
 );
+
+do $$
+declare
+  v_constraint_name text;
+begin
+  select conname
+  into v_constraint_name
+  from pg_constraint
+  where conrelid = 'public.wallet_movements'::regclass
+    and contype = 'c'
+    and pg_get_constraintdef(oid) like '%tipo%'
+  limit 1;
+
+  if v_constraint_name is not null then
+    execute format('alter table public.wallet_movements drop constraint %I', v_constraint_name);
+  end if;
+end $$;
+
+alter table public.wallet_movements
+add constraint wallet_movements_tipo_check
+check (tipo in ('ajuste', 'venta', 'egreso', 'mercaderia'));
 
 create table if not exists public.wallet_state (
   id text primary key default 'principal',
@@ -70,11 +107,17 @@ create table if not exists public.sales (
   total numeric(10,2) not null default 0,
   descripcion text,
   informal boolean not null default false,
+  payment_method text not null default 'efectivo',
+  payment_evidence_url text,
+  payment_evidence_name text,
   created_at timestamptz not null default now()
 );
 
 alter table public.sales add column if not exists descripcion text;
 alter table public.sales add column if not exists informal boolean not null default false;
+alter table public.sales add column if not exists payment_method text not null default 'efectivo';
+alter table public.sales add column if not exists payment_evidence_url text;
+alter table public.sales add column if not exists payment_evidence_name text;
 
 create table if not exists public.sale_items (
   id uuid primary key default gen_random_uuid(),
@@ -209,6 +252,7 @@ declare
   v_product_id uuid;
   v_quantity integer;
   v_available_stock integer;
+  v_next_wallet numeric;
 begin
   if auth.uid() is null then
     raise exception 'Debes iniciar sesion para registrar ventas.';
@@ -236,7 +280,7 @@ begin
       raise exception 'Cada item debe incluir un producto y una cantidad valida.';
     end if;
 
-    select stock
+    select stock_local
     into v_available_stock
     from public.products
     where id = v_product_id
@@ -280,22 +324,57 @@ begin
     );
 
     update public.products
-    set stock = greatest(stock - v_quantity, 0),
+    set stock_local = greatest(stock_local - v_quantity, 0),
+        stock = greatest(stock_local - v_quantity, 0) + coalesce(stock_deposito, 0),
         updated_at = now(),
         updated_by = auth.uid()
     where id = v_product_id;
   end loop;
 
+  select coalesce(saldo_actual, 0) + coalesce(p_total, 0)
+  into v_next_wallet
+  from public.wallet_state
+  where id = 'principal'
+  for update;
+
+  if v_next_wallet is null then
+    v_next_wallet := coalesce(p_total, 0);
+    insert into public.wallet_state (id, saldo_actual, updated_at, updated_by)
+    values ('principal', v_next_wallet, now(), auth.uid())
+    on conflict (id) do update
+    set saldo_actual = excluded.saldo_actual,
+        updated_at = excluded.updated_at,
+        updated_by = excluded.updated_by;
+  else
+    update public.wallet_state
+    set saldo_actual = v_next_wallet,
+        updated_at = now(),
+        updated_by = auth.uid()
+    where id = 'principal';
+  end if;
+
+  insert into public.wallet_movements (tipo, monto, descripcion, created_by)
+  values ('venta', coalesce(p_total, 0), 'Venta ' || v_sale_id || ' - ' || coalesce(nullif(trim(p_payment_method), ''), 'efectivo'), auth.uid());
+
+  if p_shift_id is not null then
+    update public.shifts
+    set total_ventas = coalesce(total_ventas, 0) + coalesce(p_total, 0)
+    where id = p_shift_id;
+  end if;
+
   return v_sale_id;
 end;
 $$;
 
+drop function if exists public.create_sale_with_items(text, uuid, numeric, text, text, text, timestamptz, jsonb);
 revoke all on function public.create_sale_with_items(uuid, uuid, numeric, text, text, text, timestamptz, jsonb) from public;
 grant execute on function public.create_sale_with_items(uuid, uuid, numeric, text, text, text, timestamptz, jsonb) to authenticated;
 
 drop function if exists public.create_informal_sale(bigint, uuid, numeric, text, text, text, text, timestamptz);
+drop function if exists public.create_informal_sale(text, uuid, numeric, text, text, text, text, timestamptz);
+drop function if exists public.create_informal_sale(uuid, uuid, numeric, text, text, text, text, timestamptz);
 create or replace function public.create_informal_sale(
-  p_shift_id bigint,
+  p_shift_id uuid,
   p_user_id uuid,
   p_total numeric,
   p_description text,
@@ -392,8 +471,8 @@ begin
 end;
 $$;
 
-revoke all on function public.create_informal_sale(bigint, uuid, numeric, text, text, text, text, timestamptz) from public;
-grant execute on function public.create_informal_sale(bigint, uuid, numeric, text, text, text, text, timestamptz) to authenticated;
+revoke all on function public.create_informal_sale(uuid, uuid, numeric, text, text, text, text, timestamptz) from public;
+grant execute on function public.create_informal_sale(uuid, uuid, numeric, text, text, text, text, timestamptz) to authenticated;
 
 drop policy if exists "profiles_select_authenticated" on public.profiles;
 create policy "profiles_select_authenticated"
@@ -435,17 +514,24 @@ to authenticated
 using (true);
 
 drop policy if exists "products_write_admin" on public.products;
+drop policy if exists "products_update_admin" on public.products;
+drop policy if exists "products_delete_admin" on public.products;
 drop policy if exists "products_insert_staff" on public.products;
 create policy "products_insert_staff"
 on public.products for insert
 to authenticated
 with check (public.is_staff());
 
-create policy "products_write_admin"
-on public.products for update, delete
+create policy "products_update_admin"
+on public.products for update
 to authenticated
 using (public.is_admin())
 with check (public.is_admin());
+
+create policy "products_delete_admin"
+on public.products for delete
+to authenticated
+using (public.is_admin());
 
 drop policy if exists "shifts_select_authenticated" on public.shifts;
 create policy "shifts_select_authenticated"
@@ -542,7 +628,7 @@ to authenticated
 with check (
   (
     created_by = auth.uid()
-    and tipo in ('venta', 'egreso')
+    and tipo in ('venta', 'egreso', 'mercaderia')
     and public.is_staff()
   )
   or public.is_admin()

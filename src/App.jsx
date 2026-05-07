@@ -1,8 +1,9 @@
 import { Suspense, lazy, useEffect } from "react";
-import { Navigate, Route, Routes, useLocation, useNavigate } from "react-router-dom";
+import { Navigate, Route, Routes, useLocation, useNavigate, useParams } from "react-router-dom";
 import ProductDetailsModal from "./components/modals/ProductDetailsModal";
 import ExpenseModal from "./components/modals/ExpenseModal";
 import InformalSaleModal from "./components/modals/InformalSaleModal";
+import MerchandiseModal from "./components/modals/MerchandiseModal";
 import ProductModal from "./components/modals/ProductModal";
 import SaleModal from "./components/modals/SaleModal";
 import WalletModal from "./components/modals/WalletModal";
@@ -18,11 +19,68 @@ import { isNativeApp } from "./utils/platform.js";
 const ProfilePage = lazy(() => import("./pages/account/ProfilePage.jsx"));
 const LoginPage = lazy(() => import("./pages/auth/LoginPage.jsx"));
 const ProductsPage = lazy(() => import("./pages/catalog/ProductsPage.jsx"));
+const TransferInventoryPage = lazy(() => import("./pages/catalog/TransferInventoryPage.jsx"));
 const DashboardPage = lazy(() => import("./pages/dashboard/DashboardPage.jsx"));
 const WalletPage = lazy(() => import("./pages/finance/WalletPage.jsx"));
 const SchedulePage = lazy(() => import("./pages/admin/SchedulePage.jsx"));
-const UsersPage = lazy(() => import("./pages/admin/UsersPage.jsx"));
 const SalesAnalyticsPage = lazy(() => import("./pages/admin/SalesAnalyticsPage.jsx"));
+
+function ProductEditorPage({
+  app,
+  editing,
+  mode,
+  onEditProduct,
+  onNewProduct,
+  productForm,
+  removeProduct,
+  resetProductFlow,
+  saveProduct,
+  setProductForm,
+  storageReady,
+  uploadError,
+  uploadProductImage,
+  uploading,
+}) {
+  const navigate = useNavigate();
+  const { productId } = useParams();
+  const product = mode === "edit" ? (app.products || []).find((item) => item.id === productId) : null;
+
+  useEffect(() => {
+    if (mode === "edit") {
+      if (product) onEditProduct(product);
+      return;
+    }
+    onNewProduct();
+  }, [mode, productId]);
+
+  if (mode === "edit" && !product) return <Navigate replace to="/panel/productos" />;
+
+  return (
+    <ProductModal
+      editing={mode === "edit" ? editing || product : null}
+      onClose={() => {
+        resetProductFlow();
+        navigate("/panel/productos");
+      }}
+      open
+      presentation="page"
+      productForm={productForm}
+      removeProduct={async (id) => {
+        const removed = await removeProduct(id);
+        if (removed) navigate("/panel/productos");
+      }}
+      saveProduct={async () => {
+        const saved = await saveProduct();
+        if (saved) navigate("/panel/productos");
+      }}
+      setProductForm={setProductForm}
+      storageReady={storageReady}
+      uploadError={uploadError}
+      uploadProductImage={uploadProductImage}
+      uploading={uploading}
+    />
+  );
+}
 
 function App() {
   const location = useLocation();
@@ -33,26 +91,29 @@ function App() {
     app,
     createExpense,
     createInformalSale,
+    createMerchandiseExpense,
     createSale,
     createSchedule,
     deleteSchedule,
     dismissToast,
     editing,
     expense,
-    expenseCategories,
     expenseModal,
     expenseSubmitting,
     informalSale,
     informalSaleModal,
     informalSalePayment,
     informalSaleSubmitting,
+    merchandise,
+    merchandiseLines,
+    merchandiseSubmitting,
     money,
     openCreateProduct,
     openEditProduct,
     openSaleFlow,
     openInformalSaleFlow,
+    openMerchandiseFlow,
     productForm,
-    productModal,
     removeProduct,
     resetProductFlow,
     saleLines,
@@ -71,6 +132,8 @@ function App() {
     setInformalSale,
     setInformalSaleModal,
     setInformalSalePayment,
+    setMerchandise,
+    setMerchandiseLines,
     setProductForm,
     setSaleLines,
     setSaleModal,
@@ -87,7 +150,6 @@ function App() {
     uploadError,
     updateScheduleStatus,
     uploadProductImage,
-    uploadExpenseEvidence,
     uploadInformalSaleEvidence,
     uploadSaleEvidence,
     uploadProfileAvatar,
@@ -98,6 +160,7 @@ function App() {
     adjustWallet,
     distributors,
     theme,
+    transferInventory,
   } = useAppContext();
 
   useEffect(() => {
@@ -107,7 +170,20 @@ function App() {
 
   const openSaleAction = nativeApp ? () => navigate("/panel/ventas/nueva") : openSaleFlow;
   const openInformalSaleAction = nativeApp ? () => navigate("/panel/ventas/informal") : openInformalSaleFlow;
-  const openExpenseAction = nativeApp ? () => navigate("/panel/cartera/egreso") : () => setExpenseModal(true);
+  const openExpenseAction = nativeApp ? () => navigate("/panel/saldo/egreso") : () => setExpenseModal(true);
+  const openMerchandiseAction = () => {
+    openMerchandiseFlow({ asPage: true });
+    navigate("/panel/saldo/mercaderia");
+  };
+  const openProductCreateAction = () => {
+    openCreateProduct();
+    navigate("/panel/productos/nuevo");
+  };
+  const openProductEditAction = (product) => {
+    openEditProduct(product);
+    navigate(`/panel/productos/${product.id}/editar`);
+  };
+  const openTransferInventoryAction = () => navigate("/panel/productos/transferir");
 
   return (
     <>
@@ -126,7 +202,7 @@ function App() {
                 path="/panel"
                 element={
                   <DashboardPage
-                    onNewProduct={openCreateProduct}
+                    onNewProduct={openProductCreateAction}
                     onNewInformalSale={openInformalSaleAction}
                     onNewSale={openSaleAction}
                     onOpenExpense={openExpenseAction}
@@ -183,39 +259,61 @@ function App() {
                 }
               />
               <Route
-                path="/panel/cartera"
+                path="/panel/saldo"
                 element={
                   <WalletPage
                     expenses={app.expenses || []}
                     isAdmin={user?.role === "admin"}
                     money={money}
                     onOpenExpense={openExpenseAction}
+                    onOpenMerchandise={openMerchandiseAction}
                     onOpenWallet={() => setWalletModal(true)}
                     wallet={app.wallet}
                   />
                 }
               />
               <Route
-                path="/panel/cartera/egreso"
+                path="/panel/saldo/egreso"
                 element={
                   <ExpenseModal
                     createExpense={createExpense}
-                    distributors={distributors || []}
                     expense={expense}
-                    expenseCategories={expenseCategories || []}
                     expenseSubmitting={expenseSubmitting}
                     money={money}
-                    onClose={() => navigate("/panel/cartera")}
+                    onClose={() => navigate("/panel/saldo")}
                     open
                     presentation="page"
                     setExpense={setExpense}
-                    uploadError={uploadError}
-                    uploadExpenseEvidence={uploadExpenseEvidence}
-                    uploading={uploading}
                     wallet={app.wallet}
                   />
                 }
               />
+              <Route
+                path="/panel/saldo/mercaderia"
+                element={
+                  <MerchandiseModal
+                    createMerchandiseExpense={async () => {
+                      const saved = await createMerchandiseExpense();
+                      if (saved) navigate("/panel/saldo");
+                      return saved;
+                    }}
+                    distributors={distributors || []}
+                    merchandise={merchandise}
+                    merchandiseLines={merchandiseLines}
+                    merchandiseSubmitting={merchandiseSubmitting}
+                    money={money}
+                    onClose={() => navigate("/panel/saldo")}
+                    open
+                    presentation="page"
+                    products={app.products || []}
+                    setMerchandise={setMerchandise}
+                    setMerchandiseLines={setMerchandiseLines}
+                    wallet={app.wallet}
+                  />
+                }
+              />
+              <Route path="/panel/cartera" element={<Navigate replace to="/panel/saldo" />} />
+              <Route path="/panel/cartera/egreso" element={<Navigate replace to="/panel/saldo/egreso" />} />
               <Route
                 path="/panel/productos"
                 element={
@@ -224,11 +322,77 @@ function App() {
                     canCreate={["admin", "vendedor"].includes(user?.role)}
                     canEdit={user?.role === "admin"}
                     money={money}
-                    onEdit={openEditProduct}
-                    onNewProduct={openCreateProduct}
+                    onEdit={openProductEditAction}
+                    onNewProduct={openProductCreateAction}
+                    onTransfer={openTransferInventoryAction}
                     onView={setSelected}
                     products={user?.role === "admin" ? app.products : visibleProducts}
                   />
+                }
+              />
+              <Route
+                path="/panel/productos/transferir"
+                element={
+                  user?.role === "admin" ? (
+                    <TransferInventoryPage
+                      money={money}
+                      onBack={() => navigate("/panel/productos")}
+                      products={app.products || []}
+                      transferInventory={transferInventory}
+                    />
+                  ) : (
+                    <Navigate replace to="/panel/productos" />
+                  )
+                }
+              />
+              <Route
+                path="/panel/productos/nuevo"
+                element={
+                  ["admin", "vendedor"].includes(user?.role) ? (
+                  <ProductEditorPage
+                    app={app}
+                    editing={editing}
+                    mode="create"
+                    onEditProduct={openEditProduct}
+                    onNewProduct={openCreateProduct}
+                    productForm={productForm}
+                    removeProduct={removeProduct}
+                    resetProductFlow={resetProductFlow}
+                    saveProduct={saveProduct}
+                    setProductForm={setProductForm}
+                    storageReady={storageReady}
+                    uploadError={uploadError}
+                    uploadProductImage={uploadProductImage}
+                    uploading={uploading}
+                  />
+                  ) : (
+                    <Navigate replace to="/panel/productos" />
+                  )
+                }
+              />
+              <Route
+                path="/panel/productos/:productId/editar"
+                element={
+                  user?.role === "admin" ? (
+                  <ProductEditorPage
+                    app={app}
+                    editing={editing}
+                    mode="edit"
+                    onEditProduct={openEditProduct}
+                    onNewProduct={openCreateProduct}
+                    productForm={productForm}
+                    removeProduct={removeProduct}
+                    resetProductFlow={resetProductFlow}
+                    saveProduct={saveProduct}
+                    setProductForm={setProductForm}
+                    storageReady={storageReady}
+                    uploadError={uploadError}
+                    uploadProductImage={uploadProductImage}
+                    uploading={uploading}
+                  />
+                  ) : (
+                    <Navigate replace to="/panel/productos" />
+                  )
                 }
               />
               <Route path="/panel/perfil" element={<ProfilePage onSave={saveProfile} onUploadAvatar={uploadProfileAvatar} user={user} />} />
@@ -252,7 +416,6 @@ function App() {
                 }
               />
               <Route path="/panel/analitica" element={<SalesAnalyticsPage expenses={app.expenses || []} money={money} sales={app.sales || []} schedules={app.schedules || []} turnos={app.turnos || []} />} />
-              <Route path="/panel/usuarios" element={<UsersPage users={app.users || []} />} />
             </Route>
           </Route>
 
@@ -298,33 +461,14 @@ function App() {
         wallet={app.wallet}
       />
 
-      <ProductModal
-        editing={editing}
-        onClose={resetProductFlow}
-        open={productModal}
-        productForm={productForm}
-        removeProduct={removeProduct}
-        saveProduct={saveProduct}
-        setProductForm={setProductForm}
-        storageReady={storageReady}
-        uploadError={uploadError}
-        uploadProductImage={uploadProductImage}
-        uploading={uploading}
-      />
-
       <ExpenseModal
         createExpense={createExpense}
-        distributors={distributors || []}
         expense={expense}
-        expenseCategories={expenseCategories || []}
         expenseSubmitting={expenseSubmitting}
         money={money}
         onClose={() => setExpenseModal(false)}
         open={expenseModal}
         setExpense={setExpense}
-        uploadError={uploadError}
-        uploadExpenseEvidence={uploadExpenseEvidence}
-        uploading={uploading}
         wallet={app.wallet}
       />
       <WalletModal adjustWallet={adjustWallet} onClose={() => setWalletModal(false)} open={walletModal} setWalletForm={setWalletForm} walletForm={walletForm} />

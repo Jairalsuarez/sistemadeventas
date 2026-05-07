@@ -20,60 +20,64 @@ const getTimestamp = (value) => {
   return Number.isFinite(time) ? time : 0;
 };
 
-export default function useSupabaseSync(session, setSession, commit, setSyncing) {
+export default function useSupabaseSync(session, setSession, commit, setSyncing, onSynced) {
   const syncRemoteData = async () => {
     if (!supabaseReady || !supabase) return;
 
-    if (session?.mode !== "supabase") {
-      const [productsResult, feedbackResult] = await Promise.all([fetchRemoteProducts(), fetchRemoteCommunityFeedback()]);
+    try {
+      if (session?.mode !== "supabase") {
+        const [productsResult, feedbackResult] = await Promise.all([fetchRemoteProducts(), fetchRemoteCommunityFeedback()]);
 
-      commit((current) => ({
-        ...current,
-        products: productsResult.ok ? productsResult.products : current.products,
-        communityFeedbacks: feedbackResult.ok ? feedbackResult.feedbacks : current.communityFeedbacks,
-      }));
+        commit((current) => ({
+          ...current,
+          products: productsResult.ok ? productsResult.products : current.products,
+          communityFeedbacks: feedbackResult.ok ? feedbackResult.feedbacks : current.communityFeedbacks,
+        }));
 
-      return;
+        return;
+      }
+
+      setSyncing(true);
+
+      const [productsResult, shiftsResult, walletResult, schedulesResult, salesResult, expensesResult, distributorsResult, categoriesResult, profilesResult, notificationsResult, feedbackResult] = await Promise.all([
+        fetchRemoteProducts(),
+        fetchRemoteShifts(),
+        fetchRemoteWalletState(),
+        fetchRemoteSchedules(),
+        fetchRemoteSales(),
+        fetchRemoteExpenses(),
+        fetchRemoteDistributors(),
+        fetchRemoteExpenseCategories(),
+        fetchRemoteProfiles(),
+        fetchRemoteNotifications(),
+        fetchRemoteCommunityFeedback(),
+      ]);
+
+      commit((current) => {
+        return {
+          ...current,
+          products: productsResult.ok ? productsResult.products : current.products,
+          turnos: shiftsResult.ok ? shiftsResult.shifts : current.turnos,
+          wallet: walletResult.ok ? walletResult.wallet : current.wallet,
+          schedules: schedulesResult.ok ? schedulesResult.schedules : current.schedules,
+          sales: salesResult.ok ? salesResult.sales : current.sales,
+          expenses: expensesResult.ok ? expensesResult.expenses : current.expenses,
+          distributors: distributorsResult.ok ? distributorsResult.distributors : current.distributors,
+          expenseCategories: categoriesResult.ok ? categoriesResult.categories : current.expenseCategories,
+          users: profilesResult.ok ? mergeUsers(current.users, profilesResult.profiles) : current.users,
+          notifications: notificationsResult.ok ? notificationsResult.notifications : current.notifications,
+          communityFeedbacks: feedbackResult.ok ? feedbackResult.feedbacks : current.communityFeedbacks,
+        };
+      });
+      onSynced?.(session);
+    } catch (error) {
+      console.error("Error syncing data:", error);
+      if (session?.mode === "supabase") {
+        onSynced?.(session);
+      }
+    } finally {
+      setSyncing(false);
     }
-
-    setSyncing(true);
-
-    const [productsResult, shiftsResult, walletResult, schedulesResult, salesResult, expensesResult, distributorsResult, categoriesResult, profilesResult, notificationsResult, feedbackResult] = await Promise.all([
-      fetchRemoteProducts(),
-      fetchRemoteShifts(),
-      fetchRemoteWalletState(),
-      fetchRemoteSchedules(),
-      fetchRemoteSales(),
-      fetchRemoteExpenses(),
-      fetchRemoteDistributors(),
-      fetchRemoteExpenseCategories(),
-      fetchRemoteProfiles(),
-      fetchRemoteNotifications(),
-      fetchRemoteCommunityFeedback(),
-    ]);
-
-    commit((current) => {
-      const shouldKeepLocalWallet =
-        walletResult.ok &&
-        getTimestamp(current.wallet?.updatedAt) > getTimestamp(walletResult.wallet?.updatedAt);
-
-      return {
-        ...current,
-        products: productsResult.ok ? productsResult.products : current.products,
-        turnos: shiftsResult.ok ? shiftsResult.shifts : current.turnos,
-        wallet: walletResult.ok && !shouldKeepLocalWallet ? walletResult.wallet : current.wallet,
-        schedules: schedulesResult.ok ? schedulesResult.schedules : current.schedules,
-        sales: salesResult.ok ? salesResult.sales : current.sales,
-        expenses: expensesResult.ok ? expensesResult.expenses : current.expenses,
-        distributors: distributorsResult.ok ? distributorsResult.distributors : current.distributors,
-        expenseCategories: categoriesResult.ok ? categoriesResult.categories : current.expenseCategories,
-        users: profilesResult.ok ? mergeUsers(current.users, profilesResult.profiles) : current.users,
-        notifications: notificationsResult.ok ? notificationsResult.notifications : current.notifications,
-        communityFeedbacks: feedbackResult.ok ? feedbackResult.feedbacks : current.communityFeedbacks,
-      };
-    });
-
-    setSyncing(false);
   };
 
   useEffect(() => {

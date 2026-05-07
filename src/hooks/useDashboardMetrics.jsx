@@ -1,5 +1,13 @@
 import { useMemo } from "react";
 
+const businessDateKey = (value) =>
+  new Intl.DateTimeFormat("sv-SE", {
+    timeZone: "America/Guayaquil",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).format(new Date(value));
+
 export default function useDashboardMetrics({
   app,
   session,
@@ -52,23 +60,23 @@ export default function useDashboardMetrics({
   );
 
   const saleTotal = useMemo(() => salePreview.reduce((acc, item) => acc + item.subtotal, 0), [salePreview]);
+  const todayKey = businessDateKey(new Date());
+  const todaySales = useMemo(
+    () => app.sales.filter((sale) => businessDateKey(sale.createdAt) === todayKey),
+    [app.sales, todayKey]
+  );
 
   const salesToday = useMemo(
-    () =>
-      app.sales
-        .filter((sale) => new Date(sale.createdAt).toDateString() === new Date().toDateString())
-        .reduce((acc, item) => acc + item.total, 0),
-    [app.sales]
+    () => todaySales.reduce((acc, item) => acc + item.total, 0),
+    [todaySales]
   );
 
   const mySalesToday = useMemo(
     () =>
-      app.sales
-        .filter(
-          (sale) => sale.userId === user?.id && new Date(sale.createdAt).toDateString() === new Date().toDateString()
-        )
+      todaySales
+        .filter((sale) => sale.userId === user?.id)
         .reduce((acc, item) => acc + item.total, 0),
-    [app.sales, user?.id]
+    [todaySales, user?.id]
   );
 
   const unreadNotifications = useMemo(
@@ -77,7 +85,7 @@ export default function useDashboardMetrics({
   );
 
   const adminStats = useMemo(() => {
-    const todaySalesCount = app.sales.filter((sale) => new Date(sale.createdAt).toDateString() === new Date().toDateString()).length;
+    const todaySalesCount = todaySales.length;
     return [
       { label: "Ventas hoy", value: money(salesToday), detail: todaySalesCount ? `${todaySalesCount} venta(s) hoy` : "Sin ventas hoy" },
       {
@@ -86,12 +94,12 @@ export default function useDashboardMetrics({
         detail: `Actualizado ${formatDate(app.wallet.updatedAt, { dateStyle: "medium", timeStyle: "short" })}`,
       },
     ];
-  }, [app.sales, app.wallet, formatDate, money, salesToday]);
+  }, [app.wallet, formatDate, money, salesToday, todaySales]);
 
   const sellerStats = useMemo(
     () => [
       { label: "Mi venta de hoy", value: money(mySalesToday), detail: activeShift ? "Tu turno esta abierto" : "Abre tu turno para registrar" },
-      { label: "Cartera actual", value: money(app.wallet.saldoActual), detail: "Referencia general del negocio" },
+      { label: "Saldo actual", value: money(app.wallet.saldoActual), detail: "Referencia general del negocio" },
     ],
     [activeShift, app.wallet.saldoActual, money, mySalesToday]
   );

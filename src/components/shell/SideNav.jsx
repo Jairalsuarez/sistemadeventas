@@ -7,16 +7,15 @@ const baseLink = "flex items-center gap-3 rounded-md px-4 py-3 text-base font-me
 export default function SideNav({ businessName = "Sabores Tropicales", isAdmin, open = false, onClose = () => {}, user }) {
   const nativeApp = isNativeApp();
   const links = [
-    { to: "/panel", label: "Dashboard", icon: "dashboard", end: true },
-    { to: "/panel/cartera", label: "Cartera", icon: "account_balance_wallet" },
+    { to: "/panel", label: "Resumen", icon: "dashboard", end: true },
+    { to: "/panel/saldo", label: "Saldo", icon: "account_balance_wallet" },
     { to: "/panel/productos", label: "Productos", icon: "inventory_2" },
     { to: "/panel/perfil", label: "Perfil", icon: "person" },
   ];
 
   if (isAdmin) {
     links.splice(2, 0, { to: "/panel/agenda", label: "Agenda", icon: "calendar_month" });
-    links.splice(3, 0, { to: "/panel/usuarios", label: "Usuarios", icon: "groups" });
-    links.splice(4, 0, { to: "/panel/analitica", label: "Ventas", icon: "monitoring" });
+    links.splice(3, 0, { to: "/panel/analitica", label: "Ventas", icon: "monitoring" });
   }
 
   return (

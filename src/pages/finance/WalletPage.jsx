@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import Icon from "../../components/ui/Icon";
 import PageHeader from "../../components/ui/PageHeader";
 import Pagination from "../../components/ui/Pagination";
@@ -8,7 +8,7 @@ import StatCard from "../../components/ui/StatCard";
 const isToday = (value) => new Date(value).toDateString() === new Date().toDateString();
 const EXPENSES_PER_PAGE = 8;
 
-export default function WalletPage({ expenses, isAdmin, money, onOpenExpense, onOpenWallet, wallet }) {
+export default function WalletPage({ expenses, isAdmin, money, onOpenExpense, onOpenMerchandise, onOpenWallet, wallet }) {
   const [currentPage, setCurrentPage] = useState(1);
   const [showExpenseMovements, setShowExpenseMovements] = useState(false);
   const expensesToday = expenses.filter((item) => isToday(item.createdAt)).reduce((acc, item) => acc + Number(item.monto || 0), 0);
@@ -17,16 +17,11 @@ export default function WalletPage({ expenses, isAdmin, money, onOpenExpense, on
     [expenses]
   );
   const totalPages = Math.max(1, Math.ceil(orderedExpenses.length / EXPENSES_PER_PAGE));
+  const safeCurrentPage = Math.min(currentPage, totalPages);
   const latestExpenses = useMemo(() => {
-    const start = (currentPage - 1) * EXPENSES_PER_PAGE;
+    const start = (safeCurrentPage - 1) * EXPENSES_PER_PAGE;
     return orderedExpenses.slice(start, start + EXPENSES_PER_PAGE);
-  }, [currentPage, orderedExpenses]);
-
-  useEffect(() => {
-    if (currentPage > totalPages) {
-      setCurrentPage(totalPages);
-    }
-  }, [currentPage, totalPages]);
+  }, [orderedExpenses, safeCurrentPage]);
 
   const stats = [
     { label: "Saldo actual", value: money(wallet?.saldoActual || 0), detail: "Disponible para la operacion diaria" },
@@ -37,17 +32,21 @@ export default function WalletPage({ expenses, isAdmin, money, onOpenExpense, on
   return (
     <div className="space-y-6">
       <PageHeader
-        eyebrow="Cartera"
-        title="Control de cartera"
+        eyebrow="Saldo"
+        title="Control de saldo"
         action={
           <>
             <button className="inline-flex items-center justify-center gap-2 rounded-xl bg-[linear-gradient(135deg,#1f7a3a,#2b8e46)] px-5 py-3 text-sm font-semibold text-white shadow-[0_12px_26px_rgba(31,122,58,0.22)] transition active:scale-[0.99] dark:bg-[linear-gradient(135deg,#2563eb,#1d4ed8)]" onClick={onOpenExpense} type="button">
               <Icon name="add" />
               Registrar egreso
             </button>
+            <button className="inline-flex items-center justify-center gap-2 rounded-xl border border-[#dfe7db] bg-white px-5 py-3 text-sm font-semibold text-[#183325] transition active:scale-[0.99] dark:border-[#314056] dark:bg-[#182235] dark:text-[#f8fafc]" onClick={onOpenMerchandise} type="button">
+              <Icon name="inventory_2" />
+              Mercaderia
+            </button>
             {isAdmin ? (
               <button className="px-1 py-3 text-sm font-semibold text-[#5b6d61] underline decoration-[#dfe7db] underline-offset-4 transition active:text-[#183325] dark:text-[#c7d2e0] dark:decoration-[#314056] dark:active:text-white" onClick={onOpenWallet} type="button">
-                Ajustar cartera
+                Ajustar saldo
               </button>
             ) : null}
           </>
@@ -97,7 +96,7 @@ export default function WalletPage({ expenses, isAdmin, money, onOpenExpense, on
               </div>
 
             <Pagination
-              currentPage={currentPage}
+              currentPage={safeCurrentPage}
               itemLabel="egresos"
               onPageChange={setCurrentPage}
               pageSize={EXPENSES_PER_PAGE}

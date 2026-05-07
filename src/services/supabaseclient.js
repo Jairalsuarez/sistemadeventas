@@ -1,4 +1,5 @@
 import { createClient } from "@supabase/supabase-js";
+import { isNativeApp } from "../utils/platform.js";
 
 const url = import.meta.env.VITE_SUPABASE_URL || import.meta.env.NEXT_PUBLIC_SUPABASE_URL || "";
 const key =
@@ -46,7 +47,33 @@ const cookieStorage = {
   },
 };
 
+const nativeStorage = {
+  getItem(storageKey) {
+    try {
+      return window.localStorage.getItem(storageKey);
+    } catch {
+      return null;
+    }
+  },
+  setItem(storageKey, value) {
+    try {
+      window.localStorage.setItem(storageKey, value);
+    } catch {
+      // Ignore storage failures.
+    }
+  },
+  removeItem(storageKey) {
+    try {
+      window.localStorage.removeItem(storageKey);
+    } catch {
+      // Ignore storage failures.
+    }
+  },
+};
+
 export const supabaseReady = Boolean(url && key);
+
+const storage = isNativeApp() ? nativeStorage : cookieStorage;
 
 export const supabase = supabaseReady
   ? createClient(url, key, {
@@ -55,7 +82,7 @@ export const supabase = supabaseReady
         autoRefreshToken: true,
         detectSessionInUrl: true,
         storageKey: "ventas-supabase-auth",
-        storage: cookieStorage,
+        storage: storage,
       },
     })
   : null;

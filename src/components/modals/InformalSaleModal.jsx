@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import Modal from "../Modal";
+import EvidenceViewer from "./EvidenceViewer";
 import Icon from "../ui/Icon";
 import PaymentMethodCard from "../sales/PaymentMethodCard";
 
@@ -62,10 +63,14 @@ export default function InformalSaleModal({
   wallet,
 }) {
   const [step, setStep] = useState(1);
+  const [evidenceViewerOpen, setEvidenceViewerOpen] = useState(false);
   const stepPanelClassName = "max-h-[min(58vh,24rem)] overflow-y-auto pr-1 sm:min-h-[24rem] sm:max-h-[24rem]";
 
   useEffect(() => {
-    if (open) setStep(1);
+    if (open) {
+      setStep(1);
+      setEvidenceViewerOpen(false);
+    }
   }, [open]);
 
   const requiresShift = userRole === "vendedor";
@@ -100,10 +105,10 @@ export default function InformalSaleModal({
         <div className="rounded-lg border border-[#dbe6d8] bg-[#f8faf6] p-4">
           <p className="text-sm font-semibold text-[#183325]">{selectedPayment.label}</p>
           <p className="mt-1 text-sm text-[#5b6d61]">Adjunta el comprobante antes de continuar con el registro.</p>
-          <div className="mt-4 flex flex-wrap items-center gap-3">
-            <label className={`${subtleButtonClassName} inline-flex items-center gap-2`}>
+          <div className="mt-4 grid min-w-0 gap-3 sm:grid-cols-[auto_auto_minmax(0,1fr)] sm:items-center">
+            <label className={`${subtleButtonClassName} inline-flex min-w-0 items-center justify-center gap-2`}>
               {uploading ? <span className="h-4 w-4 animate-spin rounded-full border-2 border-[#f59e0b]/30 border-t-[#f59e0b]" /> : null}
-              <span>{uploading ? "Subiendo..." : informalSalePayment.evidenceUrl ? "Tomar otra foto" : "Tomar foto"}</span>
+              <span className="truncate">{uploading ? "Subiendo..." : informalSalePayment.evidenceUrl ? "Tomar otra foto" : "Tomar foto"}</span>
               <input
                 accept="image/*"
                 capture="environment"
@@ -116,8 +121,8 @@ export default function InformalSaleModal({
                 type="file"
               />
             </label>
-            <label className={subtleButtonClassName}>
-              <span>{informalSalePayment.evidenceUrl ? "Elegir otra foto" : "Elegir foto"}</span>
+            <label className={`${subtleButtonClassName} inline-flex min-w-0 justify-center`}>
+              <span className="truncate">{informalSalePayment.evidenceUrl ? "Elegir otra foto" : "Elegir foto"}</span>
               <input
                 accept="image/*"
                 className="hidden"
@@ -129,17 +134,17 @@ export default function InformalSaleModal({
                 type="file"
               />
             </label>
-            {informalSalePayment.evidenceName ? <span className="text-sm text-[#5b6d61]">{informalSalePayment.evidenceName}</span> : null}
+            {informalSalePayment.evidenceName ? <span className="min-w-0 truncate text-sm text-[#5b6d61]">{informalSalePayment.evidenceName}</span> : null}
           </div>
           {uploading ? <p className="mt-3 text-sm font-medium text-[#f59e0b]">Subiendo evidencia. Mantén esta pantalla abierta.</p> : null}
           {uploadError ? <p className="mt-3 rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm font-semibold text-red-700">{uploadError}</p> : null}
         </div>
 
         {informalSalePayment.evidenceUrl ? (
-          <a className={`${subtleButtonClassName} inline-flex w-fit items-center gap-2`} href={informalSalePayment.evidenceUrl} rel="noreferrer" target="_blank">
+          <button className={`${subtleButtonClassName} inline-flex w-full min-w-0 items-center justify-center gap-2 sm:w-fit`} onClick={() => setEvidenceViewerOpen(true)} type="button">
             <Icon name="visibility" />
-            Ver evidencia
-          </a>
+            <span className="truncate">Ver evidencia</span>
+          </button>
         ) : null}
       </div>
     );
@@ -247,11 +252,11 @@ export default function InformalSaleModal({
                     <strong className="text-[#183325] dark:text-[#f8fafc]">{money(totalAmount)}</strong>
                   </div>
                   <div className="flex items-center justify-between gap-3">
-                    <span>Cartera luego</span>
+                    <span>Saldo luego</span>
                     <strong className="text-[#1f7a3a] dark:text-[#93c5fd]">{money(nextWalletTotal)}</strong>
                   </div>
                   {informalSale.description ? <div className="line-clamp-3 rounded-md border border-[#dbe6d8] bg-white px-3 py-2 text-xs text-[#5b6d61] dark:border-[#314056] dark:bg-[#0f172a] dark:text-[#c7d2e0]">{informalSale.description.trim()}</div> : null}
-                  {informalSalePayment.evidenceUrl ? <a className="inline-flex items-center gap-2 text-xs font-semibold text-[#1f7a3a] dark:text-[#93c5fd]" href={informalSalePayment.evidenceUrl} rel="noreferrer" target="_blank"><Icon className="text-base" name="visibility" />Ver evidencia</a> : null}
+                  {informalSalePayment.evidenceUrl ? <button className="inline-flex min-w-0 items-center gap-2 text-xs font-semibold text-[#1f7a3a] dark:text-[#93c5fd]" onClick={() => setEvidenceViewerOpen(true)} type="button"><Icon className="text-base" name="visibility" /><span className="truncate">Ver evidencia</span></button> : null}
                 </div>
               </div>
           </div>
@@ -282,6 +287,12 @@ export default function InformalSaleModal({
             )}
           </div>
         </div>
+        <EvidenceViewer
+          name={informalSalePayment.evidenceName || "Evidencia del pago"}
+          onClose={() => setEvidenceViewerOpen(false)}
+          open={evidenceViewerOpen}
+          url={informalSalePayment.evidenceUrl}
+        />
       </div>
     </Modal>
   );

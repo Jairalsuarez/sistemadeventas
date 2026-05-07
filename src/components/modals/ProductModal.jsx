@@ -5,6 +5,7 @@ export default function ProductModal({
   onClose,
   open,
   productForm,
+  presentation = "modal",
   removeProduct,
   saveProduct,
   setProductForm,
@@ -17,7 +18,8 @@ export default function ProductModal({
       productForm.categoria !== editing.categoria ||
       productForm.marca !== (editing.marca || "") ||
       Number(productForm.precio) !== Number(editing.precio) ||
-      Number(productForm.stock) !== Number(editing.stock) ||
+      Number(productForm.stockLocal) !== Number(editing.stockLocal) ||
+      Number(productForm.stockDeposito) !== Number(editing.stockDeposito) ||
       productForm.descripcion !== editing.descripcion ||
       productForm.imagen_url !== editing.imagen_url ||
       Boolean(productForm.activo) !== Boolean(editing.activo)
@@ -25,8 +27,7 @@ export default function ProductModal({
   const fieldClassName =
     "w-full rounded-2xl border border-[#d8dee4] bg-white px-4 py-3 text-[#1f2937] transition placeholder:text-[#9aa4b2] focus:border-[#f97316] focus:outline-none focus:ring-4 focus:ring-[#f97316]/10 dark:border-white/10 dark:bg-[#111827] dark:text-white";
   const sectionClassName = "rounded-[24px] border border-[#e5e7eb] bg-white p-5 dark:border-white/10 dark:bg-[#0f172a]";
-  const hasImage = Boolean(productForm.imagen_url?.trim());
-  const canSave = hasChanges && hasImage;
+  const canSave = hasChanges && Boolean(productForm.nombre?.trim());
 
   return (
     <Modal
@@ -34,6 +35,7 @@ export default function ProductModal({
       onClose={onClose}
       text={editing ? "Edita solo los datos necesarios del producto." : "Completa lo esencial para crear el producto."}
       title={editing ? "Editar producto" : "Nuevo producto"}
+      variant={presentation === "page" ? "page" : "default"}
       wide
     >
       <div className="space-y-5">
@@ -62,7 +64,7 @@ export default function ProductModal({
             </label>
           </div>
 
-          <div className="grid gap-4 md:grid-cols-3">
+          <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
             <label className="grid gap-2 text-sm font-semibold text-[#1f2937] dark:text-white">
               Marca
               <input
@@ -88,15 +90,28 @@ export default function ProductModal({
             </label>
 
             <label className="grid gap-2 text-sm font-semibold text-[#1f2937] dark:text-white">
-              Stock
+              Stock local
               <input
                 className={fieldClassName}
                 min="0"
-                onChange={(e) => setProductForm((current) => ({ ...current, stock: e.target.value }))}
+                onChange={(e) => setProductForm((current) => ({ ...current, stockLocal: e.target.value, stock: Number(e.target.value || 0) + Number(current.stockDeposito || 0) }))}
                 placeholder="0"
                 step="1"
                 type="number"
-                value={productForm.stock || ""}
+                value={productForm.stockLocal || ""}
+              />
+            </label>
+
+            <label className="grid gap-2 text-sm font-semibold text-[#1f2937] dark:text-white">
+              Stock deposito
+              <input
+                className={fieldClassName}
+                min="0"
+                onChange={(e) => setProductForm((current) => ({ ...current, stockDeposito: e.target.value, stock: Number(current.stockLocal || 0) + Number(e.target.value || 0) }))}
+                placeholder="0"
+                step="1"
+                type="number"
+                value={productForm.stockDeposito || ""}
               />
             </label>
           </div>
@@ -116,7 +131,7 @@ export default function ProductModal({
         <div className={`${sectionClassName} space-y-4`}>
           <label className="grid gap-2 text-sm font-semibold text-[#1f2937] dark:text-white">
             URL de la imagen
-            <span className="text-xs font-medium text-[#f97316] dark:text-[#fb923c]">Obligatoria</span>
+            <span className="text-xs font-medium text-[#5b6d61] dark:text-[#c7d2e0]">Opcional</span>
             <input
               className={fieldClassName}
               onChange={(e) => setProductForm((current) => ({ ...current, imagen_url: e.target.value }))}

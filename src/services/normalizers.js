@@ -29,6 +29,10 @@ export function safeNumber(value) {
 }
 
 export function normalizeProduct(product) {
+  const legacyStock = safeNumber(product.stock);
+  const hasSplitStock = product.stock_local !== undefined || product.stockLocal !== undefined || product.stock_deposito !== undefined || product.stockDeposito !== undefined;
+  const stockLocal = hasSplitStock ? safeNumber(product.stock_local ?? product.stockLocal) : legacyStock;
+  const stockDeposito = hasSplitStock ? safeNumber(product.stock_deposito ?? product.stockDeposito) : 0;
   return {
     id: product.id,
     nombre: product.nombre || "",
@@ -36,7 +40,9 @@ export function normalizeProduct(product) {
     marca: product.marca || "",
     descripcion: product.descripcion || "",
     precio: safeNumber(product.precio),
-    stock: safeNumber(product.stock),
+    stockLocal,
+    stockDeposito,
+    stock: stockLocal + stockDeposito,
     imagen_url: product.imagen_url || "https://images.unsplash.com/photo-1623065422902-30a2d299bbe4?auto=format&fit=crop&w=1200&q=80",
     activo: product.activo ?? true,
     updatedAt: product.updated_at || product.updatedAt || new Date().toISOString(),

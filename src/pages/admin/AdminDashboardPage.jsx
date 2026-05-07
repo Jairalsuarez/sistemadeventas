@@ -1,12 +1,11 @@
-import { useEffect, useState } from "react";
-import ActivityFeed from "../../components/dashboard/ActivityFeed";
+import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import CloseShiftModal from "../../components/modals/CloseShiftModal";
 import ShiftSummaryModal from "../../components/modals/ShiftSummaryModal";
 import Icon from "../../components/ui/Icon";
 import PageHeader from "../../components/ui/PageHeader";
 import SectionBlock from "../../components/ui/SectionBlock";
 import StatCard from "../../components/ui/StatCard";
-import { fetchPublicAnalytics, getPublicAnalytics } from "../../services/publicAnalyticsService.js";
 
 export default function AdminDashboardPage({
   adminStats,
@@ -14,31 +13,13 @@ export default function AdminDashboardPage({
   onNewInformalSale,
   onNewSale,
   onCloseShift,
-  upcomingSchedules,
-  recentActivity,
   sellerShiftRows,
   money,
 }) {
-  const [showRecentActivity, setShowRecentActivity] = useState(false);
-  const [publicAnalytics, setPublicAnalytics] = useState(() => getPublicAnalytics());
+  const navigate = useNavigate();
   const [shiftToClose, setShiftToClose] = useState(null);
   const [summaryToView, setSummaryToView] = useState(null);
-  const scheduleRows = upcomingSchedules || [];
   const sellers = sellerShiftRows || [];
-  const nextSchedule = scheduleRows[0] || null;
-
-  useEffect(() => {
-    const syncAnalytics = async () => setPublicAnalytics(await fetchPublicAnalytics());
-    syncAnalytics();
-    window.addEventListener("storage", syncAnalytics);
-    window.addEventListener("focus", syncAnalytics);
-    window.addEventListener("public-analytics-updated", syncAnalytics);
-    return () => {
-      window.removeEventListener("storage", syncAnalytics);
-      window.removeEventListener("focus", syncAnalytics);
-      window.removeEventListener("public-analytics-updated", syncAnalytics);
-    };
-  }, []);
 
   return (
     <div className="space-y-6">
@@ -75,25 +56,41 @@ export default function AdminDashboardPage({
       </div>
 
       <div className="grid gap-6 xl:grid-cols-[minmax(0,1.3fr)_380px]">
-        <SectionBlock title="Actividad reciente">
+        <div className="grid content-start gap-3">
           <button
-            className="flex w-full items-center justify-between gap-4 rounded-xl border border-[#dfe7db] bg-white px-5 py-4 text-left transition hover:border-[#1f7a3a] dark:border-[#314056] dark:bg-[#182235] dark:hover:border-[#60a5fa]"
-            onClick={() => setShowRecentActivity((current) => !current)}
+            className="flex min-h-[76px] w-full items-center justify-between gap-4 rounded-xl border border-[#dfe7db] bg-white px-5 py-4 text-left transition active:scale-[0.99] dark:border-[#314056] dark:bg-[#182235]"
+            onClick={() => navigate("/panel/saldo")}
             type="button"
           >
-            <span>
-              <span className="block text-sm font-semibold text-[#183325] dark:text-[#f8fafc]">Ver actividad reciente</span>
-              <span className="mt-1 block text-sm text-[#5b6d61] dark:text-[#c7d2e0]">{recentActivity.length} movimiento(s) disponibles</span>
+            <span className="flex min-w-0 items-center gap-3">
+              <span className="grid h-11 w-11 shrink-0 place-items-center rounded-xl bg-[#eef6f0] text-[#1f7a3a] dark:bg-[#0f172a] dark:text-[#93c5fd]">
+                <Icon name="account_balance_wallet" />
+              </span>
+              <span className="min-w-0">
+                <strong className="block text-base font-semibold text-[#183325] dark:text-[#f8fafc]">Saldo</strong>
+                <span className="mt-1 block text-sm text-[#5b6d61] dark:text-[#c7d2e0]">Egresos, mercaderia y saldo actual</span>
+              </span>
             </span>
-            <Icon className="text-[#1f7a3a] dark:text-[#60a5fa]" name={showRecentActivity ? "keyboard_arrow_up" : "keyboard_arrow_down"} />
+            <Icon className="shrink-0 text-[#1f7a3a] dark:text-[#60a5fa]" name="chevron_right" />
           </button>
 
-          {showRecentActivity ? (
-            <div className="mt-4">
-              <ActivityFeed items={recentActivity} />
-            </div>
-          ) : null}
-        </SectionBlock>
+          <button
+            className="flex min-h-[76px] w-full items-center justify-between gap-4 rounded-xl border border-[#dfe7db] bg-white px-5 py-4 text-left transition active:scale-[0.99] dark:border-[#314056] dark:bg-[#182235]"
+            onClick={() => navigate("/panel/productos")}
+            type="button"
+          >
+            <span className="flex min-w-0 items-center gap-3">
+              <span className="grid h-11 w-11 shrink-0 place-items-center rounded-xl bg-[#fff7ed] text-[#c2410c] dark:bg-[#0f172a] dark:text-[#fdba74]">
+                <Icon name="inventory_2" />
+              </span>
+              <span className="min-w-0">
+                <strong className="block text-base font-semibold text-[#183325] dark:text-[#f8fafc]">Productos</strong>
+                <span className="mt-1 block text-sm text-[#5b6d61] dark:text-[#c7d2e0]">Inventario, precios y existencias</span>
+              </span>
+            </span>
+            <Icon className="shrink-0 text-[#1f7a3a] dark:text-[#60a5fa]" name="chevron_right" />
+          </button>
+        </div>
 
         <SectionBlock title="Turnos del equipo">
           <div className="space-y-3">
@@ -142,36 +139,6 @@ export default function AdminDashboardPage({
           </div>
         </SectionBlock>
       </div>
-
-      <SectionBlock title="Resumen operativo">
-        <div className="grid gap-4 md:grid-cols-3">
-          <article className="rounded-lg border border-[#e4ece2] bg-white px-4 py-4 dark:border-[#23314d] dark:bg-[#182235]">
-            <span className="inline-flex h-10 w-10 items-center justify-center rounded-full border border-[#dfe7db] text-[#1f7a3a] dark:border-[#314056] dark:text-[#60a5fa]">
-              <Icon name="visibility" />
-            </span>
-            <strong className="mt-4 block text-2xl font-semibold text-[#183325] dark:text-[#f8fafc]">{publicAnalytics.pageVisits}</strong>
-            <p className="mt-1 text-sm text-[#5b6d61] dark:text-[#c7d2e0]">Visitas al catalogo publico</p>
-          </article>
-
-          <article className="rounded-lg border border-[#e4ece2] bg-white px-4 py-4 dark:border-[#23314d] dark:bg-[#182235]">
-            <span className="inline-flex h-10 w-10 items-center justify-center rounded-full border border-[#dfe7db] text-[#1f7a3a] dark:border-[#314056] dark:text-[#60a5fa]">
-              <Icon name="chat" />
-            </span>
-            <strong className="mt-4 block text-2xl font-semibold text-[#183325] dark:text-[#f8fafc]">{publicAnalytics.whatsappClicks}</strong>
-            <p className="mt-1 text-sm text-[#5b6d61] dark:text-[#c7d2e0]">Clics para pedir por WhatsApp</p>
-          </article>
-
-          <article className="rounded-lg border border-[#e4ece2] bg-white px-4 py-4 dark:border-[#23314d] dark:bg-[#182235]">
-            <span className="inline-flex h-10 w-10 items-center justify-center rounded-full border border-[#dfe7db] text-[#1f7a3a] dark:border-[#314056] dark:text-[#60a5fa]">
-              <Icon name="event" />
-            </span>
-            <strong className="mt-4 block text-2xl font-semibold text-[#183325] dark:text-[#f8fafc]">{scheduleRows.length}</strong>
-            <p className="mt-1 text-sm text-[#5b6d61] dark:text-[#c7d2e0]">
-              {nextSchedule ? `Proximo: ${nextSchedule.fecha} ${nextSchedule.inicio}` : "Sin agenda pendiente"}
-            </p>
-          </article>
-        </div>
-      </SectionBlock>
 
       <CloseShiftModal
         onClose={() => setShiftToClose(null)}
