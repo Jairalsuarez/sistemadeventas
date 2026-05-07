@@ -8,6 +8,7 @@ import {
   normalizeSale,
   normalizeSchedule,
   normalizeShift,
+  normalizeCashState,
   normalizeWalletMovement,
   normalizeWalletState,
   safeNumber,
@@ -24,10 +25,17 @@ function isRpcSchemaMismatch(error, functionName) {
   return (
     text.includes("shift_id") ||
     text.includes(functionName.toLowerCase()) ||
+    text.includes("invalid input syntax") ||
     text.includes("could not find") ||
     text.includes("schema cache")
   );
 }
+
+const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+const normalizeUuid = (value) => {
+  const text = String(value || "").trim();
+  return UUID_PATTERN.test(text) ? text : null;
+};
 
 async function withSupabaseTimeout(promise, actionLabel) {
   let timeoutId;
@@ -134,6 +142,15 @@ export async function fetchRemoteWalletState() {
   return { ok: true, wallet: normalizeWalletState(data) };
 }
 
+export async function fetchRemoteCashState() {
+  if (!supabaseReady || !supabase) return { ok: false, error: "Supabase no configurado." };
+  const { data, error } = await supabase.from("cash_state").select("id,saldo_actual,updated_at").eq("id", "principal").maybeSingle();
+
+  if (error) return { ok: false, error: formatSupabaseError(error) };
+  if (!data) return { ok: true, cashBox: normalizeCashState({ saldoActual: 0 }) };
+  return { ok: true, cashBox: normalizeCashState(data) };
+}
+
 export async function fetchRemoteSales() {
   if (!supabaseReady || !supabase) return { ok: false, error: "Supabase no configurado." };
 
@@ -167,7 +184,7 @@ export async function createRemoteSale(sale) {
   if (!supabaseReady || !supabase) return { ok: false, error: "Supabase no configurado." };
 
   const salePayload = {
-    p_shift_id: sale.shiftId && sale.shiftId !== "" && sale.shiftId !== "null" ? String(sale.shiftId).trim() : null,
+    p_shift_id: normalizeUuid(sale.shiftId),
     p_user_id: sale.userId,
     p_total: safeNumber(sale.total),
     p_payment_method: sale.paymentMethod || "efectivo",
@@ -266,6 +283,7 @@ async function createRemoteSaleDirect(sale, salePayload) {
       total,
       userId: sale.userId,
       shiftId: saleInsert.shift_id,
+      paymentMethod: saleInsert.payment_method,
       movementDescription: `Venta ${createdSale.id} - ${sale.paymentMethod || "efectivo"}`,
       items: itemPayload,
     });
@@ -280,7 +298,7 @@ export async function createRemoteInformalSale(sale) {
   if (!supabaseReady || !supabase) return { ok: false, error: "Supabase no configurado." };
 
   const salePayload = {
-    p_shift_id: sale.shiftId && sale.shiftId !== "" && sale.shiftId !== "null" ? String(sale.shiftId).trim() : null,
+    p_shift_id: normalizeUuid(sale.shiftId),
     p_user_id: sale.userId,
     p_total: safeNumber(sale.total),
     p_description: sale.description?.trim() || "",
@@ -289,6 +307,9 @@ export async function createRemoteInformalSale(sale) {
     p_payment_evidence_name: sale.paymentEvidenceName || null,
     p_created_at: sale.createdAt,
   };
+
+  const directResult = await createRemoteInformalSaleDirect(sale, salePayload);
+  if (directResult.ok) return directResult;
 
   const { data: saleId, error: rpcError } = await supabase.rpc("create_informal_sale", salePayload);
 
@@ -344,6 +365,7 @@ async function createRemoteInformalSaleDirect(sale, salePayload) {
       total,
       userId: sale.userId,
       shiftId: payload.shift_id,
+      paymentMethod: payload.payment_method,
       movementDescription: `Venta informal: ${sale.description?.trim() || data.id}`,
       items: [],
     });
@@ -354,20 +376,22 @@ async function createRemoteInformalSaleDirect(sale, salePayload) {
   return { ok: true, sale: normalizeSale(data, []) };
 }
 
-async function applySaleSideEffects({ total, userId, shiftId, movementDescription, items = [] }) {
-  const { data: wallet } = await supabase
-    .from("wallet_state")
-    .select("id,saldo_actual,updated_at")
-    .eq("id", "principal")
-    .maybeSingle();
+async function applySaleSideEffects({ total, userId, shiftId, paymentMethod = "efectivo", movementDescription, items = [] }) {
+  if ((paymentMethod || "efectivo") === "efectivo") {
+    const { data: cashBox } = await supabase
+      .from("cash_state")
+      .select("id,saldo_actual,updated_at")
+      .eq("id", "principal")
+      .maybeSingle();
 
-  await upsertRemoteWalletState(
-    {
-      saldoActual: safeNumber(wallet?.saldo_actual) + total,
-      updatedAt: new Date().toISOString(),
-    },
-    userId
-  );
+    await upsertRemoteCashState(
+      {
+        saldoActual: safeNumber(cashBox?.saldo_actual) + total,
+        updatedAt: new Date().toISOString(),
+      },
+      userId
+    );
+  }
 
   await createRemoteWalletMovement({
     tipo: "venta",
@@ -564,6 +588,31 @@ export async function upsertRemoteWalletState(wallet, userId) {
   const { data, error } = result;
   if (error) return { ok: false, error: error.message };
   return { ok: true, wallet: normalizeWalletState(data) };
+}
+
+export async function upsertRemoteCashState(cashBox, userId) {
+  if (!supabaseReady || !supabase) return { ok: false, error: "Supabase no configurado." };
+
+  const payload = {
+    id: "principal",
+    saldo_actual: safeNumber(cashBox.saldoActual),
+    updated_at: new Date().toISOString(),
+    updated_by: userId || null,
+  };
+
+  let result;
+  try {
+    result = await withSupabaseTimeout(
+      supabase.from("cash_state").upsert(payload).select("id,saldo_actual,updated_at").single(),
+      "actualizar la caja"
+    );
+  } catch (error) {
+    return { ok: false, error: error.message };
+  }
+
+  const { data, error } = result;
+  if (error) return { ok: false, error: formatSupabaseError(error) };
+  return { ok: true, cashBox: normalizeCashState(data) };
 }
 
 export async function createRemoteWalletMovement(movement) {

@@ -1,5 +1,37 @@
 import { useEffect } from "react";
 
+const modalBackStack = [];
+let modalBackOrder = 0;
+
+function getTopBackEntry() {
+  return modalBackStack.reduce((top, entry) => {
+    if (!top) return entry;
+    if (entry.priority > top.priority) return entry;
+    if (entry.priority === top.priority && entry.order > top.order) return entry;
+    return top;
+  }, null);
+}
+
+export function registerAppBackHandler(onBack, priority = 0) {
+  if (typeof window === "undefined") return () => {};
+
+  const entry = { id: Symbol("modal-back"), onBack, order: modalBackOrder += 1, priority };
+  modalBackStack.push(entry);
+
+  const handleBack = (event) => {
+    if (event.defaultPrevented || getTopBackEntry()?.id !== entry.id) return;
+    event.preventDefault();
+    onBack?.();
+  };
+
+  window.addEventListener("app-modal-back", handleBack);
+  return () => {
+    window.removeEventListener("app-modal-back", handleBack);
+    const index = modalBackStack.findIndex((item) => item.id === entry.id);
+    if (index >= 0) modalBackStack.splice(index, 1);
+  };
+}
+
 export default function Modal({ open, title, text, onClose, children, wide = false, closeOnBackdrop = false, variant = "default", containerClassName = "" }) {
   useEffect(() => {
     if (!open || variant === "page") return undefined;
@@ -12,6 +44,11 @@ export default function Modal({ open, title, text, onClose, children, wide = fal
       document.documentElement.style.overscrollBehavior = previousOverscroll;
     };
   }, [open]);
+
+  useEffect(() => {
+    if (!open || variant === "page" || typeof window === "undefined") return undefined;
+    return registerAppBackHandler(onClose);
+  }, [onClose, open, variant]);
 
   if (!open) return null;
 

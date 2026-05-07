@@ -4,7 +4,7 @@ import AdminDashboardPage from "../admin/AdminDashboardPage";
 import SellerDashboardPage from "../seller/SellerDashboardPage";
 import { buildShiftSummary } from "../../services/shiftSummaryService.js";
 
-export default function DashboardPage({ onNewProduct, onNewSale, onNewInformalSale, onOpenExpense, onOpenWallet }) {
+export default function DashboardPage({ onNewProduct, onNewSale, onNewInformalSale, onOpenCashWithdrawal, onOpenExpense, onOpenWallet }) {
   const { activeShift, adminStats, app, lowStock, recentActivity, sellerStats, upcomingSchedules, user, visibleProducts, startShift, closeShift, money, formatDate } = useAppContext();
   const sellerSchedules = useMemo(() => {
     if (user?.role !== "vendedor") return [];
@@ -95,6 +95,7 @@ export default function DashboardPage({ onNewProduct, onNewSale, onNewInformalSa
         onNewInformalSale={onNewInformalSale}
         onNewProduct={onNewProduct}
         onNewSale={onNewSale}
+        onOpenCashWithdrawal={onOpenCashWithdrawal}
         upcomingSchedules={upcomingSchedules}
         recentActivity={recentActivity}
         sellerShiftRows={sellerShiftRows}

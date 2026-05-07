@@ -53,7 +53,7 @@ create table if not exists public.distributors (
 
 create table if not exists public.wallet_movements (
   id uuid primary key default gen_random_uuid(),
-  tipo text not null check (tipo in ('ajuste', 'venta', 'egreso', 'mercaderia')),
+  tipo text not null check (tipo in ('ajuste', 'venta', 'egreso', 'mercaderia', 'retiro_caja')),
   monto numeric(10,2) not null,
   descripcion text,
   created_by uuid references public.profiles(id),
@@ -79,9 +79,16 @@ end $$;
 
 alter table public.wallet_movements
 add constraint wallet_movements_tipo_check
-check (tipo in ('ajuste', 'venta', 'egreso', 'mercaderia'));
+check (tipo in ('ajuste', 'venta', 'egreso', 'mercaderia', 'retiro_caja'));
 
 create table if not exists public.wallet_state (
+  id text primary key default 'principal',
+  saldo_actual numeric(10,2) not null default 0,
+  updated_by uuid references public.profiles(id),
+  updated_at timestamptz not null default now()
+);
+
+create table if not exists public.cash_state (
   id text primary key default 'principal',
   saldo_actual numeric(10,2) not null default 0,
   updated_by uuid references public.profiles(id),
@@ -195,6 +202,7 @@ alter table public.profiles enable row level security;
 alter table public.products enable row level security;
 alter table public.wallet_movements enable row level security;
 alter table public.wallet_state enable row level security;
+alter table public.cash_state enable row level security;
 alter table public.shifts enable row level security;
 alter table public.sales enable row level security;
 alter table public.sale_items enable row level security;
@@ -331,26 +339,28 @@ begin
     where id = v_product_id;
   end loop;
 
-  select coalesce(saldo_actual, 0) + coalesce(p_total, 0)
-  into v_next_wallet
-  from public.wallet_state
-  where id = 'principal'
-  for update;
+  if coalesce(nullif(trim(p_payment_method), ''), 'efectivo') = 'efectivo' then
+    select coalesce(saldo_actual, 0) + coalesce(p_total, 0)
+    into v_next_wallet
+    from public.cash_state
+    where id = 'principal'
+    for update;
 
-  if v_next_wallet is null then
-    v_next_wallet := coalesce(p_total, 0);
-    insert into public.wallet_state (id, saldo_actual, updated_at, updated_by)
-    values ('principal', v_next_wallet, now(), auth.uid())
-    on conflict (id) do update
-    set saldo_actual = excluded.saldo_actual,
-        updated_at = excluded.updated_at,
-        updated_by = excluded.updated_by;
-  else
-    update public.wallet_state
-    set saldo_actual = v_next_wallet,
-        updated_at = now(),
-        updated_by = auth.uid()
-    where id = 'principal';
+    if v_next_wallet is null then
+      v_next_wallet := coalesce(p_total, 0);
+      insert into public.cash_state (id, saldo_actual, updated_at, updated_by)
+      values ('principal', v_next_wallet, now(), auth.uid())
+      on conflict (id) do update
+      set saldo_actual = excluded.saldo_actual,
+          updated_at = excluded.updated_at,
+          updated_by = excluded.updated_by;
+    else
+      update public.cash_state
+      set saldo_actual = v_next_wallet,
+          updated_at = now(),
+          updated_by = auth.uid()
+      where id = 'principal';
+    end if;
   end if;
 
   insert into public.wallet_movements (tipo, monto, descripcion, created_by)
@@ -436,26 +446,28 @@ begin
   )
   returning id into v_sale_id;
 
-  select coalesce(saldo_actual, 0) + coalesce(p_total, 0)
-  into v_next_wallet
-  from public.wallet_state
-  where id = 'principal'
-  for update;
+  if coalesce(nullif(trim(p_payment_method), ''), 'efectivo') = 'efectivo' then
+    select coalesce(saldo_actual, 0) + coalesce(p_total, 0)
+    into v_next_wallet
+    from public.cash_state
+    where id = 'principal'
+    for update;
 
-  if v_next_wallet is null then
-    v_next_wallet := coalesce(p_total, 0);
-    insert into public.wallet_state (id, saldo_actual, updated_at, updated_by)
-    values ('principal', v_next_wallet, now(), auth.uid())
-    on conflict (id) do update
-    set saldo_actual = excluded.saldo_actual,
-        updated_at = excluded.updated_at,
-        updated_by = excluded.updated_by;
-  else
-    update public.wallet_state
-    set saldo_actual = v_next_wallet,
-        updated_at = now(),
-        updated_by = auth.uid()
-    where id = 'principal';
+    if v_next_wallet is null then
+      v_next_wallet := coalesce(p_total, 0);
+      insert into public.cash_state (id, saldo_actual, updated_at, updated_by)
+      values ('principal', v_next_wallet, now(), auth.uid())
+      on conflict (id) do update
+      set saldo_actual = excluded.saldo_actual,
+          updated_at = excluded.updated_at,
+          updated_by = excluded.updated_by;
+    else
+      update public.cash_state
+      set saldo_actual = v_next_wallet,
+          updated_at = now(),
+          updated_by = auth.uid()
+      where id = 'principal';
+    end if;
   end if;
 
   insert into public.wallet_movements (tipo, monto, descripcion, created_by)
@@ -648,6 +660,19 @@ to authenticated
 using (public.is_staff())
 with check (public.is_staff());
 
+drop policy if exists "cash_state_select_authenticated" on public.cash_state;
+create policy "cash_state_select_authenticated"
+on public.cash_state for select
+to authenticated
+using (public.is_staff());
+
+drop policy if exists "cash_state_staff_all" on public.cash_state;
+create policy "cash_state_staff_all"
+on public.cash_state for all
+to authenticated
+using (public.is_staff())
+with check (public.is_staff());
+
 drop policy if exists "notifications_select_authenticated" on public.notifications;
 create policy "notifications_select_authenticated"
 on public.notifications for select
@@ -705,5 +730,9 @@ to authenticated
 using (public.is_staff());
 
 insert into public.wallet_state (id, saldo_actual)
+values ('principal', 0)
+on conflict (id) do nothing;
+
+insert into public.cash_state (id, saldo_actual)
 values ('principal', 0)
 on conflict (id) do nothing;

@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { Outlet, useLocation, useNavigate } from "react-router-dom";
 import { useAppContext } from "../../context/AppContext";
 import Modal from "../Modal";
+import LocalNotesPanel from "../notes/LocalNotesPanel";
 import NotificationPanel from "../notifications/NotificationPanel";
 import Icon from "../ui/Icon";
 import SideNav from "./SideNav";
@@ -9,6 +10,13 @@ import TopNav from "./TopNav";
 import useClickOutside from "../../hooks/useClickOutside.jsx";
 import { isNativeApp } from "../../utils/platform.js";
 import DebugModal from "../modals/DebugModal";
+import { registerPlugin } from "@capacitor/core";
+
+const AppControl = registerPlugin("AppControl", {
+  web: () => ({
+    exitApp: async () => ({ exited: false }),
+  }),
+});
 
 export default function AppShell() {
   const navigate = useNavigate();
@@ -32,8 +40,10 @@ export default function AppShell() {
     useAppContext();
   const [openNotifications, setOpenNotifications] = useState(false);
   const [logoutModalOpen, setLogoutModalOpen] = useState(false);
+  const [exitModalOpen, setExitModalOpen] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [debugModalOpen, setDebugModalOpen] = useState(false);
+  const [notesPanelOpen, setNotesPanelOpen] = useState(false);
   const [pullState, setPullState] = useState({ active: false, armed: false, cancelled: false, startY: 0, distance: 0, maxDistance: 0, refreshing: false });
   const [isOnline, setIsOnline] = useState(() => (typeof navigator === "undefined" ? true : navigator.onLine));
   const notificationRef = useRef(null);
@@ -43,6 +53,59 @@ export default function AppShell() {
     setOpenNotifications(false);
     setMobileMenuOpen(false);
   }, [location.pathname]);
+
+  useEffect(() => {
+    if (!nativeApp) return undefined;
+
+    const handleNativeBack = () => {
+      if (notesPanelOpen) {
+        const notesEvent = new Event("app-modal-back", { cancelable: true });
+        window.dispatchEvent(notesEvent);
+        if (notesEvent.defaultPrevented) return;
+        setNotesPanelOpen(false);
+        return;
+      }
+      if (openNotifications) {
+        setOpenNotifications(false);
+        return;
+      }
+      if (mobileMenuOpen) {
+        setMobileMenuOpen(false);
+        return;
+      }
+      if (logoutModalOpen) {
+        setLogoutModalOpen(false);
+        return;
+      }
+      if (exitModalOpen) {
+        setExitModalOpen(false);
+        return;
+      }
+      if (debugModalOpen) {
+        setDebugModalOpen(false);
+        return;
+      }
+
+      const modalEvent = new Event("app-modal-back", { cancelable: true });
+      window.dispatchEvent(modalEvent);
+      if (modalEvent.defaultPrevented) return;
+
+      if (location.pathname !== "/panel") {
+        const historyIndex = window.history.state?.idx;
+        if (typeof historyIndex === "number" && historyIndex > 0) {
+          navigate(-1);
+        } else {
+          navigate("/panel");
+        }
+        return;
+      }
+
+      setExitModalOpen(true);
+    };
+
+    window.addEventListener("native-back-button", handleNativeBack);
+    return () => window.removeEventListener("native-back-button", handleNativeBack);
+  }, [debugModalOpen, exitModalOpen, location.pathname, logoutModalOpen, mobileMenuOpen, nativeApp, navigate, notesPanelOpen, openNotifications]);
 
   useEffect(() => {
     if (!nativeApp || !session) return;
@@ -229,16 +292,43 @@ export default function AppShell() {
       </Modal>
 
       <DebugModal open={debugModalOpen} onClose={() => setDebugModalOpen(false)} />
+      <LocalNotesPanel open={notesPanelOpen} onClose={() => setNotesPanelOpen(false)} />
 
-      {user?.role === "admin" && (
+      <Modal closeOnBackdrop containerClassName="max-w-[420px] p-4" open={exitModalOpen} onClose={() => setExitModalOpen(false)} text="Esto no cerrara tu cuenta." title="Deseas salir de la aplicacion?">
+        <div className="mx-auto w-full max-w-[300px]">
+          <div className="mt-3 flex flex-wrap items-center justify-center gap-3">
+            <button
+              className="rounded-xl bg-[#dc2626] px-5 py-3 text-sm font-semibold text-white transition hover:bg-[#b91c1c] dark:bg-[#ef4444] dark:hover:bg-[#dc2626]"
+              onClick={async () => {
+                setExitModalOpen(false);
+                await AppControl.exitApp();
+              }}
+              type="button"
+            >
+              Salir
+            </button>
+            <button
+              className="rounded-xl border border-[#d8dee4] px-5 py-3 text-sm font-semibold text-[#1f2937] transition hover:bg-[#f8fafc] dark:border-[#334155] dark:bg-[#172033] dark:text-white dark:hover:bg-[#22304a]"
+              onClick={() => setExitModalOpen(false)}
+              type="button"
+            >
+              Cancelar
+            </button>
+          </div>
+        </div>
+      </Modal>
+
+      {session ? (
         <button
-          onClick={() => setDebugModalOpen(true)}
-          className="fixed bottom-4 right-4 z-40 h-10 w-10 rounded-full bg-red-600 text-white shadow-lg hover:bg-red-700 flex items-center justify-center text-xs font-bold"
-          title="Debug Supabase (Ctrl+Shift+D)"
+          aria-label={notesPanelOpen ? "Cerrar notas locales" : "Abrir notas locales"}
+          onClick={() => setNotesPanelOpen((current) => !current)}
+          className="fixed bottom-4 right-4 z-[80] grid h-12 w-12 place-items-center rounded-full bg-[#1f7a3a] text-white shadow-[0_14px_30px_rgba(31,122,58,0.28)] transition hover:bg-[#17662f] dark:bg-[#2563eb] dark:hover:bg-[#1d4ed8]"
+          title="Notas locales"
+          type="button"
         >
-          D
+          <Icon name="edit_note" />
         </button>
-      )}
+      ) : null}
     </div>
   );
 }

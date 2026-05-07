@@ -8,7 +8,7 @@ import StatCard from "../../components/ui/StatCard";
 const isToday = (value) => new Date(value).toDateString() === new Date().toDateString();
 const EXPENSES_PER_PAGE = 8;
 
-export default function WalletPage({ expenses, isAdmin, money, onOpenExpense, onOpenMerchandise, onOpenWallet, wallet }) {
+export default function WalletPage({ cashBox, expenses, isAdmin, money, onOpenCashWithdrawal, onOpenExpense, onOpenMerchandise, onOpenWallet, wallet }) {
   const [currentPage, setCurrentPage] = useState(1);
   const [showExpenseMovements, setShowExpenseMovements] = useState(false);
   const expensesToday = expenses.filter((item) => isToday(item.createdAt)).reduce((acc, item) => acc + Number(item.monto || 0), 0);
@@ -24,9 +24,9 @@ export default function WalletPage({ expenses, isAdmin, money, onOpenExpense, on
   }, [orderedExpenses, safeCurrentPage]);
 
   const stats = [
-    { label: "Saldo actual", value: money(wallet?.saldoActual || 0), detail: "Disponible para la operacion diaria" },
+    { label: "Caja", value: money(cashBox?.saldoActual || 0), detail: "Efectivo disponible para retirar" },
+    { label: "Saldo general", value: money(wallet?.saldoActual || 0), detail: "Sube al retirar dinero de caja" },
     { label: "Egresos de hoy", value: money(expensesToday), detail: `${expenses.filter((item) => isToday(item.createdAt)).length} movimientos hoy` },
-    { label: "Total de egresos", value: `${expenses.length}`, detail: "Historial registrado en el sistema" },
   ];
 
   return (
@@ -45,9 +45,15 @@ export default function WalletPage({ expenses, isAdmin, money, onOpenExpense, on
               Mercaderia
             </button>
             {isAdmin ? (
-              <button className="px-1 py-3 text-sm font-semibold text-[#5b6d61] underline decoration-[#dfe7db] underline-offset-4 transition active:text-[#183325] dark:text-[#c7d2e0] dark:decoration-[#314056] dark:active:text-white" onClick={onOpenWallet} type="button">
-                Ajustar saldo
-              </button>
+              <>
+                <button className="inline-flex items-center justify-center gap-2 rounded-xl border border-[#dfe7db] bg-white px-5 py-3 text-sm font-semibold text-[#183325] transition active:scale-[0.99] dark:border-[#314056] dark:bg-[#182235] dark:text-[#f8fafc]" onClick={onOpenCashWithdrawal} type="button">
+                  <Icon name="point_of_sale" />
+                  Retirar caja
+                </button>
+                <button className="px-1 py-3 text-sm font-semibold text-[#5b6d61] underline decoration-[#dfe7db] underline-offset-4 transition active:text-[#183325] dark:text-[#c7d2e0] dark:decoration-[#314056] dark:active:text-white" onClick={onOpenWallet} type="button">
+                  Ajustar saldo
+                </button>
+              </>
             ) : null}
           </>
         }

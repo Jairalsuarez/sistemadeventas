@@ -71,6 +71,7 @@ export default function useOperationsActions({
   user,
   activeShift,
   shiftCash,
+  cashBox,
   setSaleLines,
   salePayment,
   setSalePayment,
@@ -102,6 +103,9 @@ export default function useOperationsActions({
   walletForm,
   setWalletForm,
   setWalletModal,
+  cashWithdrawalForm,
+  setCashWithdrawalForm,
+  setCashWithdrawalModal,
   scheduleForm,
   setScheduleForm,
   commit,
@@ -118,6 +122,7 @@ export default function useOperationsActions({
   createRemoteSale,
   createRemoteInformalSale,
   upsertRemoteWalletState,
+  upsertRemoteCashState,
   createRemoteWalletMovement,
   createRemoteExpense,
   createRemoteDistributor,
@@ -154,11 +159,14 @@ export default function useOperationsActions({
     commit((current) => ({
       ...current,
       sales: current.sales.filter((sale) => sale.id !== draftSale.id),
-      wallet: {
-        ...current.wallet,
-        saldoActual: Math.max(Number(current.wallet?.saldoActual || 0) - Number(amount || 0), 0),
-        updatedAt: new Date().toISOString(),
-      },
+      cashBox:
+        draftSale.paymentMethod === "efectivo"
+          ? {
+              ...current.cashBox,
+              saldoActual: Math.max(Number(current.cashBox?.saldoActual || 0) - Number(amount || 0), 0),
+              updatedAt: new Date().toISOString(),
+            }
+          : current.cashBox,
       products: current.products.map((product) => {
         const quantity = soldQuantities.get(product.id);
         if (!quantity) return product;
@@ -183,11 +191,14 @@ export default function useOperationsActions({
     commit((current) => ({
       ...current,
       sales: current.sales.filter((sale) => sale.id !== draftSale.id),
-      wallet: {
-        ...current.wallet,
-        saldoActual: Math.max(Number(current.wallet?.saldoActual || 0) - Number(amount || 0), 0),
-        updatedAt: new Date().toISOString(),
-      },
+      cashBox:
+        draftSale.paymentMethod === "efectivo"
+          ? {
+              ...current.cashBox,
+              saldoActual: Math.max(Number(current.cashBox?.saldoActual || 0) - Number(amount || 0), 0),
+              updatedAt: new Date().toISOString(),
+            }
+          : current.cashBox,
       turnos: draftSale.shiftId
         ? current.turnos.map((turno) =>
             turno.id === draftSale.shiftId
@@ -359,13 +370,14 @@ export default function useOperationsActions({
       createdAt: new Date().toISOString(),
     };
 
-    const nextWallet = { saldoActual: app.wallet.saldoActual + saleTotal, updatedAt: new Date().toISOString() };
+    const isCashSale = salePayment.method === "efectivo";
+    const nextCashBox = isCashSale ? { saldoActual: Number(cashBox?.saldoActual || 0) + saleTotal, updatedAt: new Date().toISOString() } : cashBox;
     const nextShift = activeShift ? { ...activeShift, totalVentas: activeShift.totalVentas + saleTotal } : null;
 
     commit((current) => ({
       ...current,
       sales: [draftSale, ...current.sales],
-      wallet: nextWallet,
+      cashBox: nextCashBox,
       products: current.products.map((product) => {
         const line = salePreview.find((item) => item.productId === product.id);
         return line
@@ -395,15 +407,15 @@ export default function useOperationsActions({
       }
 
       const saleRecord = saleRemote.ok ? saleRemote.sale : draftSale;
-      const walletRemote = session?.mode === "supabase" ? { ok: true, wallet: nextWallet } : await upsertRemoteWalletState(nextWallet, null);
-      const finalWallet = walletRemote.ok ? walletRemote.wallet : nextWallet;
+      const cashRemote = session?.mode === "supabase" || !isCashSale ? { ok: true, cashBox: nextCashBox } : await upsertRemoteCashState(nextCashBox, null);
+      const finalCashBox = cashRemote.ok ? cashRemote.cashBox : nextCashBox;
       const shiftRemote = session?.mode === "supabase" || !nextShift ? null : await updateRemoteShift(nextShift);
       const finalShift = nextShift ? (shiftRemote?.ok ? remoteShiftOr(nextShift, shiftRemote) : nextShift) : null;
 
       commit((current) => ({
         ...current,
         sales: current.sales.map((sale) => (sale.id === draftSale.id ? saleRecord : sale)),
-        wallet: finalWallet,
+        cashBox: finalCashBox,
         turnos: finalShift ? current.turnos.map((turno) => (turno.id === activeShift.id ? finalShift : turno)) : current.turnos,
       }));
     } catch (error) {
@@ -459,13 +471,14 @@ export default function useOperationsActions({
       createdAt: new Date().toISOString(),
     };
 
-    const nextWallet = { saldoActual: app.wallet.saldoActual + total, updatedAt: new Date().toISOString() };
+    const isCashSale = informalSalePayment.method === "efectivo";
+    const nextCashBox = isCashSale ? { saldoActual: Number(cashBox?.saldoActual || 0) + total, updatedAt: new Date().toISOString() } : cashBox;
     const nextShift = activeShift ? { ...activeShift, totalVentas: activeShift.totalVentas + total } : null;
 
     commit((current) => ({
       ...current,
       sales: [draftSale, ...current.sales],
-      wallet: nextWallet,
+      cashBox: nextCashBox,
       turnos: nextShift ? current.turnos.map((turno) => (turno.id === activeShift.id ? nextShift : turno)) : current.turnos,
     }));
 
@@ -487,7 +500,7 @@ export default function useOperationsActions({
       commit((current) => ({
         ...current,
         sales: current.sales.map((sale) => (sale.id === draftSale.id ? saleRecord : sale)),
-        wallet: nextWallet,
+        cashBox: nextCashBox,
         turnos: nextShift ? current.turnos.map((turno) => (turno.id === activeShift.id ? nextShift : turno)) : current.turnos,
       }));
     } catch (error) {
@@ -785,6 +798,51 @@ export default function useOperationsActions({
     inform("Saldo general actualizado.", "success");
   };
 
+  const withdrawCashToWallet = async () => {
+    if (!isAdminRole) return inform("Solo administracion puede retirar caja.", "warning");
+    const amount = parseMoneyInput(cashWithdrawalForm.amountInput || cashWithdrawalForm.amount);
+    const reason = cleanName(cashWithdrawalForm.motivo);
+    if (amount <= 0 || !reason) return inform("Indica cuanto vas a retirar de caja y el motivo.", "warning");
+    if (amount > Number(cashBox?.saldoActual || 0)) return inform("No hay suficiente dinero en caja para ese retiro.", "warning");
+
+    const nextCashBox = { saldoActual: Number(cashBox?.saldoActual || 0) - amount, updatedAt: new Date().toISOString() };
+    const nextWallet = { saldoActual: Number(app.wallet?.saldoActual || 0) + amount, updatedAt: new Date().toISOString() };
+
+    commit((current) => ({
+      ...current,
+      cashBox: nextCashBox,
+      wallet: nextWallet,
+    }));
+
+    try {
+      const cashRemote = await upsertRemoteCashState(nextCashBox, session?.mode === "supabase" ? session.userId : null);
+      const walletRemote = await upsertRemoteWalletState(nextWallet, session?.mode === "supabase" ? session.userId : null);
+      if (session?.mode === "supabase") {
+        await createRemoteWalletMovement({
+          tipo: "retiro_caja",
+          monto: amount,
+          descripcion: reason,
+          createdBy: session.userId,
+        });
+      }
+
+      commit((current) => ({
+        ...current,
+        cashBox: cashRemote.ok ? cashRemote.cashBox : nextCashBox,
+        wallet: walletRemote.ok ? walletRemote.wallet : nextWallet,
+      }));
+    } catch (error) {
+      inform(`No se pudo completar el retiro. ${error?.message || "Intenta de nuevo."}`, "error");
+      return false;
+    }
+
+    notify(`${personName(user)} retiro ${money(amount)} de caja hacia saldo general.`, personName(user));
+    setCashWithdrawalForm({ amount: 0, amountInput: "", motivo: "" });
+    setCashWithdrawalModal(false);
+    inform("Retiro de caja registrado.", "success");
+    return true;
+  };
+
   const transferInventory = async ({ productId, from, quantity, to }) => {
     if (!isAdminRole) return inform("Solo administracion puede transferir inventario.", "warning");
     const product = app.products.find((item) => item.id === productId);
@@ -916,6 +974,7 @@ export default function useOperationsActions({
     createMerchandiseExpense,
     transferInventory,
     adjustWallet,
+    withdrawCashToWallet,
     createSchedule,
     updateScheduleStatus,
     deleteSchedule,

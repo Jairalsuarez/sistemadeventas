@@ -89,19 +89,25 @@ export default function useDashboardMetrics({
     return [
       { label: "Ventas hoy", value: money(salesToday), detail: todaySalesCount ? `${todaySalesCount} venta(s) hoy` : "Sin ventas hoy" },
       {
+        label: "Caja",
+        value: money(app.cashBox?.saldoActual || 0),
+        detail: "Efectivo disponible antes de retiros",
+      },
+      {
         label: "Saldo general",
         value: money(app.wallet.saldoActual),
         detail: `Actualizado ${formatDate(app.wallet.updatedAt, { dateStyle: "medium", timeStyle: "short" })}`,
       },
     ];
-  }, [app.wallet, formatDate, money, salesToday, todaySales]);
+  }, [app.cashBox?.saldoActual, app.wallet, formatDate, money, salesToday, todaySales]);
 
   const sellerStats = useMemo(
     () => [
       { label: "Mi venta de hoy", value: money(mySalesToday), detail: activeShift ? "Tu turno esta abierto" : "Abre tu turno para registrar" },
+      { label: "Caja", value: money(app.cashBox?.saldoActual || 0), detail: "Efectivo disponible" },
       { label: "Saldo actual", value: money(app.wallet.saldoActual), detail: "Referencia general del negocio" },
     ],
-    [activeShift, app.wallet.saldoActual, money, mySalesToday]
+    [activeShift, app.cashBox?.saldoActual, app.wallet.saldoActual, money, mySalesToday]
   );
 
   return {

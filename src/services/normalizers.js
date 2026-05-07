@@ -70,6 +70,13 @@ export function normalizeWalletState(wallet) {
   };
 }
 
+export function normalizeCashState(cash) {
+  return {
+    saldoActual: safeNumber(cash?.saldo_actual ?? cash?.saldoActual),
+    updatedAt: cash?.updated_at || cash?.updatedAt || new Date().toISOString(),
+  };
+}
+
 export function cleanTurnoLabel(value) {
   const text = String(value || "").trim();
   const lower = text.toLowerCase();

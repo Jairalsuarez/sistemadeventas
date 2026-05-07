@@ -12,6 +12,7 @@ export default function AdminDashboardPage({
   formatDate,
   onNewInformalSale,
   onNewSale,
+  onOpenCashWithdrawal,
   onCloseShift,
   sellerShiftRows,
   money,
@@ -36,6 +37,14 @@ export default function AdminDashboardPage({
               Agregar venta informal
             </button>
             <button
+              className="inline-flex items-center justify-center gap-2 rounded-xl border border-[#dfe7db] bg-white px-5 py-3 text-sm font-semibold text-[#183325] transition active:scale-[0.99] dark:border-[#314056] dark:bg-[#182235] dark:text-[#f8fafc]"
+              onClick={onOpenCashWithdrawal}
+              type="button"
+            >
+              <Icon name="point_of_sale" />
+              Retirar caja
+            </button>
+            <button
               className="inline-flex items-center gap-3 rounded-xl bg-[#1f7a3a] px-6 py-4 text-base font-semibold text-white shadow-[0_16px_30px_rgba(31,122,58,0.24)] transition hover:-translate-y-0.5 dark:bg-[linear-gradient(135deg,#2563eb,#1d4ed8)] dark:shadow-[0_16px_30px_rgba(37,99,235,0.24)]"
               onClick={onNewSale}
               type="button"
@@ -49,7 +58,7 @@ export default function AdminDashboardPage({
         }
       />
 
-      <div className="grid gap-4 xl:grid-cols-2">
+      <div className="grid gap-4 xl:grid-cols-3">
         {adminStats.map((stat, index) => (
           <StatCard key={stat.label} accent={index === 1 ? "orange" : index === 2 ? "yellow" : "green"} detail={stat.detail} label={stat.label} value={stat.value} />
         ))}

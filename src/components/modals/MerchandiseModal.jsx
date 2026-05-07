@@ -1,5 +1,5 @@
-import { useMemo, useState } from "react";
-import Modal from "../Modal";
+import { useEffect, useMemo, useState } from "react";
+import Modal, { registerAppBackHandler } from "../Modal";
 import Icon from "../ui/Icon";
 
 const fieldClassName =
@@ -35,6 +35,11 @@ function normalizeMoneyInput(value) {
 
 function ProductPickerModal({ onClose, onSelect, open, products, selectedProductId }) {
   const [search, setSearch] = useState("");
+
+  useEffect(() => {
+    if (!open) return undefined;
+    return registerAppBackHandler(onClose, 30);
+  }, [onClose, open]);
 
   const filteredProducts = useMemo(() => {
     const query = search.trim().toLowerCase();
@@ -147,6 +152,11 @@ export default function MerchandiseModal({
   const nextWalletTotal = Number(wallet?.saldoActual || 0) - amount;
 
   const updateMerchandise = (patch) => setMerchandise((current) => ({ ...current, ...patch }));
+  useEffect(() => {
+    if (!open || step <= 1) return undefined;
+    return registerAppBackHandler(() => setStep((current) => Math.max(current - 1, 1)), 10);
+  }, [open, step]);
+
   const nextStep = () => {
     if (step === 1 && !canContinueDistributor) return;
     if (step === 2 && !canContinueAmount) return;

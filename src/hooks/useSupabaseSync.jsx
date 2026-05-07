@@ -6,6 +6,7 @@ import {
   fetchRemoteExpenseCategories,
   fetchRemoteExpenses,
   fetchRemoteCommunityFeedback,
+  fetchRemoteCashState,
   fetchRemoteNotifications,
   fetchRemoteSales,
   fetchRemoteSchedules,
@@ -39,10 +40,11 @@ export default function useSupabaseSync(session, setSession, commit, setSyncing,
 
       setSyncing(true);
 
-      const [productsResult, shiftsResult, walletResult, schedulesResult, salesResult, expensesResult, distributorsResult, categoriesResult, profilesResult, notificationsResult, feedbackResult] = await Promise.all([
+      const [productsResult, shiftsResult, walletResult, cashResult, schedulesResult, salesResult, expensesResult, distributorsResult, categoriesResult, profilesResult, notificationsResult, feedbackResult] = await Promise.all([
         fetchRemoteProducts(),
         fetchRemoteShifts(),
         fetchRemoteWalletState(),
+        fetchRemoteCashState(),
         fetchRemoteSchedules(),
         fetchRemoteSales(),
         fetchRemoteExpenses(),
@@ -59,6 +61,7 @@ export default function useSupabaseSync(session, setSession, commit, setSyncing,
           products: productsResult.ok ? productsResult.products : current.products,
           turnos: shiftsResult.ok ? shiftsResult.shifts : current.turnos,
           wallet: walletResult.ok ? walletResult.wallet : current.wallet,
+          cashBox: cashResult.ok ? cashResult.cashBox : current.cashBox,
           schedules: schedulesResult.ok ? schedulesResult.schedules : current.schedules,
           sales: salesResult.ok ? salesResult.sales : current.sales,
           expenses: expensesResult.ok ? expensesResult.expenses : current.expenses,
@@ -109,6 +112,7 @@ export default function useSupabaseSync(session, setSession, commit, setSyncing,
       .on("postgres_changes", { event: "*", schema: "public", table: "expense_categories" }, syncRemoteData)
       .on("postgres_changes", { event: "*", schema: "public", table: "shifts" }, syncRemoteData)
       .on("postgres_changes", { event: "*", schema: "public", table: "wallet_state" }, syncRemoteData)
+      .on("postgres_changes", { event: "*", schema: "public", table: "cash_state" }, syncRemoteData)
       .on("postgres_changes", { event: "*", schema: "public", table: "schedules" }, syncRemoteData)
       .on("postgres_changes", { event: "*", schema: "public", table: "profiles" }, syncRemoteData)
       .on("postgres_changes", { event: "*", schema: "public", table: "notifications" }, syncRemoteData)

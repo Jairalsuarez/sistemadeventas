@@ -23,6 +23,7 @@ import {
   createRemoteSchedule,
   createRemoteShift,
   createRemoteWalletMovement,
+  upsertRemoteCashState,
   deleteRemoteCommunityFeedback,
   deleteRemoteSchedule,
   fetchRemoteCommunityFeedback,
@@ -53,6 +54,7 @@ const EMPTY_PRODUCT = {
   activo: true,
 };
 const EMPTY_WALLET_FORM = { saldo: 0, motivo: "", password: "", confirmationAccepted: false };
+const EMPTY_CASH_WITHDRAWAL_FORM = { amount: 0, amountInput: "", motivo: "" };
 const EMPTY_EXPENSE = {
   categoria: "Mercaderia",
   categoryId: "",
@@ -139,6 +141,7 @@ export function AppProvider({ children }) {
   const [expenseModal, setExpenseModal] = useState(false);
   const [merchandiseModal, setMerchandiseModal] = useState(false);
   const [walletModal, setWalletModal] = useState(false);
+  const [cashWithdrawalModal, setCashWithdrawalModal] = useState(false);
   const [syncing, setSyncing] = useState(false);
   const [syncedSessionKey, setSyncedSessionKey] = useState("");
   const [uploading, setUploading] = useState(false);
@@ -146,6 +149,7 @@ export function AppProvider({ children }) {
   const [skipNextSessionRestore, setSkipNextSessionRestore] = useState(false);
   const [expense, setExpense] = useState(EMPTY_EXPENSE);
   const [walletForm, setWalletForm] = useState(() => ({ ...EMPTY_WALLET_FORM, saldo: getAppData().wallet.saldoActual }));
+  const [cashWithdrawalForm, setCashWithdrawalForm] = useState(EMPTY_CASH_WITHDRAWAL_FORM);
   const [shiftCash, setShiftCash] = useState(0);
   const [saleLines, setSaleLines] = useState([{ productId: "", cantidad: 1 }]);
   const [salePayment, setSalePayment] = useState(EMPTY_SALE_PAYMENT);
@@ -618,13 +622,14 @@ export function AppProvider({ children }) {
     upsertRemoteProduct,
     deleteRemoteProduct,
   });
-  const { startShift, closeShift, createSale, createInformalSale, createExpense, createMerchandiseExpense, transferInventory, adjustWallet, createSchedule, updateScheduleStatus, deleteSchedule } =
+  const { startShift, closeShift, createSale, createInformalSale, createExpense, createMerchandiseExpense, transferInventory, adjustWallet, withdrawCashToWallet, createSchedule, updateScheduleStatus, deleteSchedule } =
     useOperationsActions({
       app,
       session,
       user,
       activeShift,
       shiftCash,
+      cashBox: app.cashBox,
       setSaleLines,
       salePayment,
       setSalePayment,
@@ -656,6 +661,9 @@ export function AppProvider({ children }) {
       walletForm,
       setWalletForm,
       setWalletModal,
+      cashWithdrawalForm,
+      setCashWithdrawalForm,
+      setCashWithdrawalModal,
       scheduleForm,
       setScheduleForm,
       commit,
@@ -672,6 +680,7 @@ export function AppProvider({ children }) {
       createRemoteSale,
       createRemoteInformalSale,
       upsertRemoteWalletState,
+      upsertRemoteCashState,
       createRemoteWalletMovement,
       createRemoteExpense,
       createRemoteDistributor,
@@ -778,6 +787,8 @@ export function AppProvider({ children }) {
     setMerchandiseModal,
     walletModal,
     setWalletModal,
+    cashWithdrawalModal,
+    setCashWithdrawalModal,
     editing,
     syncing,
     uploading,
@@ -798,6 +809,8 @@ export function AppProvider({ children }) {
     setExpense,
     walletForm,
     setWalletForm,
+    cashWithdrawalForm,
+    setCashWithdrawalForm,
     shiftCash,
     setShiftCash,
     saleLines,
@@ -858,6 +871,7 @@ export function AppProvider({ children }) {
     createMerchandiseExpense,
     transferInventory,
     adjustWallet,
+    withdrawCashToWallet,
     createSchedule,
     deleteSchedule,
     updateScheduleStatus,

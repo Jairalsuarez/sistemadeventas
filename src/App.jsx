@@ -1,6 +1,7 @@
 import { Suspense, lazy, useEffect } from "react";
 import { Navigate, Route, Routes, useLocation, useNavigate, useParams } from "react-router-dom";
 import ProductDetailsModal from "./components/modals/ProductDetailsModal";
+import CashWithdrawalModal from "./components/modals/CashWithdrawalModal";
 import ExpenseModal from "./components/modals/ExpenseModal";
 import InformalSaleModal from "./components/modals/InformalSaleModal";
 import MerchandiseModal from "./components/modals/MerchandiseModal";
@@ -94,6 +95,8 @@ function App() {
     createMerchandiseExpense,
     createSale,
     createSchedule,
+    cashWithdrawalForm,
+    cashWithdrawalModal,
     deleteSchedule,
     dismissToast,
     editing,
@@ -128,6 +131,8 @@ function App() {
     session,
     authChecking,
     setExpense,
+    setCashWithdrawalForm,
+    setCashWithdrawalModal,
     setExpenseModal,
     setInformalSale,
     setInformalSaleModal,
@@ -158,6 +163,7 @@ function App() {
     walletForm,
     walletModal,
     adjustWallet,
+    withdrawCashToWallet,
     distributors,
     theme,
     transferInventory,
@@ -205,6 +211,7 @@ function App() {
                     onNewProduct={openProductCreateAction}
                     onNewInformalSale={openInformalSaleAction}
                     onNewSale={openSaleAction}
+                    onOpenCashWithdrawal={() => setCashWithdrawalModal(true)}
                     onOpenExpense={openExpenseAction}
                     onOpenWallet={() => setWalletModal(true)}
                   />
@@ -216,6 +223,7 @@ function App() {
                   <SaleModal
                     activeShift={activeShift}
                     app={app}
+                    cashBox={app.cashBox}
                     createSale={createSale}
                     money={money}
                     onClose={() => navigate("/panel")}
@@ -240,6 +248,7 @@ function App() {
                 element={
                   <InformalSaleModal
                     activeShift={activeShift}
+                    cashBox={app.cashBox}
                     createInformalSale={createInformalSale}
                     informalSale={informalSale}
                     informalSalePayment={informalSalePayment}
@@ -262,9 +271,11 @@ function App() {
                 path="/panel/saldo"
                 element={
                   <WalletPage
+                    cashBox={app.cashBox}
                     expenses={app.expenses || []}
                     isAdmin={user?.role === "admin"}
                     money={money}
+                    onOpenCashWithdrawal={() => setCashWithdrawalModal(true)}
                     onOpenExpense={openExpenseAction}
                     onOpenMerchandise={openMerchandiseAction}
                     onOpenWallet={() => setWalletModal(true)}
@@ -426,6 +437,7 @@ function App() {
       <SaleModal
         activeShift={activeShift}
         app={app}
+        cashBox={app.cashBox}
         createSale={createSale}
         money={money}
         onClose={() => setSaleModal(false)}
@@ -445,6 +457,7 @@ function App() {
 
       <InformalSaleModal
         activeShift={activeShift}
+        cashBox={app.cashBox}
         createInformalSale={createInformalSale}
         informalSale={informalSale}
         informalSalePayment={informalSalePayment}
@@ -472,6 +485,15 @@ function App() {
         wallet={app.wallet}
       />
       <WalletModal adjustWallet={adjustWallet} onClose={() => setWalletModal(false)} open={walletModal} setWalletForm={setWalletForm} walletForm={walletForm} />
+      <CashWithdrawalModal
+        cashBox={app.cashBox}
+        cashWithdrawalForm={cashWithdrawalForm}
+        money={money}
+        onClose={() => setCashWithdrawalModal(false)}
+        open={cashWithdrawalModal}
+        setCashWithdrawalForm={setCashWithdrawalForm}
+        withdrawCashToWallet={withdrawCashToWallet}
+      />
       <ProductDetailsModal money={money} onClose={() => setSelected(null)} open={Boolean(selected)} product={selected} variant={session || nativeApp ? "default" : "public"} whatsappNumber={app.business.whatsapp} />
     </>
   );

@@ -1,6 +1,13 @@
+import { useEffect } from "react";
+import { registerAppBackHandler } from "../Modal";
 import Icon from "../ui/Icon";
 
 export default function EvidenceViewer({ name = "Evidencia del pago", onClose, open, url }) {
+  useEffect(() => {
+    if (!open || !url) return undefined;
+    return registerAppBackHandler(onClose, 30);
+  }, [onClose, open, url]);
+
   if (!open || !url) return null;
 
   return (

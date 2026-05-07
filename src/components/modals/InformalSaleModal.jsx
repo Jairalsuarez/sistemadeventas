@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import Modal from "../Modal";
+import Modal, { registerAppBackHandler } from "../Modal";
 import EvidenceViewer from "./EvidenceViewer";
 import Icon from "../ui/Icon";
 import PaymentMethodCard from "../sales/PaymentMethodCard";
@@ -46,6 +46,7 @@ function parseMoneyInput(value) {
 
 export default function InformalSaleModal({
   activeShift,
+  cashBox,
   createInformalSale,
   informalSale,
   informalSalePayment,
@@ -60,7 +61,6 @@ export default function InformalSaleModal({
   uploadInformalSaleEvidence,
   uploading,
   userRole,
-  wallet,
 }) {
   const [step, setStep] = useState(1);
   const [evidenceViewerOpen, setEvidenceViewerOpen] = useState(false);
@@ -73,10 +73,15 @@ export default function InformalSaleModal({
     }
   }, [open]);
 
+  useEffect(() => {
+    if (!open || step <= 1) return undefined;
+    return registerAppBackHandler(() => setStep((current) => Math.max(current - 1, 1)), 10);
+  }, [open, step]);
+
   const requiresShift = userRole === "vendedor";
   const paymentNeedsEvidence = informalSalePayment.method === "transferencia_directa";
   const totalAmount = parseMoneyInput(informalSale.totalInput || informalSale.total);
-  const nextWalletTotal = Number(wallet?.saldoActual || 0) + totalAmount;
+  const nextCashTotal = informalSalePayment.method === "efectivo" ? Number(cashBox?.saldoActual || 0) + totalAmount : Number(cashBox?.saldoActual || 0);
   const selectedPayment = paymentOptions.find((item) => item.value === informalSalePayment.method) || paymentOptions[0];
 
   const canContinueDetail = totalAmount > 0 && Boolean(informalSale.description.trim());
@@ -252,8 +257,8 @@ export default function InformalSaleModal({
                     <strong className="text-[#183325] dark:text-[#f8fafc]">{money(totalAmount)}</strong>
                   </div>
                   <div className="flex items-center justify-between gap-3">
-                    <span>Saldo luego</span>
-                    <strong className="text-[#1f7a3a] dark:text-[#93c5fd]">{money(nextWalletTotal)}</strong>
+                    <span>Caja luego</span>
+                    <strong className="text-[#1f7a3a] dark:text-[#93c5fd]">{money(nextCashTotal)}</strong>
                   </div>
                   {informalSale.description ? <div className="line-clamp-3 rounded-md border border-[#dbe6d8] bg-white px-3 py-2 text-xs text-[#5b6d61] dark:border-[#314056] dark:bg-[#0f172a] dark:text-[#c7d2e0]">{informalSale.description.trim()}</div> : null}
                   {informalSalePayment.evidenceUrl ? <button className="inline-flex min-w-0 items-center gap-2 text-xs font-semibold text-[#1f7a3a] dark:text-[#93c5fd]" onClick={() => setEvidenceViewerOpen(true)} type="button"><Icon className="text-base" name="visibility" /><span className="truncate">Ver evidencia</span></button> : null}

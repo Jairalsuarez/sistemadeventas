@@ -1,5 +1,5 @@
 import { supabaseReady } from "./supabaseclient";
-import { createNotice, DEFAULT_LOGO, normalizeCommunityFeedback, normalizeProduct } from "./normalizers.js";
+import { createNotice, DEFAULT_LOGO, normalizeCashState, normalizeCommunityFeedback, normalizeProduct } from "./normalizers.js";
 
 const APP_KEY = "ventas-app-v2";
 const BUSINESS_CONTACT = {
@@ -51,6 +51,7 @@ function seed() {
       featuredProductId: null,
     },
     wallet: { saldoActual: 0, updatedAt: new Date().toISOString() },
+    cashBox: { saldoActual: 0, updatedAt: new Date().toISOString() },
     users: localUsers,
     products: [
       normalizeProduct({
@@ -128,6 +129,7 @@ export function getAppData() {
     if (!parsed) return seed();
     const merged = { ...seed(), ...parsed };
     merged.business = { ...seed().business, ...(parsed.business || {}), ...BUSINESS_CONTACT };
+    merged.cashBox = normalizeCashState(parsed.cashBox || parsed.cash_box || seed().cashBox);
     if (supabaseReady) {
       merged.users = [];
     }
